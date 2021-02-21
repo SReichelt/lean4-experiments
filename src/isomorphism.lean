@@ -139,77 +139,75 @@ instance propHasEquiv                                 : HasEquivalence Prop := �
 instance instanceHasEquiv (α : Sort u)                : HasEquivalence α    := ⟨Eq⟩
 def      setoidHasEquiv   {α : Sort u} (s : Setoid α) : HasEquivalence α    := @HasEquivalence.mk α s.r (relEquiv s.iseqv)
 
-def useEq {α : Sort u} := instanceHasEquiv α
 
 
-
--- We would also like to be able to compose those equivalences, and we need them to behave like
--- isomorphisms when composed, with `refl` as the identity, `symm` as inverse, and `trans` as composition.
+-- We would also like to be able to reason about those equivalences, and we need them to behave like
+-- isomorphisms when doing so, with `refl` as the identity, `symm` as inverse, and `trans` as composition.
 --
--- To formalize the appropriate axioms, we need to be able to check whether isomorphisms are equal. However,
--- later we will have isomorphisms where this equality is actually replaced by an equivalence, i.e. it
--- contains structure. Therefore, we already define everything in the most general way.
--- (Unfortunately, because of the indirections involved, that breaks type class inference quite often.)
+-- Therefore, we need to be able to decide whether two isomorphisms are equal. However, later we will have
+-- isomorphisms where this equality is actually replaced by an equivalence, i.e. it contains structure.
+-- Of course, it is possible to formulate the axioms in this general way, but it turns out that
+-- * it breaks type class inference and simplification in many cases, and
+-- * in Lean we don't benefit from it at all.
 --
 -- The axioms are strongly inspired by the seven corresponding lemmas in `data.equiv.basic` of Mathlib in
--- Lean 3, but reformulated in terms of operations on morphisms (and with one additional axiom). They
--- capture all of the ways in which a chain of isomorphisms can possibly be simplified:
--- * Associativity says that parentheses can be omitted, so what remains is simplification of inverses and
---   of individual pairs of morphisms.
--- * Identities can be removed from the chain.
--- * Inverses with inner inverses or compositions can be simplified so that the entire chain becomes "flat"
---   again.
--- * Inverses can be canceled with their direct neighbor.
+-- Lean 3, but reformulated in terms of operations on morphisms (and with one additional axiom which was
+-- missing from those lemmas).
+-- They can actually be understood as simplification rules that enable equational reasoning by transforming
+-- all possible terms into a canonical form -- which luckily makes proofs in this file trivial, and maybe
+-- it also points to some sort of constructive interpretation of the axioms, even though they are given as
+-- equalities.
 
-class HasComposition {U : Sort u} (M : U → U → Sort v) (eq : ∀ {α β : U}, HasEquivalence (M α β)) where
-(comp  {α β γ   : U}                                     : M α β → M β γ → M α γ)
---                                                         h • (g • f) = (h • g) • f
-(assoc {α β γ δ : U} (f : M α β) (g : M β γ) (h : M γ δ) : eq.equiv (comp (comp f g) h) (comp f (comp g h)))
+class HasCompositionOp {U : Sort u} (M : U → U → Sort v) where
+(comp  {α β γ : U} : M α β → M β γ → M α γ)
 
--- Note that we use a nonstandard order in `HasComposition.comp` so that it directly matches
+-- Note that we use a nonstandard order in `HasCompositionOp.comp` so that it directly matches
 -- `IsEquivalence.trans`. When using `•` notation (which we use to avoid clashing with `∘`), we reverse
 -- the order to conform to function/morphism/functor composition.
-def revComp {U : Sort u} {M : U → U → Sort v} [eq : ∀ {α β : U}, HasEquivalence (M α β)] [h : HasComposition M eq] {α β γ : U} (g : M β γ) (f : M α β) := @HasComposition.comp U M eq h α β γ f g
--- Unfortunately, the definition of `revComp` is more general than what Lean type class resolution can
--- handle, so defining the notation here is of no use.
---infixr:90 " • " => revComp
+def revComp {U : Sort u} {M : U → U → Sort v} [h : HasCompositionOp M] {α β γ : U} (g : M β γ) (f : M α β) :=
+@HasCompositionOp.comp U M h α β γ f g
+infixr:90 " • " => revComp
 
-class HasMorphisms {U : Sort u} (M : U → U → Sort v) (eq : ∀ {α β : U}, HasEquivalence (M α β)) extends HasComposition M eq where
-(id       (α   : U)             : M α α)
---                                id • f = f
-(leftId   {α β : U} (f : M α β) : eq.equiv (comp f (id β)) f)
---                                f • id = f
-(rightId  {α β : U} (f : M α β) : eq.equiv (comp (id α) f) f)
+class HasComposition {U : Sort u} (M : U → U → Sort v) extends HasCompositionOp M where
+(assoc {α β γ δ : U} (f : M α β) (g : M β γ) (h : M γ δ) : h • (g • f) = (h • g) • f)
 
-def id__ {U : Sort u} {M : U → U → Sort v} [eq : ∀ {α β : U}, HasEquivalence (M α β)] [h : HasMorphisms M eq] (α : U) := @HasMorphisms.id U M eq h α
+class HasId {U : Sort u} (M : U → U → Sort v) extends HasComposition M where
+(id (α : U) : M α α)
 
-class HasIsomorphisms {U : Sort u} (M : U → U → Sort v) (eq : ∀ {α β : U}, HasEquivalence (M α β)) extends @HasMorphisms U M eq where
-(inv      {α β : U}                         : M α β → M β α)
---                                            (g • f)⁻¹ = f⁻¹ • g⁻¹
-(compInv  {α β : U} (f : M α β) (g : M β γ) : eq.equiv (inv (comp f g)) (comp (inv g) (inv f)))
---                                            f⁻¹ • f = id
-(leftInv  {α β : U} (f : M α β)             : eq.equiv (comp f (inv f)) (id α))
---                                            f • f⁻¹ = id
-(rightInv {α β : U} (f : M α β)             : eq.equiv (comp (inv f) f) (id β))
---                                            (f⁻¹)⁻¹ = f
-(invInv   {α β : U} (f : M α β)             : eq.equiv (inv (inv f))    f)
---                                            id⁻¹ = id
-(idInv    (α   : U)                         : eq.equiv (inv (id α))     (id α))
+def id__ {U : Sort u} {M : U → U → Sort v} [h : HasId M] (α : U) := @HasId.id U M h α
 
-def inv {U : Sort u} {M : U → U → Sort v} [eq : ∀ {α β : U}, HasEquivalence (M α β)] [h : HasIsomorphisms M eq] {α β : U} (f : M α β) := @HasIsomorphisms.inv U M eq h α β f 
--- See above.
---postfix:10000 "⁻¹"  => inv
+class HasMorphisms {U : Sort u} (M : U → U → Sort v) extends HasId M where
+(leftId  {α β : U} (f : M α β) : id β • f = f)
+(rightId {α β : U} (f : M α β) : f • id α = f)
+
+class HasInv {U : Sort u} (M : U → U → Sort v) extends HasMorphisms M where
+(inv {α β : U} : M α β → M β α)
+
+def inv {U : Sort u} {M : U → U → Sort v} [h : HasInv M] {α β : U} (f : M α β) := @HasInv.inv U M h α β f 
+postfix:10000 "⁻¹"  => inv
+class HasIsomorphisms {U : Sort u} (M : U → U → Sort v) extends HasInv M where
+(compInv  {α β : U} (f : M α β) (g : M β γ) : (g • f)⁻¹ = f⁻¹ • g⁻¹)
+(leftInv  {α β : U} (f : M α β)             : f⁻¹ • f = id α)
+(rightInv {α β : U} (f : M α β)             : f • f⁻¹ = id β)
+(invInv   {α β : U} (f : M α β)             : (f⁻¹)⁻¹ = f)
+(idInv    (α   : U)                         : (id α)⁻¹ = id α)
 
 -- Isomorphisms in `Prop` are trivial in Lean, so we can define one instance that works for all ordinary
 -- equivalence relations such as those defined above.
-instance propEquivHasComp {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasComposition  equiv useEq :=
-⟨isEquiv.trans, λ _ _ _ => proofIrrel _ _⟩
-instance propEquivHasMor  {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasMorphisms    equiv useEq :=
-⟨isEquiv.refl,  λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
-instance propEquivHasIso  {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasIsomorphisms equiv useEq :=
-⟨isEquiv.symm,  λ _ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
+instance propEquivHasCompOp {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasCompositionOp equiv :=
+⟨isEquiv.trans⟩
+instance propEquivHasComp   {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasComposition   equiv :=
+⟨λ _ _ _ => proofIrrel _ _⟩
+instance propEquivHasId     {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasId            equiv :=
+⟨isEquiv.refl⟩
+instance propEquivHasMor    {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasMorphisms     equiv :=
+⟨λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
+instance propEquivHasInv    {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasInv           equiv :=
+⟨isEquiv.symm⟩
+instance propEquivHasIso    {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasIsomorphisms  equiv :=
+⟨λ _ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
 
-instance setoidHasIso {α : Sort u} (s : Setoid α) : HasIsomorphisms (@HasEquivalence.equiv α (setoidHasEquiv s)) useEq :=
+instance setoidHasIso {α : Sort u} (s : Setoid α) : HasIsomorphisms (@HasEquivalence.equiv α (setoidHasEquiv s)) :=
 @propEquivHasIso α s.r (relEquiv s.iseqv)
 
 
@@ -217,19 +215,19 @@ instance setoidHasIso {α : Sort u} (s : Setoid α) : HasIsomorphisms (@HasEquiv
 -- Combine everything into a single type class.
 
 class HasEquivalenceStructure (U : Sort u) extends HasEquivalence U where
-[hasIso : HasIsomorphisms equiv useEq]
+[hasIso : HasIsomorphisms equiv]
 
-instance isEquiv (U : Sort u) [hasEq : HasEquivalenceStructure U] : IsEquivalence   hasEq.equiv       := hasEq.isEquiv
-instance hasComp (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasComposition  hasEq.equiv useEq := hasEq.hasIso.toHasComposition
-instance hasMor  (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasMorphisms    hasEq.equiv useEq := hasEq.hasIso.toHasMorphisms
-instance hasIso  (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasIsomorphisms hasEq.equiv useEq := hasEq.hasIso
+instance isEquiv (U : Sort u) [hasEq : HasEquivalenceStructure U] : IsEquivalence   hasEq.equiv := hasEq.isEquiv
+instance hasComp (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasComposition  hasEq.equiv := hasEq.hasIso.toHasComposition
+instance hasMor  (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasMorphisms    hasEq.equiv := hasEq.hasIso.toHasMorphisms
+instance hasIso  (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasIsomorphisms hasEq.equiv := hasEq.hasIso
 
-instance equivalenceStructure (U : Sort u) [hasEquiv : HasEquivalence U] [hasIso : HasIsomorphisms hasEquiv.equiv useEq] : HasEquivalenceStructure U :=
+instance equivalenceStructure (U : Sort u) [hasEquiv : HasEquivalence U] [hasIso : HasIsomorphisms hasEquiv.equiv] : HasEquivalenceStructure U :=
 { equiv   := hasEquiv.equiv,
   isEquiv := hasEquiv.isEquiv,
   hasIso  := hasIso }
 
-def useEq' {α : Sort u} := @equivalenceStructure α useEq (propEquivHasIso Eq)
+def useEq {α : Sort u} := @equivalenceStructure α (instanceHasEquiv α) (propEquivHasIso Eq)
 
 instance setoidEquivalenceStructure {α : Sort u} (s : Setoid α) : HasEquivalenceStructure α :=
 @equivalenceStructure α (setoidHasEquiv s) (setoidHasIso s)
@@ -275,23 +273,22 @@ variable {S : StructureWithEquiv}
 def equiv := S.hasEq.equiv
 infix:25 " ≃ " => equiv
 
-instance isEquiv : IsEquivalence   (@equiv S)       := S.hasEq.isEquiv
-instance hasComp : HasComposition  (@equiv S) useEq := S.hasEq.hasIso.toHasComposition
-instance hasMor  : HasMorphisms    (@equiv S) useEq := S.hasEq.hasIso.toHasMorphisms
-instance hasIso  : HasIsomorphisms (@equiv S) useEq := S.hasEq.hasIso
+instance isEquiv   : IsEquivalence    (@equiv S) := S.hasEq.isEquiv
+instance hasCompOp : HasCompositionOp (@equiv S) := S.hasEq.hasIso.toHasCompositionOp
+instance hasComp   : HasComposition   (@equiv S) := S.hasEq.hasIso.toHasComposition
+instance hasId     : HasId            (@equiv S) := S.hasEq.hasIso.toHasId
+instance hasMor    : HasMorphisms     (@equiv S) := S.hasEq.hasIso.toHasMorphisms
+instance hasInv    : HasInv           (@equiv S) := S.hasEq.hasIso.toHasInv
+instance hasIso    : HasIsomorphisms  (@equiv S) := S.hasEq.hasIso
 
 def refl  (α     : S) : α ≃ α                 := isEquiv.refl α
 def symm  {α β   : S} : α ≃ β → β ≃ α         := isEquiv.symm
 def trans {α β γ : S} : α ≃ β → β ≃ γ → α ≃ γ := isEquiv.trans
 
-def id_        (α     : S)                         : α ≃ α := @id__    S.U equiv useEq hasMor  α
-def id'        {α     : S}                                 := id_ α
-def isoRevComp {α β γ : S} (g : β ≃ γ) (f : α ≃ β) : α ≃ γ := @revComp S.U equiv useEq hasComp α β γ g f
-def isoInv     {α β   : S}             (f : α ≃ β) : β ≃ α := @inv     S.U equiv useEq hasIso  α β     f
-infixr:90     " • " => isoRevComp
-postfix:10000 "⁻¹"  => isoInv
+def id_ (α : S) : α ≃ α := @id__ S.U equiv hasMor.toHasId α
+def id' {α : S} := id_ α
 
-        theorem assoc    {α β γ δ : S} (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h • (g • f) = (h • g) • f := hasIso.assoc    f g h
+@[simp] theorem assoc    {α β γ δ : S} (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h • (g • f) = (h • g) • f := hasIso.assoc    f g h
 @[simp] theorem leftId   {α β     : S} (f : α ≃ β)                         : id' • f = f               := hasIso.leftId   f
 @[simp] theorem rightId  {α β     : S} (f : α ≃ β)                         : f • id' = f               := hasIso.rightId  f
 @[simp] theorem compInv  {α β γ   : S} (f : α ≃ β) (g : β ≃ γ)             : (g • f)⁻¹ = f⁻¹ • g⁻¹     := hasIso.compInv  f g
@@ -336,57 +333,49 @@ open StructureWithEquiv
 -- split into the three pieces of structure that we are dealing with, so we can reuse it in other contexts.
 
 class IsCompositionFunctor {U : Sort u} {V : Sort v} {X : U → U → Sort u'} {Y : V → V → Sort v'}
-  (eqX : ∀ {α β : U}, HasEquivalence (X α β)) (eqY : ∀ {α β : V}, HasEquivalence (Y α β))
-  [compX : HasComposition X eqX] [compY : HasComposition Y eqY]
+  [compX : HasComposition X] [compY : HasComposition Y]
   (F : U → V) (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
   where
---                                                   FF (g • f) ≃ FF g • FF f
-(transportComp {α β γ : U} (f : X α β) (g : X β γ) : eqY.equiv (FF (compX.comp _ f g)) (compY.comp _ (FF f) (FF g)))
+(transportComp {α β γ : U} (f : X α β) (g : X β γ) : FF (g • f) = FF g • FF f)
 
 class IsMorphismFunctor {U : Sort u} {V : Sort v} {X : U → U → Sort u'} {Y : V → V → Sort v'}
-  (eqX : ∀ {α β : U}, HasEquivalence (X α β)) (eqY : ∀ {α β : V}, HasEquivalence (Y α β))
-  [morX : HasMorphisms X eqX] [morY : HasMorphisms Y eqY]
+  [morX : HasMorphisms X] [morY : HasMorphisms Y]
   (F : U → V) (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
-  extends @IsCompositionFunctor U V X Y eqX eqY morX.toHasComposition morY.toHasComposition F FF
+  extends @IsCompositionFunctor U V X Y morX.toHasComposition morY.toHasComposition F FF
   where
---                     FF id ≃ id
-(transportId (α : U) : eqY.equiv (FF (morX.id _ α)) (morY.id _ (F α)))
+(transportId (α : U) : FF (id__ α) = id__ (F α))
 
 class IsIsomorphismFunctor {U : Sort u} {V : Sort v} {X : U → U → Sort u'} {Y : V → V → Sort v'}
-  (eqX : ∀ {α β : U}, HasEquivalence (X α β)) (eqY : ∀ {α β : V}, HasEquivalence (Y α β))
-  [isoX : HasIsomorphisms X eqX] [isoY : HasIsomorphisms Y eqY]
+  [isoX : HasIsomorphisms X] [isoY : HasIsomorphisms Y]
   (F : U → V) (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
-  extends @IsMorphismFunctor U V X Y eqX eqY isoX.toHasMorphisms isoY.toHasMorphisms F FF
+  extends @IsMorphismFunctor U V X Y isoX.toHasMorphisms isoY.toHasMorphisms F FF
   where
---                                    FF f⁻¹ ≃ (FF f)⁻¹
-(transportInv {α β : U} (f : X α β) : eqY.equiv (FF (isoX.inv _ f)) (isoY.inv _ (FF f)))
+(transportInv {α β : U} (f : X α β) : FF f⁻¹ = (FF f)⁻¹)
 
 structure StructureFunctor (S T : StructureWithEquiv) :=
 (map                 : S     → T)
 (transport {α β : S} : α ≃ β → map α ≃ map β)
-[isFunctor           : IsIsomorphismFunctor useEq useEq map transport]
+[isFunctor           : IsIsomorphismFunctor map transport]
 
 namespace StructureFunctor
 
 instance (S T : StructureWithEquiv) : CoeFun (StructureFunctor S T) (λ F => S.U → T.U) := ⟨λ F => F.map⟩
 
--- It seems we have to help Lean a little to get back from the very abstract definitions to something
--- manageable, since our equivalences are actually always equalities at the moment.
-
 variable {S T U : StructureWithEquiv}
 
-instance isIsoFunctor  (F : StructureFunctor S T) : @IsIsomorphismFunctor S.U T.U equiv equiv useEq useEq hasIso  hasIso  F.map F.transport := F.isFunctor
-instance isMorFunctor  (F : StructureFunctor S T) : @IsMorphismFunctor    S.U T.U equiv equiv useEq useEq hasMor  hasMor  F.map F.transport :=
-@IsIsomorphismFunctor.toIsMorphismFunctor S.U T.U equiv equiv useEq useEq hasIso hasIso F.map F.transport (isIsoFunctor F)
-instance isCompFunctor (F : StructureFunctor S T) : @IsCompositionFunctor S.U T.U equiv equiv useEq useEq hasComp hasComp F.map F.transport :=
-@IsMorphismFunctor.toIsCompositionFunctor S.U T.U equiv equiv useEq useEq hasMor hasMor F.map F.transport (isMorFunctor F)
+instance isIsoFunctor  (F : StructureFunctor S T) : @IsIsomorphismFunctor S.U T.U equiv equiv hasIso  hasIso  F.map F.transport :=
+F.isFunctor
+instance isMorFunctor  (F : StructureFunctor S T) : @IsMorphismFunctor    S.U T.U equiv equiv hasMor  hasMor  F.map F.transport :=
+@IsIsomorphismFunctor.toIsMorphismFunctor S.U T.U equiv equiv hasIso hasIso F.map F.transport (isIsoFunctor F)
+instance isCompFunctor (F : StructureFunctor S T) : @IsCompositionFunctor S.U T.U equiv equiv hasComp hasComp F.map F.transport :=
+@IsMorphismFunctor.toIsCompositionFunctor S.U T.U equiv equiv hasMor hasMor F.map F.transport (isMorFunctor F)
 
 def transportInvDef  (F : StructureFunctor S T) :=
-@IsIsomorphismFunctor.transportInv  S.U T.U equiv equiv useEq useEq hasIso  hasIso  F.map F.transport (isIsoFunctor  F)
+@IsIsomorphismFunctor.transportInv  S.U T.U equiv equiv hasIso  hasIso  F.map F.transport (isIsoFunctor  F)
 def transportIdDef   (F : StructureFunctor S T) :=
-@IsMorphismFunctor.transportId      S.U T.U equiv equiv useEq useEq hasMor  hasMor  F.map F.transport (isMorFunctor  F)
+@IsMorphismFunctor.transportId      S.U T.U equiv equiv hasMor  hasMor  F.map F.transport (isMorFunctor  F)
 def transportCompDef (F : StructureFunctor S T) :=
-@IsCompositionFunctor.transportComp S.U T.U equiv equiv useEq useEq hasComp hasComp F.map F.transport (isCompFunctor F)
+@IsCompositionFunctor.transportComp S.U T.U equiv equiv hasComp hasComp F.map F.transport (isCompFunctor F)
 
 @[simp] theorem transportComp (F : StructureFunctor S T) {α β γ : S} (f : α ≃ β) (g : β ≃ γ) :
   F.transport (g • f) = F.transport g • F.transport f := transportCompDef F f g
@@ -406,7 +395,7 @@ def congrArg {α β : S} (F : StructureFunctor S T) : α ≃ β → F α ≃ F �
 def ext (F G : StructureFunctor S T) := ∀ α, F α ≃ G α
 
 instance extIsEquiv : IsEquivalence (@ext S T) :=
-{ refl  := λ F α   => congrArg F (refl α),
+{ refl  := λ F   α => congrArg F (refl α),
   symm  := λ e   α => symm (e α),
   trans := λ e f α => trans (e α) (f α) }
 
@@ -418,33 +407,35 @@ instance hasEquiv : HasEquivalence (StructureFunctor S T) := ⟨ext⟩
 def mapId   {S : StructureWithEquiv}           : S     → S                 := id
 def transId {S : StructureWithEquiv} {α β : S} : α ≃ β → mapId α ≃ mapId β := id
 
-instance idIsFunctor (S : StructureWithEquiv) : @IsIsomorphismFunctor S.U S.U _ _ useEq useEq hasIso hasIso mapId transId :=
-{ transportComp := λ _ _ => rfl,
-  transportId   := λ _   => rfl,
-  transportInv  := λ _   => rfl }
+instance idIsFunctor (S : StructureWithEquiv) :
+  @IsIsomorphismFunctor S.U S.U equiv equiv hasIso hasIso mapId transId :=
+{ transportComp := λ f g => rfl,
+  transportId   := λ α   => rfl,
+  transportInv  := λ f   => rfl }
 
 def idFun {S : StructureWithEquiv} : StructureFunctor S S := ⟨mapId, transId⟩
 
-def mapComp   (F : StructureFunctor S T) (G : StructureFunctor T U)           : S     → U                             := G.map       ∘ F.map
-def transComp (F : StructureFunctor S T) (G : StructureFunctor T U) {α β : S} : α ≃ β → mapComp F G α ≃ mapComp F G β := G.transport ∘ F.transport
+def mapComp   (F : StructureFunctor S T) (G : StructureFunctor T U)           :
+  S     → U                             := G.map       ∘ F.map
+def transComp (F : StructureFunctor S T) (G : StructureFunctor T U) {α β : S} :
+  α ≃ β → mapComp F G α ≃ mapComp F G β := G.transport ∘ F.transport
 
-instance compIsFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) : @IsIsomorphismFunctor S.U U.U _ _ useEq useEq hasIso hasIso (mapComp F G) (transComp F G) :=
-{ transportComp := λ _ _ => sorry,
-  transportId   := λ _   => sorry,
-  transportInv  := λ _   => sorry }
+instance compIsFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) :
+  @IsIsomorphismFunctor S.U U.U equiv equiv hasIso hasIso (mapComp F G) (transComp F G) :=
+{ transportComp := λ f g => sorry,
+  transportId   := λ α   => sorry,
+  transportInv  := λ f   => sorry }
 
 def compFun (F : StructureFunctor S T) (G : StructureFunctor T U) : StructureFunctor S U :=
 { map       := mapComp       F G,
   transport := transComp     F G,
   isFunctor := compIsFunctor F G }
 
--- Ideally, this would let us use our bullet notation for functors as well, but not yet.
-instance hasComp : HasComposition StructureFunctor hasEquiv := ⟨compFun, λ _ _ _ => sorry⟩
-instance hasId   : HasMorphisms   StructureFunctor hasEquiv := ⟨@idFun, λ _ => sorry, λ _ => sorry⟩
+instance hasComp : HasCompositionOp StructureFunctor := ⟨compFun⟩
 
-instance extHasIso : HasIsomorphisms (@ext S T) useEq := sorry
+instance extHasIso : HasIsomorphisms (@ext S T) := sorry
 
--- Why does type class resolution fail here? We should be able to write it as `⟨ext⟩`.
+-- Why does type class resolution fail here?
 instance functorHasEq : HasEquivalenceStructure (StructureFunctor S T) :=
 { equiv   := ext,
   isEquiv := extIsEquiv,
@@ -459,7 +450,7 @@ def bijective  (F : StructureFunctor S T) := PProd.mk (injective F) (surjective 
 
 -- The functors between two structures form a structure, with equivalence given by extensionality.
 
--- Why does type class resolution fail here? We should be able to write it as `⟨StructureFunctor S T⟩`.
+-- Why does type class resolution fail here?
 def functorStructure (S T : StructureWithEquiv) : StructureWithEquiv := 
 { U     := StructureFunctor S T,
   hasEq := functorHasEq }
@@ -498,14 +489,14 @@ def toSetoidFunctor (S : StructureWithEquiv) : StructureFunctor S (setoidStructu
   isFunctor := sorry }
 
 def StructureQuotient (S : StructureWithEquiv) := Quotient (structureToSetoid S)
-def skeletonStructure (S : StructureWithEquiv) := @StructureWithEquiv.defaultStructure (StructureQuotient S) useEq'
+def skeletonStructure (S : StructureWithEquiv) := @StructureWithEquiv.defaultStructure (StructureQuotient S) useEq
 
 def setoidToSkeletonFunctor (S : StructureWithEquiv) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
 { map       := λ α => Quotient.mk α,
   transport := λ e => Quotient.sound e,
   isFunctor := sorry }
 
-def toSkeletonFunctor (S : StructureWithEquiv) := compFun (toSetoidFunctor S) (setoidToSkeletonFunctor S)
+def toSkeletonFunctor (S : StructureWithEquiv) := setoidToSkeletonFunctor S • toSetoidFunctor S
 
 
 
@@ -519,7 +510,8 @@ def toSkeletonFunctor (S : StructureWithEquiv) := compFun (toSetoidFunctor S) (s
 --    v          v          v
 --   `T` ----> `T_≈` ---> `T/≃`
 --
--- This can be understood as the reason why isomorphism can generally be identified with equality.
+-- This can be understood as the reason why isomorphism can generally be identified with equality: In all
+-- operations that preserve structure, we can take the quotient with respect to equivalence/isomorphism.
 
 variable {S T : StructureWithEquiv}
 
@@ -531,7 +523,8 @@ def setoidFunctor (F : StructureFunctor S T) : StructureFunctor (setoidStructure
 def mapToSkeleton (F : StructureFunctor S T) : skeletonStructure S → skeletonStructure T :=
 Quotient.lift (Quotient.mk ∘ F.map) sorry
 
-def transportToSkeleton (F : StructureFunctor S T) {a b : skeletonStructure S} (h : a = b) : mapToSkeleton F a ≃ mapToSkeleton F b :=
+def transportToSkeleton (F : StructureFunctor S T) {a b : skeletonStructure S} (h : a = b) :
+  mapToSkeleton F a ≃ mapToSkeleton F b :=
 Eq.subst (motive := λ x => mapToSkeleton F a ≃ mapToSkeleton F x) h (refl (mapToSkeleton F a))
 
 def skeletonFunctor (F : StructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
@@ -551,13 +544,15 @@ open Forgetfulness
 --
 -- Since our notion of equality of functors is given by `ext`, not literal equality, we need to use
 -- that instead. However, we are actually defining equivalence of structures mainly for the purpose of
--- using it as an equivalence within a `StructureWithEquiv` itself (completing the round-trip). Since
--- the definition of `StructureWithEquiv` requires equivalence of isomorphisms to be a proposition, at
--- some point we need to coerce `ext` into an equivalence relation.
+-- using it as an equivalence within a `StructureWithEquiv` itself, completing the round-trip. Since
+-- `StructureWithEquiv` contains axioms for operations on isomorphisms, we will need to prove that those
+-- axioms are satisfied by the two morphisms in our structure. But the axioms are written as propositions,
+-- so at some point we end up coercing `ext` into an equivalence relation.
 --
 -- This is where the `setoidFunctor` we just defined comes into play: Instead of moving between `Prop`
--- and `Sort` while proving that our equivalence type satisfies the isomorphism axioms, we can first
--- write them as data and then use `setoidFunctor` to transport them to `Prop`.
+-- and `Sort` while proving that our equiv type satisfies the isomorphism axioms, we can first write them
+-- as data and then use `setoidFunctor` to convert the equivalence to a new one where the equivalences of
+-- the functors live in `Prop`.
 
 structure StructureEquiv (S T : StructureWithEquiv) where
 (toFun    : StructureFunctor S T)
@@ -580,7 +575,7 @@ def symm {S T : StructureWithEquiv} (e : StructureEquiv S T) : StructureEquiv T 
   rightInv := e.leftInv }
 
 def trans {S T U : StructureWithEquiv} (e : StructureEquiv S T) (f : StructureEquiv T U) : StructureEquiv S U :=
-{ toFun    := compFun e.toFun f.toFun,
+{ toFun    := compFun e.toFun  f.toFun,
   invFun   := compFun f.invFun e.invFun,
   leftInv  := sorry,
   rightInv := sorry }
@@ -588,7 +583,16 @@ def trans {S T U : StructureWithEquiv} (e : StructureEquiv S T) (f : StructureEq
 instance structureEquiv    : IsEquivalence  StructureEquiv     := ⟨refl, symm, trans⟩
 instance structureHasEquiv : HasEquivalence StructureWithEquiv := ⟨StructureEquiv⟩
 
-instance structureEquivHasIso : HasIsomorphisms StructureEquiv useEq := sorry
+-- TODO state isomorphism axioms for equivalences here; use them in structureEquivHasIso
+
+def forgetMorphismEquivalenceStructure {S T : StructureWithEquiv} (e : StructureEquiv S T) :
+  StructureEquiv (setoidStructure S) (setoidStructure T) :=
+{ toFun    := setoidFunctor e.toFun,
+  invFun   := setoidFunctor e.invFun,
+  leftInv  := λ F => transportToSetoid (e.leftInv  F),
+  rightInv := λ F => transportToSetoid (e.rightInv F) }
+
+instance structureEquivHasIso : HasIsomorphisms StructureEquiv := sorry
 
 instance structureHasEq : HasEquivalenceStructure StructureWithEquiv :=
 { equiv   := StructureEquiv,
