@@ -229,9 +229,9 @@ instance setoidEquivalenceStructure {α : Sort u} (s : Setoid α) : HasEquivalen
 -- any `Type u` with `Equiv` as equivalence, any `α : Type u` with `Eq` as equivalence, and so on, but also
 -- a lot of structures we are going to define below.
 --
--- Ideally, the domain of `equiv` should actually not be `Sort v` but `StructureWithEquiv` itself, i.e. the
+-- Ideally, the domain of `equiv` should actually not be `Sort v` but `Structure` itself, i.e. the
 -- equivalences should be allowed to have internal structure. However, that would require us to define
--- `StructureWithEquiv` mutually with declaring it as an instance of `HasIsomorphismStructure`, which seems
+-- `Structure` mutually with declaring it as an instance of `HasIsomorphismStructure`, which seems
 -- difficult or impossible in Lean. So at least for the moment, we just forget inner structure at a
 -- carefully chosen point.
 --
@@ -249,17 +249,17 @@ instance setoidEquivalenceStructure {α : Sort u} (s : Setoid α) : HasEquivalen
 -- Side note: In HLM, the logic implemented for the Slate theorem prover, the most fundamental concept is a
 -- "set," but sets in HLM must be understood more like sets in Lean than sets in axiomatic set theory. An
 -- HLM set is essentially a type with an equality (following something like Cantor's original ideas instead
--- of ZFC), and `StructureWithEquiv` is precisely the internalization of this concept in type theory.
+-- of ZFC), and `Structure` is precisely the internalization of this concept in type theory.
 
-structure StructureWithEquiv where
+structure Structure where
 (U     : Sort u)
 [hasEq : HasEquivalenceStructure U]
 
-namespace StructureWithEquiv
+namespace Structure
 
-instance : CoeSort StructureWithEquiv (Sort u) := ⟨λ S => S.U⟩
+instance : CoeSort Structure (Sort u) := ⟨λ S => S.U⟩
 
-variable {S : StructureWithEquiv}
+variable {S : Structure}
 
 def equiv := S.hasEq.equiv
 infix:25 " ≃ " => equiv
@@ -288,36 +288,36 @@ def id' {α : S} := id_ α
 @[simp] theorem invInv   {α β     : S} (f : α ≃ β)                         : (f⁻¹)⁻¹ = f               := hasIso.invInv   f
 @[simp] theorem idInv    (α       : S)                                     : (id_ α)⁻¹ = id'           := hasIso.idInv    α
 
-def defaultStructure (U : Sort u) [hasEq : HasEquivalenceStructure U] : StructureWithEquiv := @StructureWithEquiv.mk U hasEq
+def defaultStructure (U : Sort u) [hasEq : HasEquivalenceStructure U] : Structure := @Structure.mk U hasEq
 def setoidInstanceStructure {α : Sort u} (s : Setoid α) := @defaultStructure α (setoidEquivalenceStructure s)
 
--- For reference, here is the complete list of axioms for an `S : StructureWithEquiv`, aligned to highlight
+-- For reference, here is the complete list of axioms for an `S : Structure`, aligned to highlight
 -- the two different points of view:
 --
 -- ` refl     (α       : S) : α ≃ α                 `  `id_ α` / `id'`
 -- ` symm     {α β     : S} : α ≃ β → β ≃ α         `  `⁻¹`
 -- ` trans    {α β γ   : S} : α ≃ β → β ≃ γ → α ≃ γ `  `•` (in reverse order)
 -- ` assoc    {α β γ δ : S}                            (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h • (g • f) = (h • g) • f `
--- ` leftId   {α β     : S}                            (f : α ≃ β)                         : id' • f   = f               `
--- ` rightId  {α β     : S}                            (f : α ≃ β)                         : f • id'   = f               `
+-- ` leftId   {α β     : S}                            (f : α ≃ β)                         : id' • f   = f             `
+-- ` rightId  {α β     : S}                            (f : α ≃ β)                         : f • id'   = f             `
 -- ` compInv  {α β γ   : S}                            (f : α ≃ β) (g : β ≃ γ)             : (g • f)⁻¹ = f⁻¹ • g⁻¹     `
--- ` leftInv  {α β     : S}                            (f : α ≃ β)                         : f⁻¹ • f   = id'             `
--- ` rightInv {α β     : S}                            (f : α ≃ β)                         : f • f⁻¹   = id'             `
--- ` invInv   {α β     : S}                            (f : α ≃ β)                         : (f⁻¹)⁻¹   = f               `
+-- ` leftInv  {α β     : S}                            (f : α ≃ β)                         : f⁻¹ • f   = id'           `
+-- ` rightInv {α β     : S}                            (f : α ≃ β)                         : f • f⁻¹   = id'           `
+-- ` invInv   {α β     : S}                            (f : α ≃ β)                         : (f⁻¹)⁻¹   = f             `
 -- ` idInv    (α       : S)                                                                : (id_ α)⁻¹ = id'           `
 --
 -- Note how the axioms can actually be understood as simplification rules that enable equational
 -- reasoning by transforming all possible terms into a canonical form (with the simplification for
 -- associativity being the omission of parentheses). Besides making all proofs about them trivial, maybe
--- it also points to a constructive interpretation of the axioms, even though they are given as equalities.
+-- it also points to a constructive interpretation of the axioms as functions.
 
-end StructureWithEquiv
+end Structure
 
-open StructureWithEquiv
+open Structure
 
 
 
--- We want to define a map between two `StructureWithEquiv` that is compatible with their equivalences.
+-- We want to define a map between two `Structure` that is compatible with their equivalences.
 -- In particular, the map should be equipped with a `transport` function that transports "relabeling"
 -- operations as described in the introduction, i.e. equivalences. `transport` can also be regarded as a
 -- substitution principle, or generally as a well-definedness condition for the map if we interpret `≃` as
@@ -349,16 +349,16 @@ class IsIsomorphismFunctor {U : Sort u} {V : Sort v} {X : U → U → Sort u'} {
   where
 (transportInv {α β : U} (f : X α β) : FF f⁻¹ = (FF f)⁻¹)
 
-structure StructureFunctor (S T : StructureWithEquiv) :=
+structure StructureFunctor (S T : Structure) :=
 (map                 : S     → T)
 (transport {α β : S} : α ≃ β → map α ≃ map β)
 [isFunctor           : IsIsomorphismFunctor map transport]
 
 namespace StructureFunctor
 
-instance (S T : StructureWithEquiv) : CoeFun (StructureFunctor S T) (λ F => S.U → T.U) := ⟨λ F => F.map⟩
+instance (S T : Structure) : CoeFun (StructureFunctor S T) (λ F => S.U → T.U) := ⟨λ F => F.map⟩
 
-variable {S T U : StructureWithEquiv}
+variable {S T U : Structure}
 
 -- The transport function can be understood as a substitution principle. Note that, like much of this
 -- file, it is a definition, not a theorem, because it needs to preserve structure.
@@ -391,7 +391,7 @@ def transportCompDef (F : StructureFunctor S T) :=
 -- We can define equivalence of functors by extensionality, using equivalence in `T` instead of equality.
 -- Note that despite the beautiful but misleading use of `∀`, this definition does not live in `Prop`.
 -- This is an equivalence according to our definition, and it is compatible with isomorphisms via the
--- functor axioms, so we can use it to build an instance of `StructureWithEquiv` again.
+-- functor axioms, so we can use it to build an instance of `Structure` again.
 
 def FunExt (F G : StructureFunctor S T) := ∀ α, F α ≃ G α
 
@@ -421,7 +421,7 @@ instance functorHasEq : HasEquivalenceStructure (StructureFunctor S T) :=
   isEquiv := funExtIsEquiv,
   hasIso  := funExtHasIso }
 
-def functorStructure (S T : StructureWithEquiv) : StructureWithEquiv := 
+def functorStructure (S T : Structure) : Structure := 
 -- Why can't we just write `⟨StructureFunctor S T⟩` here?
 { U     := StructureFunctor S T,
   hasEq := functorHasEq }
@@ -432,7 +432,7 @@ def functorStructure (S T : StructureWithEquiv) : StructureWithEquiv :=
 def mapId             : S     → S                 := id
 def transId {α β : S} : α ≃ β → mapId α ≃ mapId β := id
 
-instance idIsFunctor (S : StructureWithEquiv) :
+instance idIsFunctor (S : Structure) :
   @IsIsomorphismFunctor S.U S.U equiv equiv hasIso hasIso mapId transId :=
 { transportComp := λ f g => rfl,
   transportId   := λ α   => rfl,
@@ -467,7 +467,7 @@ def Bijective  (F : StructureFunctor S T) := Prod (Injective F) (Surjective F)
 
 -- We can even build an inverse functor for any functor that is bijective according to this definition,
 -- even though we do not assume classical logic. This works because the equivalences in
--- `StructureWithEquiv` can actually hold the data we are defining here. The inverse functor is unique
+-- `Structure` can actually hold the data we are defining here. The inverse functor is unique
 -- (modulo equivalence).
 
 def arbitraryInverseElement (F : StructureFunctor S T) (h : Surjective F) (β : T) : S :=
@@ -488,12 +488,11 @@ open StructureFunctor
 
 
 
--- We can forget the structure on a `StructureWithEquiv` on two levels, obtaining modified instances of
--- `StructureWithEquiv` via functors that are actually bijective according to the definition above.
+-- We can forget the structure held inside a `Structure` on two levels, obtaining modified instances of
+-- `Structure` via functors that are actually bijective according to the definition above.
 --
 -- 1. We can coerce the equivalence to `Prop` to obtain a setoid structure. The result is on the same
---    level as an `Equiv` in Mathlib, so one should not be mislead to think that we lose a lot of data in
---    this step.
+--    level as an `Equiv` in Mathlib, so this coercion preserves quite a lot of data.
 --    In comments, we will write `setoidStructure S` as `S_≈`.
 --
 -- 2. In a classical setting, we can additionally take the quotient with respect to equivalence, obtaining
@@ -502,32 +501,32 @@ open StructureFunctor
 --
 -- We currently use skeleton structures whenever we need to make sure that two objects depending on
 -- structures can be compared for equality. We could use setoid structures instead if we replaced the
--- equalities in the axioms of `StructureWithEquiv` with equivalence relations. With an inductive version
--- of `StructureWithEquiv`, we would not need to forget any structure.
+-- equalities in the axioms of `Structure` with equivalence relations. With an inductive version
+-- of `Structure`, we would not need to forget any structure.
 
 namespace Forgetfulness
 
-def SetoidEquiv {S : StructureWithEquiv} (α β : S) := Nonempty (α ≃ β)
-def transportToSetoid {S : StructureWithEquiv} {α β : S} (e : α ≃ β) : SetoidEquiv α β := ⟨e⟩
-def setoidEquiv {S : StructureWithEquiv} : Equivalence (@SetoidEquiv S) := ⟨λ α => ⟨refl α⟩, λ ⟨e⟩ => ⟨symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨trans e f⟩⟩
+def SetoidEquiv {S : Structure} (α β : S) := Nonempty (α ≃ β)
+def transportToSetoid {S : Structure} {α β : S} (e : α ≃ β) : SetoidEquiv α β := ⟨e⟩
+def setoidEquiv {S : Structure} : Equivalence (@SetoidEquiv S) := ⟨λ α => ⟨refl α⟩, λ ⟨e⟩ => ⟨symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨trans e f⟩⟩
 
-instance structureToSetoid (S : StructureWithEquiv) : Setoid S.U := ⟨SetoidEquiv, setoidEquiv⟩
-def setoidStructure (S : StructureWithEquiv) := StructureWithEquiv.setoidInstanceStructure (structureToSetoid S)
+instance structureToSetoid (S : Structure) : Setoid S.U := ⟨SetoidEquiv, setoidEquiv⟩
+def setoidStructure (S : Structure) := Structure.setoidInstanceStructure (structureToSetoid S)
 
-def toSetoidFunctor (S : StructureWithEquiv) : StructureFunctor S (setoidStructure S) :=
+def toSetoidFunctor (S : Structure) : StructureFunctor S (setoidStructure S) :=
 { map       := id,
   transport := transportToSetoid,
   isFunctor := sorry }
 
-def StructureQuotient (S : StructureWithEquiv) := Quotient (structureToSetoid S)
-def skeletonStructure (S : StructureWithEquiv) := @StructureWithEquiv.defaultStructure (StructureQuotient S) equality
+def StructureQuotient (S : Structure) := Quotient (structureToSetoid S)
+def skeletonStructure (S : Structure) := @Structure.defaultStructure (StructureQuotient S) equality
 
-def setoidToSkeletonFunctor (S : StructureWithEquiv) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
+def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
 { map       := λ α => Quotient.mk α,
   transport := λ e => Quotient.sound e,
   isFunctor := sorry }
 
-def toSkeletonFunctor (S : StructureWithEquiv) := setoidToSkeletonFunctor S • toSetoidFunctor S
+def toSkeletonFunctor (S : Structure) := setoidToSkeletonFunctor S • toSetoidFunctor S
 
 
 
@@ -546,13 +545,13 @@ def toSkeletonFunctor (S : StructureWithEquiv) := setoidToSkeletonFunctor S • 
 --
 -- This can be understood as the reason why isomorphism can generally be identified with equality: In all
 -- operations that preserve structure, we can take the quotient with respect to equivalence/isomorphism
--- without losing any information. It also suggests a reason why mathematicians are usually unconcerned
--- about universe issues (rightly so, apparently).
+-- and work on the quotient structures. It also suggests a reason why mathematicians are usually
+-- unconcerned about universe issues (rightly so, apparently).
 --
 -- The HLM logic implemented in Slate can be understood as completely living on the right side of this
--- diagram. This formalization also proves the consistency of HLM as a welcome side effect.
+-- diagram. The same could be said about HoTT.
 
-variable {S T : StructureWithEquiv}
+variable {S T : Structure}
 
 def setoidFunctor (F : StructureFunctor S T) : StructureFunctor (setoidStructure S) (setoidStructure T) :=
 { map       := F.map,
@@ -582,46 +581,46 @@ open Forgetfulness
 -- replace equality on functors with an instance of `FunExt`.
 --
 -- We are actually defining equivalence of structures mainly for the purpose of using it as an
--- equivalence within a `StructureWithEquiv` itself, completing the round-trip. However, since the
--- isomorphism axioms of `StructureWithEquiv` are based on equality, we need to make sure that we can
--- safely compare two `StructureWithEquiv` for equality.
+-- equivalence within a `Structure` itself, completing the round-trip. However, since the isomorphism
+-- axioms of `Structure` are based on equality, we need to make sure that we can safely compare two
+-- `Structure`s for equality.
 --
 -- This is where the `skeletonFunctor` we just defined comes into play: We can declare our equivalence
 -- to be one between skeleton structures. Then the functors contained in the equivalences are really
 -- just functions, so we can compare them for equality.
 
-structure LargeStructureEquiv (S T : StructureWithEquiv) where
+structure LargeStructureEquiv (S T : Structure) where
 (toFun    : StructureFunctor S T)
 (invFun   : StructureFunctor T S)
 (leftInv  : FunExt (compFun toFun invFun) idFun)
 (rightInv : FunExt (compFun invFun toFun) idFun)
 
-def StructureEquiv (S T : StructureWithEquiv) := LargeStructureEquiv (skeletonStructure S) (skeletonStructure T)
+def StructureEquiv (S T : Structure) := LargeStructureEquiv (skeletonStructure S) (skeletonStructure T)
 
 namespace StructureEquiv
 
 -- This part could be generalized to LargeStructureEquiv if necessary.
 
-def refl (S : StructureWithEquiv) : StructureEquiv S S :=
+def refl (S : Structure) : StructureEquiv S S :=
 { toFun    := idFun,
   invFun   := idFun,
   leftInv  := sorry,
   rightInv := sorry }
 
-def symm {S T : StructureWithEquiv} (e : StructureEquiv S T) : StructureEquiv T S :=
+def symm {S T : Structure} (e : StructureEquiv S T) : StructureEquiv T S :=
 { toFun    := e.invFun,
   invFun   := e.toFun,
   leftInv  := e.rightInv,
   rightInv := e.leftInv }
 
-def trans {S T U : StructureWithEquiv} (e : StructureEquiv S T) (f : StructureEquiv T U) : StructureEquiv S U :=
+def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) : StructureEquiv S U :=
 { toFun    := compFun e.toFun  f.toFun,
   invFun   := compFun f.invFun e.invFun,
   leftInv  := sorry,
   rightInv := sorry }
 
 instance structureEquiv    : IsEquivalence  StructureEquiv     := ⟨refl, symm, trans⟩
-instance structureHasEquiv : HasEquivalence StructureWithEquiv := ⟨StructureEquiv⟩
+instance structureHasEquiv : HasEquivalence Structure := ⟨StructureEquiv⟩
 
 -- This part requires using skeleton structures.
 
@@ -638,7 +637,7 @@ instance structureHasIso : HasIsomorphisms StructureEquiv :=
   invInv   := sorry,
   idInv    := sorry }
 
-instance structureHasEq : HasEquivalenceStructure StructureWithEquiv :=
+instance structureHasEq : HasEquivalenceStructure Structure :=
 -- Why can't we just write `⟨⟩` here?
 { equiv   := StructureEquiv,
   isEquiv := structureEquiv,
@@ -646,7 +645,7 @@ instance structureHasEq : HasEquivalenceStructure StructureWithEquiv :=
 
 -- We can build a `StructureEquiv` from a bijective functor.
 
-def functorToEquiv {S T : StructureWithEquiv} (F : StructureFunctor S T) (h : Bijective F) : StructureEquiv S T :=
+def functorToEquiv {S T : Structure} (F : StructureFunctor S T) (h : Bijective F) : StructureEquiv S T :=
 { toFun    := skeletonFunctor F,
   invFun   := skeletonFunctor (inverse F h),
   leftInv  := sorry,
@@ -660,9 +659,44 @@ open StructureEquiv
 
 -- Using this definition of equivalence, now we can actually build a "universe" structure, or rather
 -- one which behaves like a universe for all our purposes: The objects are actual structures (of a
--- lower Lean universe), but the equivalences cannot contain any inner structure.
+-- lower Lean universe), but the equivalences do not contain any inner structure.
+--
+-- Note how, in the process of encoding a universe, we remained purely constructive but simulated
+-- classical logic. This shows that constructive type theory and classical set theory are really
+-- just two different points on the path from one universe to the next, and that constructive
+-- mathematics can be interpreted classically and vice versa.
 
-def universeStructure : StructureWithEquiv :=
--- Why can't we just write `⟨StructureWithEquiv⟩` here?
-{ U     := StructureWithEquiv,
+def universeStructure : Structure :=
+-- Why can't we just write `⟨Structure⟩` here?
+{ U     := Structure,
   hasEq := structureHasEq }
+
+
+
+-- Now we can wrap the function `defaultStructure`, which encodes a given Lean type as a structure
+-- (with equality), into a functor from typeStructure to universeStructure.
+
+--def defaultStructureFunctor : StructureFunctor typeStructure universeStructure :=
+--{ map       := defaultStructure,
+--  transport := sorry,
+--  isFunctor := sorry }
+
+
+
+-- After this tour across universes, we return to our original goal of automating the definition of
+-- isomorphisms for arbitrary structures.
+
+namespace BuildingBlocks
+
+structure EncodedPiType where
+(α : Structure)
+(C : α → Sort v) --(C : StructureFunctor α universeStructure)
+
+def EncodedDependentFunction (T : EncodedPiType) := ∀ x : T.α, T.C x
+
+-- Every term of type `∀ x, C x` can be converted to an instance of `EncodedDependentFunction`:
+
+def encodeDependentFunction {α : Sort u} [hasEq : HasEquivalenceStructure α] {C : α → Sort v} (f : ∀ x, C x) :
+  EncodedDependentFunction ⟨@defaultStructure α hasEq, C⟩ := f
+
+end BuildingBlocks
