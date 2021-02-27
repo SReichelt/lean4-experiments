@@ -6,9 +6,12 @@
 -- universal algebra and category theory. It axiomatically captures the notion of "equality up to
 -- relabeling" in a composable way, such that it can be applied in a computational way to all structures
 -- that can be defined in type theory -- ideally without having to write a single proof for any particular
--- structure. Automatic generation of richer structure such as morphism also seems within reach.
+-- structure. Automatic generation of richer structure such as morphisms also seems within reach.
 --
--- The initial idea behind this formalization is actually quite simple: Frequently in mathematics, we are
+--  Initial idea
+-- --------------
+--
+-- The starting point of this formalization is actually quite simple: Frequently in mathematics, we are
 -- dealing with a set/type together with some structure on it; in Lean this is most commonly realized as a
 -- type class `C : Type u → Type v`. If `α` is a type with an instance `x : C α` of `C`, we define its
 -- "bundled structure" to be `⟨α, x⟩ : Σ α, C α`. For such bundled structures, we are able to give a
@@ -17,23 +20,31 @@
 -- * Given an `e : Equiv α β`, i.e. a "relabeling" operation that maps from one carrier type to another,
 --   we need to correspondingly relabel instances of `C α` to `C β`, i.e. transport them along `e`. We
 --   axiomatize this as a `transport` map which takes `e` to an `f : Equiv (C α) (C β)` in a way that
---   commutes with operations on the `Equiv`s.
+--   commutes with `refl`, `symm`, and `trans`.
 -- 
 -- * Then we can define an isomorphism between two bundled instances `⟨α, x⟩ ⟨β, y⟩ : Σ α, C α` to be an
 --   `e : Equiv α β` together with a proof that the equivalence given by `transport e` maps `x` to `y`.
 --   In other words, we simply require the `transport` operation to correctly apply the given relabeling
 --   operation on the right-hand side of the bundled instance.
 --
--- Although this applies to a lot of basic structures, this initial version does not compose very well, as
--- in Lean it is not the case that everything is a type. Note that we _can_ compose structures, e.g. build
--- a group structure from a semigroup structure and then define an appropriate `transport` map for groups.
--- However, in this example we would really like to define the `transport` map for groups as a composition
--- of the already-defined map for semigroups with another map that only takes care of the additional
--- structure.
+-- The intent of this generic definition of "isomorphism" is that it should enable us to transport
+-- elements and properties along concrete isomorphisms in a generic way, i.e. without writing either
+-- individual proofs or tactics.
 --
--- In general terms, we already have that any `⟨α, ⟨x₁, x₂⟩⟩` can be an instance of a bundled structure
--- (as it is just a special case of `⟨α, x⟩`), but we would also like to treat the same structure as
--- `⟨⟨α, x₁⟩, x₂⟩`, which would not type-check because `⟨α, x₁⟩` is not a type.
+--  Generalization
+-- ----------------
+--
+-- Although the initial version applies to a lot of basic algebraic structures, it does not compose very
+-- well, as in Lean it is not the case that everything is a type. As a consequence, the `transport` map
+-- needs to be defined individually for each type class `C` in the example above.
+--
+-- However, we would really like to define e.g. the `transport` map for groups as a composition of a
+-- `transport` map for semigroups which have have defined earlier, with another map that only takes care
+-- of the additional structure of a group compared to a semigroup.
+--
+-- In general terms, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` as `⟨⟨α, x₁⟩, x₂⟩`
+-- if `⟨α, x₁⟩` has already been defined as a bundled structure. However, in the initial version this
+-- would not type-check because the left-hand side must be a type and `⟨α, x₁⟩` is not a type.
 --
 -- Therefore, we generalize our initial version in two directions:
 --
@@ -46,24 +57,42 @@
 --   `transport`. If the right-hand side is actually a structure with isomorphisms, we need to check for
 --   isomorphism instead.
 --
--- This leads to the insight that we first need to abstract over different variants of equality and
--- equivalence, and then define everything in terms of that abstraction. In a way, the resulting theory can
--- be regarded as a very abstract characterization of what equivalence really means. For example, the
--- `transport` map mentioned at the beginning can also be understood as either a special kind of functor or
--- as a substitution operation if equivalence is interpreted as equality.
+--  Preliminary results
+-- ---------------------
 --
--- Using the generalized framework, we can not only compose bundled structures as described above, but we
--- can actually define how to build arbitrary structures in terms of basic building blocks corresponding to
--- all fundamental type constructors. This way, we can really get a definition of "isomorphism" for any
--- structure that can be defined.
+-- In order to unify the different cases, we define a generic `Structure` type which can hold various
+-- objects with equivalences between them, such as:
 --
--- All of this seems strongly related to HoTT but does not use univalence in any way. We give some pointers
--- to possible connections to other theories below. Mathematically some of this might also be a reinvention
--- of existing ideas, but there seems to be some novelty in the combination of these ideas.
+--  Type                      | Equivalence
+-- ---------------------------+---------------------------------
+--  `Prop`                    | `Iff`
+--  `α : Sort u`              | `Eq`
+--  `α` with `[s : Setoid α]` | `s.r`
+--  `Sort u`                  | `Equiv` from `data.equiv.basic`
+--  `Structure`               | `StructureEquiv` defined below
+--
+-- After determining the necessary axioms of this `Structure` type, the result is starting to look more
+-- and more like a Rosetta stone: While formalizing the "universe structure" which holds structures of a
+-- lower universe, we encounter and leverage a "simulated" classical logic within our fully constructive
+-- formalization. More specifically we find that constructive dependent type theory and a certain variant
+-- of classical set theory are just two different points on the path from one universe to the next.
+--
+-- In addition, we can give a novel (?) explanation why isomorphism can generally be treated as equality.
+--
+-- Returning to the goal of defining isomorphism as "equality up to relabeling" for particular structures,
+-- we can not only compose bundled structures as described above, but we are actually able to
+-- automatically analyze arbitrary structures in terms of their basic building blocks, and in particular:
+-- * determine the correct definition of "isomorphism" for each structure,
+-- * automatically analyze whether a given property is isomorphism-invariant, and
+-- * transport isomorphism-invariant properties along concrete isomorphisms.
+--
+-- All of this seems strongly related to HoTT but does not use univalence in any way. We give some
+-- pointers to possible connections to other theories below. Mathematically some of this might also be a
+-- reinvention of existing ideas, but there seems to be some novelty in the combination of these ideas.
 
 
 -- TODO:
--- * Finish basic definitions.
+-- * Fill sorrys.
 -- * Finish basic building blocks.
 -- * Compose building blocks automatically.
 -- * Abstract over Lean's type classes.
@@ -96,220 +125,243 @@
 
 
 
-universes u v u' v'
+universes u v
+
+
+
+-- Iff and Eq are equivalence relations. (Should this be in Core?)
+
+def iffEquiv              : Equivalence Iff     := ⟨Iff.refl, Iff.symm, Iff.trans⟩
+def eqEquiv  {α : Sort u} : Equivalence (@Eq α) := ⟨Eq.refl,  Eq.symm,  Eq.trans⟩
 
 
 
 -- We want to formalize a very general "structure with equivalences", so we start with a very basic
 -- abstraction for something that looks like an equivalence relation except that the codomain is `Sort u`
--- instead of `Prop`.
--- Even though `α`, `β` are not necessarily types, we write them in this way to capture the fact that
--- the canonical instance in Lean is `Equiv` (which we don't reference to keep this file self-contained).
+-- instead of `Prop`. Therefore, `Equiv.refl`/`Equiv.symm`/`Equiv.trans`, where `Equiv` is the Lean 4
+-- version of the `equiv` type in Lean 3 mathlib, is also an instance of this type.
+--
+-- Even though `α`, `β` are not necessarily types, we use greek letters to raise awareness that they
+-- frequently will be.
 
-class IsEquivalence {U : Sort u} (equiv : U → U → Sort v) where
+def GeneralizedRelation (U : Sort u) := U → U → Sort v
+
+class IsEquivalence {U : Sort u} (equiv : GeneralizedRelation U) where
 (refl  (α     : U) : equiv α α)
 (symm  {α β   : U} : equiv α β → equiv β α)
 (trans {α β γ : U} : equiv α β → equiv β γ → equiv α γ)
 
-def ProofEq (p : Prop) := λ h₁ h₂ : p => True
+namespace IsEquivalence
 
-instance proofEquiv {p : Prop}                                          : IsEquivalence (ProofEq p) := ⟨λ _ => trivial, λ _ => trivial, λ _ _ => trivial⟩
-instance iffEquiv                                                       : IsEquivalence Iff         := ⟨Iff.refl,       Iff.symm,       Iff.trans⟩
-instance eqEquiv    {α : Sort u}                                        : IsEquivalence (@Eq α)     := ⟨Eq.refl,        Eq.symm,        Eq.trans⟩
-instance relEquiv   {α : Sort u} {r : α → α → Prop} (e : Equivalence r) : IsEquivalence r           := ⟨e.refl,         e.symm,         e.trans⟩
+-- Every equivalence relation can trivially be converted to an instance of `IsEquivalence`.
+instance relGenEquiv {α : Sort u} {r : α → α → Prop} (e : Equivalence r) : IsEquivalence r :=
+⟨e.refl, e.symm, e.trans⟩
 
-class HasEquivalence (U : Sort u) where
-(equiv   : U → U → Sort v)
-[isEquiv : IsEquivalence equiv]
+-- Some common instances.
+instance iffGenEquiv                                : IsEquivalence Iff     := relGenEquiv iffEquiv
+instance eqGenEquiv     {α : Sort u}                : IsEquivalence (@Eq α) := relGenEquiv eqEquiv
+instance setoidGenEquiv (α : Sort u) [s : Setoid α] : IsEquivalence s.r     := relGenEquiv s.iseqv
 
-instance (U : Sort u) [hasEquiv : HasEquivalence U] : IsEquivalence hasEquiv.equiv := hasEquiv.isEquiv
+end IsEquivalence
 
-instance proofsHaveEquiv  {p : Prop}                  : HasEquivalence p    := ⟨ProofEq p⟩
-instance propHasEquiv                                 : HasEquivalence Prop := ⟨Iff⟩
-instance instanceHasEquiv (α : Sort u)                : HasEquivalence α    := ⟨Eq⟩
-def      setoidHasEquiv   {α : Sort u} (s : Setoid α) : HasEquivalence α    := @HasEquivalence.mk α s.r (relEquiv s.iseqv)
+open IsEquivalence
 
 
 
--- We would also like to be able to manipulate equivalences, and we need them to behave like isomorphisms
--- when doing so, with `refl` as the identity, `symm` as inverse, and `trans` as composition. Therefore,
--- we add axioms for them that are the same as those of a category (for `trans` and `refl`) but with the
--- addition of inverses as first-class structure (for `symm`).
+-- We would also like to be able to manipulate such equivalences, and we need them to behave like
+-- isomorphisms when doing so, with `refl` as the identity, `symm` as inverse, and `trans` as composition.
 --
--- As currently written, the axioms contain equality comparisons on isomorphisms. However, later we will
--- have isomorphisms where this equality is actually replaced by an equivalence, i.e. it contains data.
--- Of course, it is possible to reformulate the axioms in a way that abstracts over equality, but it
--- turns out that
--- * it breaks type class inference and simplification in many cases,
--- * in Lean we don't benefit from it at all, and
--- * there is potentially a computational interpretation despite the use of equality.
+-- Starting with the seven corresponding lemmas in `data.equiv.basic` of mathlib in Lean 3 (`symm_symm`,
+-- `trans_refl`, etc.), reformulating them in terms of morphisms, and adding one missing case, we arrive
+-- at the following list of axioms (with variables `α β γ δ : U`, and writing `α ≃ β` for `equiv α β`):
 --
--- The axioms were actually inspired by the seven corresponding lemmas in `data.equiv.basic` of Mathlib
--- in Lean 3, but reformulated in terms of operations on morphisms (and with one missing axiom added).
+-- ` refl     : α ≃ α                           ` | `id`
+-- ` symm     : α ≃ β → β ≃ α                   ` | `⁻¹`
+-- ` trans    : α ≃ β → β ≃ γ → α ≃ γ           ` | `∘` (in reverse order)
+-- ` assoc    (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h ∘ (g ∘ f) = (h ∘ g) ∘ f `
+-- ` leftId   (f : α ≃ β)                         : id ∘ f    = f             `
+-- ` rightId  (f : α ≃ β)                         : f ∘ id    = f             `
+-- ` compInv  (f : α ≃ β) (g : β ≃ γ)             : (g ∘ f)⁻¹ = f⁻¹ ∘ g⁻¹     `
+-- ` leftInv  (f : α ≃ β)                         : f⁻¹ ∘ f   = id            `
+-- ` rightInv (f : α ≃ β)                         : f ∘ f⁻¹   = id            `
+-- ` invInv   (f : α ≃ β)                         : (f⁻¹)⁻¹   = f             `
+-- ` idInv                                        : id⁻¹      = id            `
+--
+-- `assoc`, `leftId`, and `rightId` are simply the axioms of a category, and the remaining axioms add
+-- inverses (whose existence is guaranteed by `symm` aka `⁻¹`) as first-class structure.
+-- (If this seems to contradict the initial statement that we are describing a generalization of
+-- isomorphism compared to category theory, note that we are defining a generalized _equivalence relation_,
+-- not a generalized category.)
+--
+-- Since our equivalences (aka isomorphisms) will have inner structure, we need to avoid comparing them
+-- for equality, and in fact we will be avoiding "real" equality throughout the entire formalization.
+-- Ideally, the equivalences should actually be structures of the same kind that we are currently defining,
+-- leading to a complicated inductive definition which Lean refuses to accept. Fortunately, we do not
+-- actually need to work with the inner structure of equivalences/isomorphisms beyond the axioms listed
+-- above, so we can coerce them to setoids and replace equality with setoid equivalence.
+--
+-- Remark: Interestingly, all axioms can be regarded as simplification rules that enable equational
+-- reasoning by transforming all possible terms into a canonical form (with the simplification for
+-- associativity being the omission of parentheses). Besides making proofs trivial, this observation also
+-- suggests an alternative formalization of the axioms in terms of a "simplify" function.
 
-class HasCompositionOp {U : Sort u} (M : U → U → Sort v) where
-(comp  {α β γ : U} : M α β → M β γ → M α γ)
+namespace Morphisms
 
--- Note that we use a nonstandard order in `HasCompositionOp.comp` so that it directly matches
+structure BundledSetoid where
+(α : Sort v)
+[s : Setoid α]
+
+instance : CoeSort BundledSetoid (Sort v) := ⟨BundledSetoid.α⟩
+instance hasEquiv (s : BundledSetoid) : HasEquiv s.α := ⟨s.s.r⟩
+
+def Morphisms (U : Sort u) := U → U → BundledSetoid
+
+variable {U : Sort u}
+
+def morphismsToRelation (M : Morphisms U) : GeneralizedRelation U := λ α β => (M α β).α
+instance : Coe (Morphisms U) (GeneralizedRelation U) := ⟨morphismsToRelation⟩
+
+class HasComp (M : Morphisms U) where
+(comp {α β γ : U} : M α β → M β γ → M α γ)
+
+-- Note that we use a nonstandard order in `HasComp.comp` so that it directly matches
 -- `IsEquivalence.trans`. When using `•` notation (which we use to avoid clashing with `∘`), we reverse
 -- the order to conform to function/morphism/functor composition.
-def revComp {U : Sort u} {M : U → U → Sort v} [h : HasCompositionOp M] {α β γ : U} (g : M β γ) (f : M α β) :=
-@HasCompositionOp.comp U M h α β γ f g
+def comp {M : Morphisms U} [h : HasComp M] {α β γ : U} (f : M α β) (g : M β γ) := @HasComp.comp U M h α β γ f g
+def revComp {M : Morphisms U} [h : HasComp M] {α β γ : U} (g : M β γ) (f : M α β) := comp f g
 infixr:90 " • " => revComp
 
-class HasComposition {U : Sort u} (M : U → U → Sort v) extends HasCompositionOp M where
-(assoc {α β γ δ : U} (f : M α β) (g : M β γ) (h : M γ δ) : h • (g • f) = (h • g) • f)
+class HasComposition (M : Morphisms U) extends HasComp M where
+(assoc {α β γ δ : U} (f : M α β) (g : M β γ) (h : M γ δ) : h • (g • f) ≈ (h • g) • f)
 
-class HasId {U : Sort u} (M : U → U → Sort v) extends HasComposition M where
+class HasId (M : Morphisms U) extends HasComposition M where
 (id (α : U) : M α α)
 
-def id__ {U : Sort u} {M : U → U → Sort v} [h : HasId M] (α : U) := @HasId.id U M h α
+def id__ {M : Morphisms U} [h : HasId M] (α : U) := @HasId.id U M h α
 
-class HasMorphisms {U : Sort u} (M : U → U → Sort v) extends HasId M where
-(leftId  {α β : U} (f : M α β) : id β • f = f)
-(rightId {α β : U} (f : M α β) : f • id α = f)
+class HasMorphisms (M : Morphisms U) extends HasId M where
+(leftId  {α β : U} (f : M α β) : id β • f ≈ f)
+(rightId {α β : U} (f : M α β) : f • id α ≈ f)
 
-class HasInv {U : Sort u} (M : U → U → Sort v) extends HasMorphisms M where
+class HasInv (M : Morphisms U) extends HasMorphisms M where
 (inv {α β : U} : M α β → M β α)
 
-def inv {U : Sort u} {M : U → U → Sort v} [h : HasInv M] {α β : U} (f : M α β) := @HasInv.inv U M h α β f 
+def inv {M : Morphisms U} [h : HasInv M] {α β : U} (f : M α β) := @HasInv.inv U M h α β f 
 postfix:10000 "⁻¹"  => inv
 
-class HasIsomorphisms {U : Sort u} (M : U → U → Sort v) extends HasInv M where
-(compInv  {α β : U} (f : M α β) (g : M β γ) : (g • f)⁻¹ = f⁻¹ • g⁻¹)
-(leftInv  {α β : U} (f : M α β)             : f⁻¹ • f = id α)
-(rightInv {α β : U} (f : M α β)             : f • f⁻¹ = id β)
-(invInv   {α β : U} (f : M α β)             : (f⁻¹)⁻¹ = f)
-(idInv    (α   : U)                         : (id α)⁻¹ = id α)
+class HasIsomorphisms (M : Morphisms U) extends HasInv M where
+(compInv  {α β : U} (f : M α β) (g : M β γ) : (g • f)⁻¹ ≈ f⁻¹ • g⁻¹)
+(leftInv  {α β : U} (f : M α β)             : f⁻¹ • f   ≈ id α)
+(rightInv {α β : U} (f : M α β)             : f • f⁻¹   ≈ id β)
+(invInv   {α β : U} (f : M α β)             : (f⁻¹)⁻¹   ≈ f)
+(idInv    (α   : U)                         : (id α)⁻¹  ≈ id α)
 
--- Isomorphisms in `Prop` are trivial in Lean, so we can define one instance that works for all ordinary
--- equivalence relations such as those defined above.
+instance isoEquiv (M : Morphisms U) [h : HasIsomorphisms M] : IsEquivalence (morphismsToRelation M) :=
+⟨h.id, h.inv, h.comp⟩
 
-instance propEquivHasCompOp {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasCompositionOp equiv :=
-⟨isEquiv.trans⟩
-instance propEquivHasComp   {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasComposition   equiv :=
-⟨λ _ _ _ => proofIrrel _ _⟩
-instance propEquivHasId     {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasId            equiv :=
-⟨isEquiv.refl⟩
-instance propEquivHasMor    {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasMorphisms     equiv :=
-⟨λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
-instance propEquivHasInv    {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasInv           equiv :=
-⟨isEquiv.symm⟩
-instance propEquivHasIso    {U : Sort u} (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv] : HasIsomorphisms  equiv :=
-⟨λ _ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
+-- In Lean, we can use proof irrelevance to define one instance that works for all ordinary equivalence
+-- relations.
 
-instance setoidHasIso {α : Sort u} (s : Setoid α) : HasIsomorphisms (@HasEquivalence.equiv α (setoidHasEquiv s)) :=
-@propEquivHasIso α s.r (relEquiv s.iseqv)
+namespace PropEquiv
+
+instance {p : Prop} : Setoid p := ⟨Eq, eqEquiv⟩
+
+variable (equiv : U → U → Prop) [isEquiv : IsEquivalence equiv]
+
+def propIso : U → U → BundledSetoid := λ α β => ⟨equiv α β⟩
+
+instance propEquivHasComp : HasComp         (propIso equiv) := ⟨isEquiv.trans⟩
+instance propEquivHasCmp  : HasComposition  (propIso equiv) := ⟨λ _ _ _ => proofIrrel _ _⟩
+instance propEquivHasId   : HasId           (propIso equiv) := ⟨isEquiv.refl⟩
+instance propEquivHasMor  : HasMorphisms    (propIso equiv) := ⟨λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
+instance propEquivHasInv  : HasInv          (propIso equiv) := ⟨isEquiv.symm⟩
+instance propEquivHasIso  : HasIsomorphisms (propIso equiv) := ⟨λ _ _ => proofIrrel _ _,
+                                                                λ _ => proofIrrel _ _, λ _ => proofIrrel _ _,
+                                                                λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
+
+end PropEquiv
+
+open PropEquiv
+
+instance setoidHasIso (α : Sort u) [s : Setoid α] : HasIsomorphisms (propIso s.r) :=
+@propEquivHasIso α s.r (relGenEquiv s.iseqv)
+
+end Morphisms
+
+open Morphisms
+open PropEquiv
 
 
 
 -- Combine everything into a single type class.
 
-class HasEquivalenceStructure (U : Sort u) extends HasEquivalence U where
-[hasIso : HasIsomorphisms equiv]
+class HasStructure (U : Sort u) where
+(M : Morphisms U)
+[h : HasIsomorphisms M]
 
-instance isEquiv (U : Sort u) [hasEq : HasEquivalenceStructure U] : IsEquivalence   hasEq.equiv := hasEq.isEquiv
-instance hasComp (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasComposition  hasEq.equiv := hasEq.hasIso.toHasComposition
-instance hasMor  (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasMorphisms    hasEq.equiv := hasEq.hasIso.toHasMorphisms
-instance hasIso  (U : Sort u) [hasEq : HasEquivalenceStructure U] : HasIsomorphisms hasEq.equiv := hasEq.hasIso
+namespace HasStructure
 
-instance equivalenceStructure (U : Sort u) [hasEquiv : HasEquivalence U] [hasIso : HasIsomorphisms hasEquiv.equiv] : HasEquivalenceStructure U :=
-{ equiv   := hasEquiv.equiv,
-  isEquiv := hasEquiv.isEquiv,
-  hasIso  := hasIso }
+instance hasCmp  (U : Sort u) [h : HasStructure U] : HasComposition  h.M := h.h.toHasComposition
+instance hasMor  (U : Sort u) [h : HasStructure U] : HasMorphisms    h.M := h.h.toHasMorphisms
+instance hasIso  (U : Sort u) [h : HasStructure U] : HasIsomorphisms h.M := h.h
+instance isEquiv (U : Sort u) [h : HasStructure U] : IsEquivalence (morphismsToRelation h.M) := isoEquiv h.M
 
-def equality {α : Sort u} := @equivalenceStructure α (instanceHasEquiv α) (propEquivHasIso Eq)
+instance propHasStructure                                 : HasStructure Prop := ⟨propIso Iff⟩
+instance instanceHasStructure (α : Sort u)                : HasStructure α    := ⟨propIso Eq⟩
+instance setoidHasStructure   (α : Sort u) [s : Setoid α] : HasStructure α    := ⟨propIso s.r⟩
 
-instance setoidEquivalenceStructure {α : Sort u} (s : Setoid α) : HasEquivalenceStructure α :=
-@equivalenceStructure α (setoidHasEquiv s) (setoidHasIso s)
+end HasStructure
+
+open HasStructure
 
 
 
 -- Now we put everything together to define our general "structure with equivalence". Concrete instances are
 -- any `Type u` with `Equiv` as equivalence, any `α : Type u` with `Eq` as equivalence, and so on, but also
--- a lot of structures we are going to define below.
---
--- Ideally, the domain of `equiv` should actually not be `Sort v` but `Structure` itself, i.e. the
--- equivalences should be allowed to have internal structure. However, that would require us to define
--- `Structure` mutually with declaring it as an instance of `HasIsomorphismStructure`, which seems
--- difficult or impossible in Lean. So at least for the moment, we just forget inner structure at a
--- carefully chosen point.
---
--- If we are interested in recovering computational properties, one way to do it would be to generate code
--- that creates copies of the definition up to any desired level of internal structure.
--- A wild guess: Can this be used to obtain what has been called a "computational interpretation of
--- univalence"? More specifically:
--- * In another theorem prover (e.g. Agda?) it may be possible to actually construct the inductive version of
---   this type, eliminating the need to forget inner structure and thus making everything fully constructive.
--- * Failing that, being able to remain constructive up to an arbitrary level seems like it might also
---   qualify.
--- * Or maybe in HoTT, using equality at the inner level is actually OK if we have a computational
---   interpretation that applies to any given individual universe level?
+-- some new structures we are going to define below.
 --
 -- Side note: In HLM, the logic implemented for the Slate theorem prover, the most fundamental concept is a
 -- "set," but sets in HLM must be understood more like sets in Lean than sets in axiomatic set theory. An
 -- HLM set is essentially a type with an equality (following something like Cantor's original ideas instead
--- of ZFC), and `Structure` is precisely the internalization of this concept in type theory.
+-- of ZFC), and this `Structure` is precisely the internalization of an HLM set in type theory.
 
 structure Structure where
-(U     : Sort u)
-[hasEq : HasEquivalenceStructure U]
+(U : Sort u)
+[h : HasStructure U]
 
 namespace Structure
 
-instance : CoeSort Structure (Sort u) := ⟨λ S => S.U⟩
+instance : CoeSort Structure (Sort u) := ⟨Structure.U⟩
 
 variable {S : Structure}
 
-def equiv := S.hasEq.equiv
-infix:25 " ≃ " => equiv
+instance hasStructure : HasStructure S.U := S.h
 
-instance isEquiv   : IsEquivalence    (@equiv S) := S.hasEq.isEquiv
-instance hasCompOp : HasCompositionOp (@equiv S) := S.hasEq.hasIso.toHasCompositionOp
-instance hasComp   : HasComposition   (@equiv S) := S.hasEq.hasIso.toHasComposition
-instance hasId     : HasId            (@equiv S) := S.hasEq.hasIso.toHasId
-instance hasMor    : HasMorphisms     (@equiv S) := S.hasEq.hasIso.toHasMorphisms
-instance hasInv    : HasInv           (@equiv S) := S.hasEq.hasIso.toHasInv
-instance hasIso    : HasIsomorphisms  (@equiv S) := S.hasEq.hasIso
+def iso := S.h.M
+infix:25 " ≃ " => iso
 
-def refl  (α     : S) : α ≃ α                 := isEquiv.refl α
-def symm  {α β   : S} : α ≃ β → β ≃ α         := isEquiv.symm
-def trans {α β γ : S} : α ≃ β → β ≃ γ → α ≃ γ := isEquiv.trans
+def refl  (α     : S) : α ≃ α                 := (isEquiv S.U).refl α
+def symm  {α β   : S} : α ≃ β → β ≃ α         := (isEquiv S.U).symm
+def trans {α β γ : S} : α ≃ β → β ≃ γ → α ≃ γ := (isEquiv S.U).trans
+
+instance hasCmp : HasComposition  (@iso S) := hasStructure.hasCmp
+instance hasMor : HasMorphisms    (@iso S) := hasStructure.hasMor
+instance hasIso : HasIsomorphisms (@iso S) := hasStructure.hasIso
 
 def id_ (α : S) : α ≃ α := id__ α
 def id' {α : S} := id_ α
 
-        theorem assoc    {α β γ δ : S} (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h • (g • f) = (h • g) • f := hasIso.assoc    f g h
-@[simp] theorem leftId   {α β     : S} (f : α ≃ β)                         : id' • f = f               := hasIso.leftId   f
-@[simp] theorem rightId  {α β     : S} (f : α ≃ β)                         : f • id' = f               := hasIso.rightId  f
-@[simp] theorem compInv  {α β γ   : S} (f : α ≃ β) (g : β ≃ γ)             : (g • f)⁻¹ = f⁻¹ • g⁻¹     := hasIso.compInv  f g
-@[simp] theorem leftInv  {α β     : S} (f : α ≃ β)                         : f⁻¹ • f = id'             := hasIso.leftInv  f
-@[simp] theorem rightInv {α β     : S} (f : α ≃ β)                         : f • f⁻¹ = id'             := hasIso.rightInv f
-@[simp] theorem invInv   {α β     : S} (f : α ≃ β)                         : (f⁻¹)⁻¹ = f               := hasIso.invInv   f
-@[simp] theorem idInv    (α       : S)                                     : (id_ α)⁻¹ = id'           := hasIso.idInv    α
+        theorem assoc    {α β γ δ : S} (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h • (g • f) ≈ (h • g) • f := hasIso.assoc    f g h
+@[simp] theorem leftId   {α β     : S} (f : α ≃ β)                         : id' • f   ≈ f             := hasIso.leftId   f
+@[simp] theorem rightId  {α β     : S} (f : α ≃ β)                         : f • id'   ≈ f             := hasIso.rightId  f
+@[simp] theorem compInv  {α β γ   : S} (f : α ≃ β) (g : β ≃ γ)             : (g • f)⁻¹ ≈ f⁻¹ • g⁻¹     := hasIso.compInv  f g
+@[simp] theorem leftInv  {α β     : S} (f : α ≃ β)                         : f⁻¹ • f   ≈ id'           := hasIso.leftInv  f
+@[simp] theorem rightInv {α β     : S} (f : α ≃ β)                         : f • f⁻¹   ≈ id'           := hasIso.rightInv f
+@[simp] theorem invInv   {α β     : S} (f : α ≃ β)                         : (f⁻¹)⁻¹   ≈ f             := hasIso.invInv   f
+@[simp] theorem idInv    (α       : S)                                     : (id_ α)⁻¹ ≈ id'           := hasIso.idInv    α
 
-def defaultStructure (U : Sort u) [hasEq : HasEquivalenceStructure U] : Structure := @Structure.mk U hasEq
-def setoidInstanceStructure {α : Sort u} (s : Setoid α) := @defaultStructure α (setoidEquivalenceStructure s)
-
--- For reference, here is the complete list of axioms for an `S : Structure`, aligned to highlight
--- the two different points of view:
---
--- ` refl     (α       : S) : α ≃ α                 `  `id_ α` / `id'`
--- ` symm     {α β     : S} : α ≃ β → β ≃ α         `  `⁻¹`
--- ` trans    {α β γ   : S} : α ≃ β → β ≃ γ → α ≃ γ `  `•` (in reverse order)
--- ` assoc    {α β γ δ : S}                            (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h • (g • f) = (h • g) • f `
--- ` leftId   {α β     : S}                            (f : α ≃ β)                         : id' • f   = f             `
--- ` rightId  {α β     : S}                            (f : α ≃ β)                         : f • id'   = f             `
--- ` compInv  {α β γ   : S}                            (f : α ≃ β) (g : β ≃ γ)             : (g • f)⁻¹ = f⁻¹ • g⁻¹     `
--- ` leftInv  {α β     : S}                            (f : α ≃ β)                         : f⁻¹ • f   = id'           `
--- ` rightInv {α β     : S}                            (f : α ≃ β)                         : f • f⁻¹   = id'           `
--- ` invInv   {α β     : S}                            (f : α ≃ β)                         : (f⁻¹)⁻¹   = f             `
--- ` idInv    (α       : S)                                                                : (id_ α)⁻¹ = id'           `
---
--- Note how the axioms can actually be understood as simplification rules that enable equational
--- reasoning by transforming all possible terms into a canonical form (with the simplification for
--- associativity being the omission of parentheses). Besides making all proofs about them trivial, maybe
--- it also points to a constructive interpretation of the axioms as functions.
+def defaultStructure (U : Sort u) [h : HasStructure U] : Structure := ⟨U⟩
+def setoidInstanceStructure (α : Sort u) [s : Setoid α] := @defaultStructure α (setoidHasStructure α)
 
 end Structure
 
@@ -317,7 +369,45 @@ open Structure
 
 
 
--- We want to define a map between two `Structure` that is compatible with their equivalences.
+-- We can "forget" the data held inside a `Structure` on two levels, obtaining modified instances of
+-- `Structure`:
+--
+-- 1. We can coerce the equivalence to `Prop` to obtain a setoid structure. The result is on the same
+--    level as an `Equiv` in mathlib, so this coercion preserves quite a lot of data.
+--    In comments, we will write `setoidStructure S` as `S_≈`.
+--
+-- 2. In a classical setting, we can additionally take the quotient with respect to equivalence, obtaining
+--    a "skeleton" structure where equivalence is equality.
+--    In comments, we will write `skeletonStructure S` as `S/≃`.
+--
+-- Later, we will prove some properties of these operations.
+--
+-- Within this file, we coerce structures to setoids whenever we want to use structures as isomorphisms,
+-- but we never use quotients. With an inductive version of `Structure`, we could keep all data instead.
+
+namespace Forgetfulness
+
+variable (S : Structure)
+
+def SetoidEquiv (α β : S) := Nonempty (α ≃ β).α
+def transportToSetoid {α β : S} (e : α ≃ β) : SetoidEquiv S α β := ⟨e⟩
+def setoidEquiv : Equivalence (SetoidEquiv S) :=
+⟨λ α => ⟨Structure.refl α⟩, λ ⟨e⟩ => ⟨Structure.symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨Structure.trans e f⟩⟩
+
+instance structureToSetoid : Setoid S.U := ⟨SetoidEquiv S, setoidEquiv S⟩
+def setoidStructure : Structure := setoidInstanceStructure S.U
+
+def StructureQuotient := Quotient (structureToSetoid S)
+instance quotientHasStructure : HasStructure (StructureQuotient S) := instanceHasStructure (StructureQuotient S)
+def skeletonStructure : Structure := ⟨StructureQuotient S⟩
+
+end Forgetfulness
+
+open Forgetfulness
+
+
+
+-- We want to define a map between two `Structure`s that is compatible with their equivalences.
 -- In particular, the map should be equipped with a `transport` function that transports "relabeling"
 -- operations as described in the introduction, i.e. equivalences. `transport` can also be regarded as a
 -- substitution principle, or generally as a well-definedness condition for the map if we interpret `≃` as
@@ -325,29 +415,41 @@ open Structure
 --
 -- `transport` must respect operations on isomorphisms. This turns the combination of `map` and `transport`
 -- into a functor with the additional requirement that it must also preserve inverses, as those are an
--- integral part of our axiomatized structure. So first we give a more general definition of a functor
--- (split into the three pieces of structure that we are dealing with, so we can potentially reuse it in
--- other contexts).
+-- integral part of our axiomatized structure. So first we give a more general definition of a functor,
+-- split into the three pieces of structure that we are dealing with so we can potentially reuse it in
+-- other contexts.
 
-class IsCompositionFunctor {U : Sort u} {V : Sort v} {X : U → U → Sort u'} {Y : V → V → Sort v'}
-  [compX : HasComposition X] [compY : HasComposition Y]
-  (F : U → V) (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
-  where
-(transportComp {α β γ : U} (f : X α β) (g : X β γ) : FF (g • f) = FF g • FF f)
+namespace Functors
 
-class IsMorphismFunctor {U : Sort u} {V : Sort v} {X : U → U → Sort u'} {Y : V → V → Sort v'}
-  [morX : HasMorphisms X] [morY : HasMorphisms Y]
-  (F : U → V) (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
-  extends @IsCompositionFunctor U V X Y morX.toHasComposition morY.toHasComposition F FF
-  where
-(transportId (α : U) : FF (id__ α) = id__ (F α))
+variable {U : Sort u}      {V : Sort v}
+         {X : Morphisms U} {Y : Morphisms V}
+         (F  :              U     → V)
+         (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
 
-class IsIsomorphismFunctor {U : Sort u} {V : Sort v} {X : U → U → Sort u'} {Y : V → V → Sort v'}
-  [isoX : HasIsomorphisms X] [isoY : HasIsomorphisms Y]
-  (F : U → V) (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
-  extends @IsMorphismFunctor U V X Y isoX.toHasMorphisms isoY.toHasMorphisms F FF
-  where
-(transportInv {α β : U} (f : X α β) : FF f⁻¹ = (FF f)⁻¹)
+-- This corresponds to `FF` also being a functor. With an inductive definition of `Structure`, the
+-- definition of a functor would need to be recursive.
+class IsSetoidFunctor where
+(transportSetoid {α β : U} (f g : X α β) : f ≈ g → FF f ≈ FF g)
+
+class IsCompositionFunctor [cmpX : HasComposition X] [cmpY : HasComposition Y]
+  extends @IsSetoidFunctor U V X Y F FF where
+(transportComp {α β γ : U} (f : X α β) (g : X β γ) : FF (g • f) ≈ FF g • FF f)
+
+class IsMorphismFunctor [morX : HasMorphisms X] [morY : HasMorphisms Y]
+  extends @IsCompositionFunctor U V X Y F FF morX.toHasComposition morY.toHasComposition where
+(transportId (α : U) : FF (id__ α) ≈ id__ (F α))
+
+class IsIsomorphismFunctor [isoX : HasIsomorphisms X] [isoY : HasIsomorphisms Y]
+  extends @IsMorphismFunctor U V X Y F FF isoX.toHasMorphisms isoY.toHasMorphisms where
+(transportInv {α β : U} (f : X α β) : FF f⁻¹ ≈ (FF f)⁻¹)
+
+end Functors
+
+open Functors
+
+
+
+-- Now we define our specific version of a functor between structures.
 
 structure StructureFunctor (S T : Structure) :=
 (map                 : S     → T)
@@ -356,53 +458,57 @@ structure StructureFunctor (S T : Structure) :=
 
 namespace StructureFunctor
 
-instance (S T : Structure) : CoeFun (StructureFunctor S T) (λ F => S.U → T.U) := ⟨λ F => F.map⟩
+instance (S T : Structure) : CoeFun (StructureFunctor S T) (λ F => S → T) := ⟨λ F => F.map⟩
 
 variable {S T U : Structure}
 
 -- The transport function can be understood as a substitution principle. Note that, like much of this
--- file, it is a definition, not a theorem, because it needs to preserve structure.
+-- file, it is a definition, not a theorem, because it needs to preserve data.
 
 def congrArg {α β : S} (F : StructureFunctor S T) : α ≃ β → F α ≃ F β := F.transport
 
 -- Restate the axioms as theorems about `congrArg`.
 
-instance isIsoFunctor  (F : StructureFunctor S T) : @IsIsomorphismFunctor S.U T.U equiv equiv hasIso  hasIso  F.map F.transport :=
+instance isIsoFunctor    (F : StructureFunctor S T) : @IsIsomorphismFunctor S.U T.U iso iso F.map F.transport hasIso hasIso :=
 F.isFunctor
-instance isMorFunctor  (F : StructureFunctor S T) : @IsMorphismFunctor    S.U T.U equiv equiv hasMor  hasMor  F.map F.transport :=
-@IsIsomorphismFunctor.toIsMorphismFunctor S.U T.U equiv equiv hasIso hasIso F.map F.transport (isIsoFunctor F)
-instance isCompFunctor (F : StructureFunctor S T) : @IsCompositionFunctor S.U T.U equiv equiv hasComp hasComp F.map F.transport :=
-@IsMorphismFunctor.toIsCompositionFunctor S.U T.U equiv equiv hasMor hasMor F.map F.transport (isMorFunctor F)
+instance isMorFunctor    (F : StructureFunctor S T) : @IsMorphismFunctor    S.U T.U iso iso F.map F.transport hasMor hasMor :=
+(isIsoFunctor F).toIsMorphismFunctor
+instance isCompFunctor   (F : StructureFunctor S T) : @IsCompositionFunctor S.U T.U iso iso F.map F.transport hasCmp hasCmp :=
+(isMorFunctor F).toIsCompositionFunctor
+instance isSetoidFunctor (F : StructureFunctor S T) : @IsSetoidFunctor      S.U T.U iso iso F.map F.transport               :=
+(isCompFunctor F).toIsSetoidFunctor
 
-def transportInvDef  (F : StructureFunctor S T) :=
-@IsIsomorphismFunctor.transportInv  S.U T.U equiv equiv hasIso  hasIso  F.map F.transport (isIsoFunctor  F)
-def transportIdDef   (F : StructureFunctor S T) :=
-@IsMorphismFunctor.transportId      S.U T.U equiv equiv hasMor  hasMor  F.map F.transport (isMorFunctor  F)
-def transportCompDef (F : StructureFunctor S T) :=
-@IsCompositionFunctor.transportComp S.U T.U equiv equiv hasComp hasComp F.map F.transport (isCompFunctor F)
+def transportSetoidDef (F : StructureFunctor S T) :=
+@IsSetoidFunctor.transportSetoid S.U T.U iso iso F.map F.transport
+def transportInvDef    (F : StructureFunctor S T) :=
+@IsIsomorphismFunctor.transportInv    S.U T.U iso iso F.map F.transport hasIso hasIso (isIsoFunctor  F)
+def transportIdDef     (F : StructureFunctor S T) :=
+@IsMorphismFunctor.transportId        S.U T.U iso iso F.map F.transport hasMor hasMor (isMorFunctor  F)
+def transportCompDef   (F : StructureFunctor S T) :=
+@IsCompositionFunctor.transportComp   S.U T.U iso iso F.map F.transport hasCmp hasCmp (isCompFunctor F)
 
-@[simp] theorem transportComp (F : StructureFunctor S T) {α β γ : S} (f : α ≃ β) (g : β ≃ γ) :
-  congrArg F (g • f) = congrArg F g • congrArg F f := transportCompDef F f g
-@[simp] theorem transportId   (F : StructureFunctor S T) (α     : S) :
-  congrArg F (id_ α) = id'                         := transportIdDef   F α
-@[simp] theorem transportInv  (F : StructureFunctor S T) {α β   : S} (f : α ≃ β) :
-  congrArg F f⁻¹     = (congrArg F f)⁻¹            := transportInvDef  F f
+@[simp] theorem transportSetoid (F : StructureFunctor S T) {α β   : S} (f g : α ≃ β) :
+  f ≈ g → congrArg F f ≈ congrArg F g              := transportSetoidDef F f g
+@[simp] theorem transportComp   (F : StructureFunctor S T) {α β γ : S} (f : α ≃ β) (g : β ≃ γ) :
+  congrArg F (g • f) ≈ congrArg F g • congrArg F f := transportCompDef   F f g
+@[simp] theorem transportId     (F : StructureFunctor S T) (α     : S) :
+  congrArg F (id_ α) ≈ id'                         := transportIdDef     F α
+@[simp] theorem transportInv    (F : StructureFunctor S T) {α β   : S} (f : α ≃ β) :
+  congrArg F f⁻¹     ≈ (congrArg F f)⁻¹            := transportInvDef    F f
 
 -- We can define equivalence of functors by extensionality, using equivalence in `T` instead of equality.
--- Note that despite the beautiful but misleading use of `∀`, this definition does not live in `Prop`.
+-- Note that although writing `∀` instead of `Π` (as required by Lean 4) looks beautiful, it obscures
+-- that this definition does not live in `Prop`.
 -- This is an equivalence according to our definition, and it is compatible with isomorphisms via the
 -- functor axioms, so we can use it to build an instance of `Structure` again.
 
 def FunExt (F G : StructureFunctor S T) := ∀ α, F α ≃ G α
 
-instance funExtIsEquiv : IsEquivalence (@FunExt S T) :=
-{ refl  := λ F   α => refl (F α),
-  symm  := λ φ   α => symm (φ α),
-  trans := λ φ ψ α => trans (φ α) (ψ α) }
+def funExtEquiv {F G : StructureFunctor S T} (φ ψ : FunExt F G) := ∀ α, φ α ≈ ψ α
+instance funExtSetoid (F G : StructureFunctor S T) : Setoid (FunExt F G) := ⟨funExtEquiv, ⟨sorry, sorry, sorry⟩⟩
+def funExt (F G : StructureFunctor S T) : BundledSetoid := ⟨FunExt F G⟩
 
-instance hasEquiv : HasEquivalence (StructureFunctor S T) := ⟨FunExt⟩
-
-instance funExtHasIso : HasIsomorphisms (@FunExt S T) :=
+instance funExtHasIso : HasIsomorphisms (@funExt S T) :=
 { comp     := λ φ ψ α => ψ α • φ α,
   assoc    := sorry,
   id       := λ F α => id_ (F α)
@@ -415,16 +521,12 @@ instance funExtHasIso : HasIsomorphisms (@FunExt S T) :=
   invInv   := sorry,
   idInv    := sorry }
 
-instance functorHasEq : HasEquivalenceStructure (StructureFunctor S T) :=
--- Why can't we just write `⟨⟩` here?
-{ equiv   := FunExt,
-  isEquiv := funExtIsEquiv,
-  hasIso  := funExtHasIso }
+instance functorHasStructure : HasStructure (StructureFunctor S T) := ⟨funExt⟩
+def functorStructure : Structure := ⟨StructureFunctor S T⟩
 
-def functorStructure (S T : Structure) : Structure := 
--- Why can't we just write `⟨StructureFunctor S T⟩` here?
-{ U     := StructureFunctor S T,
-  hasEq := functorHasEq }
+instance functorIsSetoid : Setoid (StructureFunctor S T) := structureToSetoid functorStructure
+def functorSetoidStructure := setoidStructure (@functorStructure S T)
+def functorSetoid : BundledSetoid := ⟨(@functorSetoidStructure S T).U⟩
 
 -- Given this definition of equivalence of functors, it makes sense to define identity and composition and
 -- prove that they are well-behaved with respect to equivalence.
@@ -433,10 +535,11 @@ def mapId             : S     → S                 := id
 def transId {α β : S} : α ≃ β → mapId α ≃ mapId β := id
 
 instance idIsFunctor (S : Structure) :
-  @IsIsomorphismFunctor S.U S.U equiv equiv hasIso hasIso mapId transId :=
-{ transportComp := λ f g => rfl,
-  transportId   := λ α   => rfl,
-  transportInv  := λ f   => rfl }
+  @IsIsomorphismFunctor S.U S.U iso iso mapId transId hasIso hasIso :=
+{ transportSetoid := λ f g h => h,
+  transportComp   := λ f g   => sorry,
+  transportId     := λ α     => sorry,
+  transportInv    := λ f     => sorry }
 
 def idFun : StructureFunctor S S := ⟨mapId, transId⟩
 
@@ -446,23 +549,27 @@ def transComp (F : StructureFunctor S T) (G : StructureFunctor T U) {α β : S} 
   α ≃ β → mapComp F G α ≃ mapComp F G β := G.transport ∘ F.transport
 
 instance compIsFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) :
-  @IsIsomorphismFunctor S.U U.U equiv equiv hasIso hasIso (mapComp F G) (transComp F G) :=
-{ transportComp := λ f g => sorry,
-  transportId   := λ α   => sorry,
-  transportInv  := λ f   => sorry }
+  @IsIsomorphismFunctor S.U U.U iso iso (mapComp F G) (transComp F G) hasIso hasIso :=
+{ transportSetoid := λ f g h => sorry,
+  transportComp   := λ f g   => sorry,
+  transportId     := λ α     => sorry,
+  transportInv    := λ f     => sorry }
 
 def compFun (F : StructureFunctor S T) (G : StructureFunctor T U) : StructureFunctor S U :=
 { map       := mapComp       F G,
   transport := transComp     F G,
   isFunctor := compIsFunctor F G }
 
-instance hasComp : HasCompositionOp StructureFunctor := ⟨compFun⟩
+instance hasComp        : HasComp        @functorSetoid := ⟨@compFun⟩
+instance hasComposition : HasComposition @functorSetoid := ⟨sorry⟩
+instance hasId          : HasId          @functorSetoid := ⟨@idFun⟩
+instance hasMorphisms   : HasMorphisms   @functorSetoid := ⟨sorry, sorry⟩
 
 -- If we interpret `≃` as equality, we can pretend that functors are just functions and define their
 -- properties accordingly. Again, note that these definitions contain data.
 
 def Injective  (F : StructureFunctor S T) := ∀ α β, F α ≃ F β → α ≃ β
-def Surjective (F : StructureFunctor S T) := ∀ β, Σ α, F α ≃ β
+def Surjective (F : StructureFunctor S T) := ∀ β, Σ α, (F α ≃ β).α
 def Bijective  (F : StructureFunctor S T) := Prod (Injective F) (Surjective F)
 
 -- We can even build an inverse functor for any functor that is bijective according to this definition,
@@ -488,84 +595,55 @@ open StructureFunctor
 
 
 
--- We can forget the structure held inside a `Structure` on two levels, obtaining modified instances of
--- `Structure` via functors that are actually bijective according to the definition above.
+-- A functor between two structures induces a functor between their setoid structures, and in the
+-- classical setting also between their skeleton structures. More specifically, we have the following
+-- commutative diagram (modulo equivalence defined on functors, i.e. `FunExt`), where all the horizontal
+-- functors are `Bijective`:
 --
--- 1. We can coerce the equivalence to `Prop` to obtain a setoid structure. The result is on the same
---    level as an `Equiv` in Mathlib, so this coercion preserves quite a lot of data.
---    In comments, we will write `setoidStructure S` as `S_≈`.
+--    `S` -≃--> `S_≈` -≃-> `S/≃`
+--     |          |          |
+-- `F` |          |          |
+--     v          v          v
+--    `T` -≃--> `T_≈` -≃-> `T/≃`
 --
--- 2. In a classical setting, we can additionally take the quotient with respect to equivalence, obtaining
---    a "skeleton" structure where equivalence is equality.
---    In comments, we will write `skeletonStructure S` as `S/≃`.
+-- This can be understood as the reason why isomorphism can generally be identified with equality: In all
+-- operations that preserve structure, we can take the quotient with respect to equivalence/isomorphism
+-- and work on the quotient structures. In particular, if `F` is also `Bijective`, then all structures
+-- are equivalent, and thus they are all equal within the quotient structure of the `universeStructure`
+-- which we are going to define.
 --
--- We currently use skeleton structures whenever we need to make sure that two objects depending on
--- structures can be compared for equality. We could use setoid structures instead if we replaced the
--- equalities in the axioms of `Structure` with equivalence relations. With an inductive version
--- of `Structure`, we would not need to forget any structure.
+-- The HLM logic implemented in Slate can be understood as completely living on the right side of this
+-- diagram. The same could be said about HoTT.
 
 namespace Forgetfulness
 
-def SetoidEquiv {S : Structure} (α β : S) := Nonempty (α ≃ β)
-def transportToSetoid {S : Structure} {α β : S} (e : α ≃ β) : SetoidEquiv α β := ⟨e⟩
-def setoidEquiv {S : Structure} : Equivalence (@SetoidEquiv S) := ⟨λ α => ⟨refl α⟩, λ ⟨e⟩ => ⟨symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨trans e f⟩⟩
-
-instance structureToSetoid (S : Structure) : Setoid S.U := ⟨SetoidEquiv, setoidEquiv⟩
-def setoidStructure (S : Structure) := Structure.setoidInstanceStructure (structureToSetoid S)
-
 def toSetoidFunctor (S : Structure) : StructureFunctor S (setoidStructure S) :=
 { map       := id,
-  transport := transportToSetoid,
+  transport := transportToSetoid S,
   isFunctor := sorry }
-
-def StructureQuotient (S : Structure) := Quotient (structureToSetoid S)
-def skeletonStructure (S : Structure) := @Structure.defaultStructure (StructureQuotient S) equality
 
 def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
 { map       := λ α => Quotient.mk α,
   transport := λ e => Quotient.sound e,
   isFunctor := sorry }
 
-def toSkeletonFunctor (S : Structure) := setoidToSkeletonFunctor S • toSetoidFunctor S
+def toSkeletonFunctor (S : Structure) := compFun (toSetoidFunctor S) (setoidToSkeletonFunctor S)
 
+variable {S T : Structure} (F : StructureFunctor S T)
 
-
--- A functor between two structures induces a functor between their setoid structures, and in the
--- classical setting also between their skeleton structures. More specifically, we have the following
--- commutative diagram (modulo equivalence defined on functors), where all the horizontal functors are
--- bijective (also modulo equivalence):
---
---                      `S` -≅--> `S_≈` -≅-> `S/≃`
---                       |          |          |
---                       |          |          |
---                       v          v          v
---                      `T` -≅--> `T_≈` -≅-> `T/≃`
---
---     universe level:  u+n         u          0, at least conceptually
---
--- This can be understood as the reason why isomorphism can generally be identified with equality: In all
--- operations that preserve structure, we can take the quotient with respect to equivalence/isomorphism
--- and work on the quotient structures. It also suggests a reason why mathematicians are usually
--- unconcerned about universe issues (rightly so, apparently).
---
--- The HLM logic implemented in Slate can be understood as completely living on the right side of this
--- diagram. The same could be said about HoTT.
-
-variable {S T : Structure}
-
-def setoidFunctor (F : StructureFunctor S T) : StructureFunctor (setoidStructure S) (setoidStructure T) :=
+def setoidFunctor : StructureFunctor (setoidStructure S) (setoidStructure T) :=
 { map       := F.map,
   transport := λ ⟨e⟩ => ⟨F.transport e⟩,
   isFunctor := sorry }
 
-def mapToSkeleton (F : StructureFunctor S T) : skeletonStructure S → skeletonStructure T :=
+def mapToSkeleton : skeletonStructure S → skeletonStructure T :=
 Quotient.lift (Quotient.mk ∘ F.map) sorry
 
-def transportToSkeleton (F : StructureFunctor S T) {a b : skeletonStructure S} (h : a = b) :
+def transportToSkeleton {a b : skeletonStructure S} (h : a = b) :
   mapToSkeleton F a ≃ mapToSkeleton F b :=
-Eq.subst (motive := λ x => mapToSkeleton F a ≃ mapToSkeleton F x) h (refl (mapToSkeleton F a))
+Eq.subst (motive := λ x => mapToSkeleton F a ≃ mapToSkeleton F x) h (Structure.refl (mapToSkeleton F a))
 
-def skeletonFunctor (F : StructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
+def skeletonFunctor : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
 { map       := mapToSkeleton F,
   transport := transportToSkeleton F,
   isFunctor := sorry }
@@ -577,16 +655,13 @@ open Forgetfulness
 
 
 -- Based on the definition of a functor between two structures, we can define equivalence of two
--- structures in the same way that equivalence of types is defined in Mathlib, except that we need to
--- replace equality on functors with an instance of `FunExt`.
+-- structures in the same way that equivalence of types is defined in mathlib, except that we need to
+-- replace equality of functors with an instance of `FunExt`. For the purpose of using the equivalence
+-- to define a `Structure`, we need to make sure that this `FunExt` does not have any inner structure
+-- beyond a setoid.
 --
--- We are actually defining equivalence of structures mainly for the purpose of using it as an
--- equivalence within a `Structure` itself, completing the round-trip. However, since the isomorphism
--- axioms of `Structure` are based on equality, we need to make sure that we can safely compare two
--- `Structure`s for equality.
---
--- This is where the `skeletonFunctor` we just defined comes into play: We can declare our equivalence
--- to be one between skeleton structures. Then the functors contained in the equivalences are really
+-- This is where the `setoidFunctor` we just defined comes into play: We can declare our equivalence
+-- to be one between setoid structures. Then the functors contained in the equivalences are really
 -- just functions, so we can compare them for equality.
 
 structure LargeStructureEquiv (S T : Structure) where
@@ -595,11 +670,9 @@ structure LargeStructureEquiv (S T : Structure) where
 (leftInv  : FunExt (compFun toFun invFun) idFun)
 (rightInv : FunExt (compFun invFun toFun) idFun)
 
-def StructureEquiv (S T : Structure) := LargeStructureEquiv (skeletonStructure S) (skeletonStructure T)
+def StructureEquiv (S T : Structure) := LargeStructureEquiv (setoidStructure S) (setoidStructure T)
 
 namespace StructureEquiv
-
--- This part could be generalized to LargeStructureEquiv if necessary.
 
 def refl (S : Structure) : StructureEquiv S S :=
 { toFun    := idFun,
@@ -619,15 +692,14 @@ def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) 
   leftInv  := sorry,
   rightInv := sorry }
 
-instance structureEquiv    : IsEquivalence  StructureEquiv     := ⟨refl, symm, trans⟩
-instance structureHasEquiv : HasEquivalence Structure := ⟨StructureEquiv⟩
+def equivEquiv {S T : Structure} (φ ψ : StructureEquiv S T) := φ.toFun ≈ ψ.toFun ∧ φ.invFun ≈ ψ.invFun
+instance equivSetoid (S T : Structure) : Setoid (StructureEquiv S T) := ⟨equivEquiv, ⟨sorry, sorry, sorry⟩⟩
+def equiv (S T : Structure) : BundledSetoid := ⟨StructureEquiv S T⟩
 
--- This part requires using skeleton structures.
-
-instance structureHasIso : HasIsomorphisms StructureEquiv :=
+instance equivHasIso : HasIsomorphisms equiv :=
 { comp     := trans,
   assoc    := sorry,
-  id       := refl
+  id       := refl,
   leftId   := sorry,
   rightId  := sorry,
   inv      := symm,
@@ -637,17 +709,11 @@ instance structureHasIso : HasIsomorphisms StructureEquiv :=
   invInv   := sorry,
   idInv    := sorry }
 
-instance structureHasEq : HasEquivalenceStructure Structure :=
--- Why can't we just write `⟨⟩` here?
-{ equiv   := StructureEquiv,
-  isEquiv := structureEquiv,
-  hasIso  := structureHasIso }
-
 -- We can build a `StructureEquiv` from a bijective functor.
 
 def functorToEquiv {S T : Structure} (F : StructureFunctor S T) (h : Bijective F) : StructureEquiv S T :=
-{ toFun    := skeletonFunctor F,
-  invFun   := skeletonFunctor (inverse F h),
+{ toFun    := setoidFunctor F,
+  invFun   := setoidFunctor (inverse F h),
   leftInv  := sorry,
   rightInv := sorry }
 
@@ -662,14 +728,13 @@ open StructureEquiv
 -- lower Lean universe), but the equivalences do not contain any inner structure.
 --
 -- Note how, in the process of encoding a universe, we remained purely constructive but simulated
--- classical logic. This shows that constructive type theory and classical set theory are really
--- just two different points on the path from one universe to the next, and that constructive
--- mathematics can be interpreted classically and vice versa.
+-- classical logic. This shows that constructive type theory and (a specific variant of) classical
+-- set theory are really just two different points on the path from one universe to the next, and
+-- that much of classical mathematics can be interpreted constructively (and vice versa, of course).
 
-def universeStructure : Structure :=
--- Why can't we just write `⟨Structure⟩` here?
-{ U     := Structure,
-  hasEq := structureHasEq }
+instance structureHasStructure : HasStructure Structure := ⟨equiv⟩
+
+def universeStructure : Structure := ⟨Structure⟩
 
 
 
@@ -690,13 +755,13 @@ namespace BuildingBlocks
 
 structure EncodedPiType where
 (α : Structure)
-(C : α → Sort v) --(C : StructureFunctor α universeStructure)
+(C : α → Sort v) -- TODO: (C : StructureFunctor α universeStructure), using defaultStructureFunctor
 
 def EncodedDependentFunction (T : EncodedPiType) := ∀ x : T.α, T.C x
 
 -- Every term of type `∀ x, C x` can be converted to an instance of `EncodedDependentFunction`:
 
-def encodeDependentFunction {α : Sort u} [hasEq : HasEquivalenceStructure α] {C : α → Sort v} (f : ∀ x, C x) :
-  EncodedDependentFunction ⟨@defaultStructure α hasEq, C⟩ := f
+def encodeDependentFunction {α : Sort u} [h : HasStructure α] {C : α → Sort v} (f : ∀ x, C x) :
+  EncodedDependentFunction ⟨defaultStructure α, C⟩ := f
 
 end BuildingBlocks
