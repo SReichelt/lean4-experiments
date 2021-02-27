@@ -175,6 +175,10 @@ class IsEquivalence {U : Sort u} (R : GeneralizedRelation U) where
 
 namespace IsEquivalence
 
+def equiv {U : Sort u} {R : GeneralizedRelation U} (α β : U) := (R α β).α
+
+instance {U : Sort u} {R : GeneralizedRelation U} (α β : U) : HasEquiv (equiv α β) := ⟨(R α β).s.r⟩
+
 -- Every equivalence relation can trivially be converted to an instance of `IsEquivalence`.
 instance relGenEquiv {α : Sort u} {r : α → α → Prop} (e : Equivalence r) : IsEquivalence (genRel r) :=
 ⟨e.refl, e.symm, e.trans⟩
@@ -364,6 +368,7 @@ def id' {α : S} := id_ α
 @[simp] theorem idInv    (α       : S)                                     : (id_ α)⁻¹ ≈ id'           := hasIso.idInv    α
 
 def defaultStructure (U : Sort u) [h : HasStructure U] : Structure := ⟨U⟩
+def instanceStructure (α : Sort u) := @defaultStructure α (instanceHasStructure α)
 def setoidInstanceStructure (α : Sort u) [s : Setoid α] := @defaultStructure α (setoidHasStructure α)
 
 end Structure
@@ -762,7 +767,7 @@ def universeStructure : Structure := ⟨Structure⟩
 -- contains precisely this operation, we need to provide an abstraction for it.
 --
 -- The `universeStructure` we have just defined enables us to do exactly that: The function
--- `defaultStructure`, which encodes a given Lean type as a `Structure` with equivalence given by
+-- `instanceStructure`, which encodes a given Lean type as a `Structure` with equivalence given by
 -- equality, is actually a functor from `typeStructure` to `universeStructure`. This functor
 -- transports an `Equiv` between two types to a `StructureEquiv` between the corresponding instance
 -- structures. And `StructureEquiv` provides the necessary operation of transporting an instance of
@@ -771,8 +776,8 @@ def universeStructure : Structure := ⟨Structure⟩
 -- The benefit of this encoding is that `StructureEquiv` is much more general than the original
 -- `Equiv` because many different objects can be encoded as instances of `Structure`.
 
---def defaultStructureFunctor : StructureFunctor typeStructure universeStructure :=
---{ map       := defaultStructure,
+--def typeToStructureFunctor : StructureFunctor typeStructure universeStructure :=
+--{ map       := instanceStructure,
 --  transport := sorry,
 --  isFunctor := sorry }
 
@@ -785,7 +790,7 @@ namespace BuildingBlocks
 
 structure EncodedPiType where
 (α : Structure)
-(C : α → Sort v) -- TODO: (C : StructureFunctor α universeStructure), using defaultStructureFunctor
+(C : α → Sort v) -- TODO: (C : StructureFunctor α universeStructure), using typeToStructureFunctor
 
 def EncodedDependentFunction (T : EncodedPiType) := ∀ x : T.α, T.C x
 
