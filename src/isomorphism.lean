@@ -560,10 +560,10 @@ def compFun (F : StructureFunctor S T) (G : StructureFunctor T U) : StructureFun
   transport := transComp     F G,
   isFunctor := compIsFunctor F G }
 
-instance hasComp        : HasComp        @functorSetoid := ⟨@compFun⟩
-instance hasComposition : HasComposition @functorSetoid := ⟨sorry⟩
-instance hasId          : HasId          @functorSetoid := ⟨@idFun⟩
-instance hasMorphisms   : HasMorphisms   @functorSetoid := ⟨sorry, sorry⟩
+instance hasComp : HasComp        @functorSetoid := ⟨@compFun⟩
+instance hasCmp  : HasComposition @functorSetoid := ⟨sorry⟩
+instance hasId   : HasId          @functorSetoid := ⟨@idFun⟩
+instance hasMor  : HasMorphisms   @functorSetoid := ⟨sorry, sorry⟩
 
 -- If we interpret `≃` as equality, we can pretend that functors are just functions and define their
 -- properties accordingly. Again, note that these definitions contain data.
