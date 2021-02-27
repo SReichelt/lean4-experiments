@@ -80,7 +80,8 @@
 -- we encounter and leverage a "simulated" classical logic within our fully constructive formalization.
 -- This classical logic becomes an integral part of the universe structure, or in other words constructive
 -- type theory and classical set theory occur as just two different points on the path from one universe
--- to the next.
+-- to the next. As a consequence, we obtain a constructive interpretation of this variant of classical set
+-- theory.
 --
 -- In addition, we can give a novel (?) explanation why isomorphism can generally be treated as equality.
 --
@@ -159,7 +160,7 @@ structure BundledSetoid where
 [s : Setoid α]
 
 instance : CoeSort BundledSetoid (Sort u) := ⟨BundledSetoid.α⟩
-instance (s : BundledSetoid) : HasEquiv s.α := ⟨s.s.r⟩
+instance (s : BundledSetoid) : Setoid s.α := s.s
 
 def propSetoid (p : Prop) : BundledSetoid :=
 { α := p,
@@ -176,8 +177,6 @@ class IsEquivalence {U : Sort u} (R : GeneralizedRelation U) where
 namespace IsEquivalence
 
 def equiv {U : Sort u} {R : GeneralizedRelation U} (α β : U) := (R α β).α
-
-instance {U : Sort u} {R : GeneralizedRelation U} (α β : U) : HasEquiv (equiv α β) := ⟨(R α β).s.r⟩
 
 -- Every equivalence relation can trivially be converted to an instance of `IsEquivalence`.
 instance relGenEquiv {α : Sort u} {r : α → α → Prop} (e : Equivalence r) : IsEquivalence (genRel r) :=
@@ -219,8 +218,8 @@ open IsEquivalence
 -- isomorphism compared to category theory, note that we are defining a generalized _equivalence relation_,
 -- not a generalized category.)
 --
--- Note that we do not compare equivalences/isomorphisms for equality, but use the setoid equivalence we
--- just introduced.
+-- In contrast to `Equiv` and to the usual treatment of category theory, we never compare
+-- equivalences/isomorphisms for equality, but use the setoid equivalence `≈` we just introduced.
 --
 -- Remark: Interestingly, all axioms can be regarded as simplification rules that enable equational
 -- reasoning by transforming all possible terms into a canonical form (with the simplification for
@@ -297,7 +296,7 @@ open PropEquiv
 
 
 
--- Combine everything into a single type class.
+-- Bundle the generalized equivalence relation and its axioms into a single type class.
 
 class HasStructure (U : Sort u) where
 (M : GeneralizedRelation U)
@@ -345,7 +344,7 @@ def iso := S.h.M
 def equiv (α β : S) := (iso α β).α
 infix:25 " ≃ " => equiv
 
-instance (α β : S) : HasEquiv (equiv α β) := ⟨(iso α β).s.r⟩
+instance (α β : S) : Setoid (equiv α β) := (iso α β).s
 
 instance hasCmp : HasComposition  (@iso S) := hasStructure.hasCmp
 instance hasMor : HasMorphisms    (@iso S) := hasStructure.hasMor
@@ -376,12 +375,11 @@ open Structure
 -- We can "forget" the data held inside a `Structure` on two levels, obtaining modified instances of
 -- `Structure`:
 --
--- 1. We can coerce the equivalence to `Prop` to obtain a setoid structure. The result is on the same
---    level as an `Equiv` in mathlib, so this coercion preserves quite a lot of data.
+-- 1. We can coerce the equivalence to an equivalence _relation_, obtaining a "setoid structure."
 --    In comments, we will write `setoidStructure S` as `S_≈`.
 --
 -- 2. In a classical setting, we can additionally take the quotient with respect to equivalence, obtaining
---    a "skeleton" structure where equivalence is equality.
+--    a "skeleton structure" where equivalence is equality.
 --    In comments, we will write `skeletonStructure S` as `S/≃`.
 --
 -- Later, we will prove some properties of these operations.
@@ -402,7 +400,6 @@ instance structureToSetoid : Setoid S.U := ⟨SetoidEquiv S, setoidEquiv S⟩
 def setoidStructure : Structure := setoidInstanceStructure S.U
 
 def StructureQuotient := Quotient (structureToSetoid S)
-instance quotientHasStructure : HasStructure (StructureQuotient S) := instanceHasStructure (StructureQuotient S)
 def skeletonStructure : Structure := ⟨StructureQuotient S⟩
 
 end Forgetfulness
@@ -433,7 +430,7 @@ variable {U : Sort u}                {V : Sort v}
 -- This corresponds to `FF` also being a functor. With an inductive definition of `Structure`, the
 -- definition of a functor would need to be recursive.
 class IsSetoidFunctor where
-(transportSetoid {α β : U} (f g : X α β) : f ≈ g → FF f ≈ FF g)
+(transportSetoid {α β : U} {f g : X α β} : f ≈ g → FF f ≈ FF g)
 
 class IsCompositionFunctor [cmpX : HasComposition X] [cmpY : HasComposition Y]
   extends @IsSetoidFunctor U V X Y F FF where
@@ -491,8 +488,8 @@ def transportIdDef     (F : StructureFunctor S T) :=
 def transportCompDef   (F : StructureFunctor S T) :=
 @IsCompositionFunctor.transportComp S.U T.U iso iso F.map F.transport hasCmp hasCmp (isCompFunctor F)
 
-@[simp] theorem transportSetoid (F : StructureFunctor S T) {α β   : S} (f g : α ≃ β) :
-  f ≈ g → congrArg F f ≈ congrArg F g              := transportSetoidDef F f g
+@[simp] theorem transportSetoid (F : StructureFunctor S T) {α β   : S} {f g : α ≃ β} :
+  f ≈ g → congrArg F f ≈ congrArg F g              := transportSetoidDef F
 @[simp] theorem transportComp   (F : StructureFunctor S T) {α β γ : S} (f : α ≃ β) (g : β ≃ γ) :
   congrArg F (g • f) ≈ congrArg F g • congrArg F f := transportCompDef   F f g
 @[simp] theorem transportId     (F : StructureFunctor S T) (α     : S) :
@@ -512,17 +509,21 @@ def FunExt (F G : StructureFunctor S T) := ∀ α, F α ≃ G α
 
 namespace FunExt
 
+def refl  (F :     StructureFunctor S T)                                   : FunExt F F := λ α => id_ (F α)
+def symm  {F G :   StructureFunctor S T} (φ : FunExt F G)                  : FunExt G F := λ α => (φ α)⁻¹
+def trans {F G H : StructureFunctor S T} (φ : FunExt F G) (ψ : FunExt G H) : FunExt F H := λ α => ψ α • φ α
+
 def funExtEquiv {F G : StructureFunctor S T} (φ ψ : FunExt F G) := ∀ α, φ α ≈ ψ α
 instance funExtSetoid (F G : StructureFunctor S T) : Setoid (FunExt F G) := ⟨funExtEquiv, ⟨sorry, sorry, sorry⟩⟩
 def funExt (F G : StructureFunctor S T) : BundledSetoid := ⟨FunExt F G⟩
 
 instance funExtHasIso : HasIsomorphisms (@funExt S T) :=
-{ comp     := λ φ ψ α => ψ α • φ α,
+{ comp     := trans,
   assoc    := sorry,
-  id       := λ F α => id_ (F α)
+  id       := refl,
   leftId   := sorry,
   rightId  := sorry,
-  inv      := λ φ α => (φ α)⁻¹
+  inv      := symm,
   compInv  := sorry,
   leftInv  := sorry,
   rightInv := sorry,
@@ -550,10 +551,10 @@ def transId {α β : S} : α ≃ β → mapId α ≃ mapId β := id
 
 instance idIsFunctor (S : Structure) :
   @IsIsomorphismFunctor S.U S.U iso iso mapId transId hasIso hasIso :=
-{ transportSetoid := λ f g h => h,
-  transportComp   := λ f g   => sorry,
-  transportId     := λ α     => sorry,
-  transportInv    := λ f     => sorry }
+{ transportSetoid := id,
+  transportComp   := λ f g => Setoid.refl (g • f),
+  transportId     := λ α   => Setoid.refl id',
+  transportInv    := λ f   => Setoid.refl f⁻¹ }
 
 def idFun : StructureFunctor S S := ⟨mapId, transId⟩
 
@@ -564,10 +565,10 @@ def transComp (F : StructureFunctor S T) (G : StructureFunctor T U) {α β : S} 
 
 instance compIsFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) :
   @IsIsomorphismFunctor S.U U.U iso iso (mapComp F G) (transComp F G) hasIso hasIso :=
-{ transportSetoid := λ f g h => sorry,
-  transportComp   := λ f g   => sorry,
-  transportId     := λ α     => sorry,
-  transportInv    := λ f     => sorry }
+{ transportSetoid := λ h   => transportSetoid G (transportSetoid F h),
+  transportComp   := λ f g => sorry,
+  transportId     := λ α   => sorry,
+  transportInv    := λ f   => sorry }
 
 def compFun (F : StructureFunctor S T) (G : StructureFunctor T U) : StructureFunctor S U :=
 { map       := mapComp       F G,
@@ -606,7 +607,7 @@ Sigma.snd (h β)
 def inverseElement (F : StructureFunctor S T) (h : Bijective F) (β : T) :=
 arbitraryInverseElement F h.snd β
 
-def inverseElementUnique (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
+def inverseElementIsUnique (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
   inverseElement F h β ≃ inverseElement F h γ :=
 let h₁ : F (inverseElement F h β) ≃ γ := trans (inverseElementIsInverse F h.snd β) e
 let h₂ : γ ≃ F (inverseElement F h γ) := symm (inverseElementIsInverse F h.snd γ)
@@ -615,7 +616,7 @@ h.fst h₃
 
 def inverse (F : StructureFunctor S T) (h : Bijective F) : StructureFunctor T S :=
 { map       := inverseElement F h,
-  transport := inverseElementUnique F h,
+  transport := inverseElementIsUnique F h,
   isFunctor := sorry }
 
 end StructureFunctor
@@ -703,32 +704,36 @@ def StructureEquiv (S T : Structure) := LargeStructureEquiv (setoidStructure S) 
 
 namespace StructureEquiv
 
-def refl (S : Structure) : StructureEquiv S S :=
+def refl (S : Structure) : LargeStructureEquiv S S :=
 { toFun    := idFun,
   invFun   := idFun,
-  leftInv  := sorry,
-  rightInv := sorry }
+  leftInv  := FunExt.refl idFun,
+  rightInv := FunExt.refl idFun }
 
-def symm {S T : Structure} (e : StructureEquiv S T) : StructureEquiv T S :=
+def symm {S T : Structure} (e : LargeStructureEquiv S T) : LargeStructureEquiv T S :=
 { toFun    := e.invFun,
   invFun   := e.toFun,
   leftInv  := e.rightInv,
   rightInv := e.leftInv }
 
-def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) : StructureEquiv S U :=
+def trans {S T U : Structure} (e : LargeStructureEquiv S T) (f : LargeStructureEquiv T U) : LargeStructureEquiv S U :=
 { toFun    := compFun e.toFun  f.toFun,
   invFun   := compFun f.invFun e.invFun,
   leftInv  := sorry,
   rightInv := sorry }
 
+-- As opposed to `LargeStructureEquiv`, when using `StructureEquiv` we can ignore `leftInv` and
+-- `rightInv` because they are just propositions.
 def equivEquiv {S T : Structure} (φ ψ : StructureEquiv S T) := φ.toFun ≈ ψ.toFun ∧ φ.invFun ≈ ψ.invFun
 instance equivSetoid (S T : Structure) : Setoid (StructureEquiv S T) := ⟨equivEquiv, ⟨sorry, sorry, sorry⟩⟩
 def structureEquiv (S T : Structure) : BundledSetoid := ⟨StructureEquiv S T⟩
 
+def refl' (S : Structure) := refl (setoidStructure S)
+
 instance equivHasIso : HasIsomorphisms structureEquiv :=
 { comp     := trans,
   assoc    := sorry,
-  id       := refl,
+  id       := refl',
   leftId   := sorry,
   rightId  := sorry,
   inv      := symm,
