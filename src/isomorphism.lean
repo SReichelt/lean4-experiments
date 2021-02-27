@@ -509,21 +509,41 @@ def FunExt (F G : StructureFunctor S T) := ∀ α, F α ≃ G α
 
 namespace FunExt
 
-def refl  (F :     StructureFunctor S T)                                   : FunExt F F := λ α => id_ (F α)
-def symm  {F G :   StructureFunctor S T} (φ : FunExt F G)                  : FunExt G F := λ α => (φ α)⁻¹
-def trans {F G H : StructureFunctor S T} (φ : FunExt F G) (ψ : FunExt G H) : FunExt F H := λ α => ψ α • φ α
+def refl  (F     : StructureFunctor S T)                                   : FunExt F F :=
+  λ α => IsEquivalence.refl  (F α)
+def symm  {F G   : StructureFunctor S T} (φ : FunExt F G)                  : FunExt G F :=
+  λ α => IsEquivalence.symm  (φ α)
+def trans {F G H : StructureFunctor S T} (φ : FunExt F G) (ψ : FunExt G H) : FunExt F H :=
+  λ α => IsEquivalence.trans (φ α) (ψ α)
 
 def funExtEquiv {F G : StructureFunctor S T} (φ ψ : FunExt F G) := ∀ α, φ α ≈ ψ α
-instance funExtSetoid (F G : StructureFunctor S T) : Setoid (FunExt F G) := ⟨funExtEquiv, ⟨sorry, sorry, sorry⟩⟩
+
+namespace funExtEquiv
+
+variable {F G : StructureFunctor S T}
+
+theorem refl  (φ     : FunExt F G)                                             : funExtEquiv φ φ :=
+λ α => Setoid.refl  (φ α)
+
+theorem symm  {φ ψ   : FunExt F G} (e : funExtEquiv φ ψ)                       : funExtEquiv ψ φ :=
+λ α => Setoid.symm  (e α)
+
+theorem trans {φ ψ χ : FunExt F G} (e : funExtEquiv φ ψ) (f : funExtEquiv ψ χ) : funExtEquiv φ χ :=
+λ α => Setoid.trans (e α) (f α)
+
+instance funExtSetoid : Setoid (FunExt F G) := ⟨funExtEquiv, ⟨refl, symm, trans⟩⟩
+
+end funExtEquiv
+
 def funExt (F G : StructureFunctor S T) : BundledSetoid := ⟨FunExt F G⟩
 
 instance funExtHasIso : HasIsomorphisms (@funExt S T) :=
-{ comp     := trans,
+{ comp     := trans,  -- λ F φ ψ α => ψ α • φ α
   assoc    := sorry,
-  id       := refl,
+  id       := refl,   -- λ F α => id_ (F α)
   leftId   := sorry,
   rightId  := sorry,
-  inv      := symm,
+  inv      := symm,   -- λ F φ α => (φ α)⁻¹
   compInv  := sorry,
   leftInv  := sorry,
   rightInv := sorry,
@@ -553,7 +573,7 @@ instance idIsFunctor (S : Structure) :
   @IsIsomorphismFunctor S.U S.U iso iso mapId transId hasIso hasIso :=
 { transportSetoid := id,
   transportComp   := λ f g => Setoid.refl (g • f),
-  transportId     := λ α   => Setoid.refl id',
+  transportId     := λ α   => Setoid.refl (id_ α),
   transportInv    := λ f   => Setoid.refl f⁻¹ }
 
 def idFun : StructureFunctor S S := ⟨mapId, transId⟩
@@ -565,7 +585,7 @@ def transComp (F : StructureFunctor S T) (G : StructureFunctor T U) {α β : S} 
 
 instance compIsFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) :
   @IsIsomorphismFunctor S.U U.U iso iso (mapComp F G) (transComp F G) hasIso hasIso :=
-{ transportSetoid := λ h   => transportSetoid G (transportSetoid F h),
+{ transportSetoid := transportSetoid G ∘ transportSetoid F,
   transportComp   := λ f g => sorry,
   transportId     := λ α   => sorry,
   transportInv    := λ f   => sorry }
@@ -625,10 +645,54 @@ open StructureFunctor
 
 
 
+-- Based on the definition of a functor between two structures, we can define equivalence of two
+-- structures in the same way that equivalence of types is defined in mathlib, except that we need to
+-- replace equality of functors with an instance of `FunExt`.
+
+structure StructureEquiv (S T : Structure) where
+(toFun    : StructureFunctor S T)
+(invFun   : StructureFunctor T S)
+(leftInv  : FunExt (compFun toFun invFun) idFun)
+(rightInv : FunExt (compFun invFun toFun) idFun)
+
+namespace StructureEquiv
+
+def refl  (S     : Structure)                                                   : StructureEquiv S S :=
+{ toFun    := idFun,
+  invFun   := idFun,
+  leftInv  := FunExt.refl idFun,
+  rightInv := FunExt.refl idFun }
+
+def symm  {S T   : Structure} (e : StructureEquiv S T)                          : StructureEquiv T S :=
+{ toFun    := e.invFun,
+  invFun   := e.toFun,
+  leftInv  := e.rightInv,
+  rightInv := e.leftInv }
+
+def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) : StructureEquiv S U :=
+{ toFun    := compFun e.toFun  f.toFun,
+  invFun   := compFun f.invFun e.invFun,
+  leftInv  := sorry,
+  rightInv := sorry }
+
+-- We can build a `StructureEquiv` from a bijective functor.
+
+def functorToEquiv {S T : Structure} (F : StructureFunctor S T) (h : Bijective F) : StructureEquiv S T :=
+{ toFun    := F,
+  invFun   := inverse F h,
+  leftInv  := sorry,
+  rightInv := sorry }
+
+end StructureEquiv
+
+open StructureEquiv
+
+
+
 -- A functor between two structures induces a functor between their setoid structures, and in the
 -- classical setting also between their skeleton structures. More specifically, we have the following
 -- commutative diagram (modulo equivalence defined on functors, i.e. `FunExt`), where all the horizontal
--- functors are `Bijective`:
+-- functors are `Bijective` (and thus we even have instances of `StructureEquiv` via `functorToEquiv`):
 --
 --    `S` -≃--> `S_≈` -≃-> `S/≃`
 --     |          |          |
@@ -684,56 +748,55 @@ open Forgetfulness
 
 
 
--- Based on the definition of a functor between two structures, we can define equivalence of two
--- structures in the same way that equivalence of types is defined in mathlib, except that we need to
--- replace equality of functors with an instance of `FunExt`. For the purpose of using the equivalence
--- to define a `Structure`, we need to make sure that this `FunExt` does not have any inner structure
--- beyond a setoid.
+-- We would like to use `StructureEquiv` as an equivalence in a `Structure` that can hold structures.
+-- With an inductive definition of `Structure`, we could use it directly. However, with the
+-- definition of `Structure` we are using, we need to make sure that all instances of `FunExt` inside
+-- our equivalence are just propositions (bringing the equivalence down to the same level as `Equiv`
+-- in mathlib).
 --
--- This is where the `setoidFunctor` we just defined comes into play: We can declare our equivalence
--- to be one between setoid structures. Then the functors contained in the equivalences are really
--- just functions, so we can compare them for equality.
+-- This is where the `setoidFunctor` we just defined comes into play: If we replace the two functors
+-- with the induced functors between the setoid structures, we get an equivalence that fulfills the
+-- same role but where equivalence of two equivalences is just a proposition.
 
-structure LargeStructureEquiv (S T : Structure) where
-(toFun    : StructureFunctor S T)
-(invFun   : StructureFunctor T S)
-(leftInv  : FunExt (compFun toFun invFun) idFun)
-(rightInv : FunExt (compFun invFun toFun) idFun)
+def SetoidStructureEquiv (S T : Structure) := StructureEquiv (setoidStructure S) (setoidStructure T)
 
-def StructureEquiv (S T : Structure) := LargeStructureEquiv (setoidStructure S) (setoidStructure T)
+namespace SetoidStructureEquiv
 
-namespace StructureEquiv
+def refl  (S     : Structure)                                                               : SetoidStructureEquiv S S :=
+  StructureEquiv.refl  (setoidStructure S)
+def symm  {S T   : Structure} (e : SetoidStructureEquiv S T)                                : SetoidStructureEquiv T S :=
+  StructureEquiv.symm  e
+def trans {S T U : Structure} (e : SetoidStructureEquiv S T) (f : SetoidStructureEquiv T U) : SetoidStructureEquiv S U :=
+  StructureEquiv.trans e f
 
-def refl (S : Structure) : LargeStructureEquiv S S :=
-{ toFun    := idFun,
-  invFun   := idFun,
-  leftInv  := FunExt.refl idFun,
-  rightInv := FunExt.refl idFun }
+-- When working with `SetoidStructureEquiv`, we can ignore `leftInv` and `rightInv` because they are
+-- just propositions.
+def equivEquiv {S T : Structure} (e f : SetoidStructureEquiv S T) :=
+e.toFun ≈ f.toFun ∧ e.invFun ≈ f.invFun
 
-def symm {S T : Structure} (e : LargeStructureEquiv S T) : LargeStructureEquiv T S :=
-{ toFun    := e.invFun,
-  invFun   := e.toFun,
-  leftInv  := e.rightInv,
-  rightInv := e.leftInv }
+namespace equivEquiv
 
-def trans {S T U : Structure} (e : LargeStructureEquiv S T) (f : LargeStructureEquiv T U) : LargeStructureEquiv S U :=
-{ toFun    := compFun e.toFun  f.toFun,
-  invFun   := compFun f.invFun e.invFun,
-  leftInv  := sorry,
-  rightInv := sorry }
+variable {S T : Structure}
 
--- As opposed to `LargeStructureEquiv`, when using `StructureEquiv` we can ignore `leftInv` and
--- `rightInv` because they are just propositions.
-def equivEquiv {S T : Structure} (φ ψ : StructureEquiv S T) := φ.toFun ≈ ψ.toFun ∧ φ.invFun ≈ ψ.invFun
-instance equivSetoid (S T : Structure) : Setoid (StructureEquiv S T) := ⟨equivEquiv, ⟨sorry, sorry, sorry⟩⟩
-def structureEquiv (S T : Structure) : BundledSetoid := ⟨StructureEquiv S T⟩
+theorem refl  (e     : SetoidStructureEquiv S T)                                           : equivEquiv e e :=
+⟨Setoid.refl  e.toFun,       Setoid.refl  e.invFun⟩
 
-def refl' (S : Structure) := refl (setoidStructure S)
+theorem symm  {e f   : SetoidStructureEquiv S T} (φ : equivEquiv e f)                      : equivEquiv f e :=
+⟨Setoid.symm  φ.left,        Setoid.symm  φ.right⟩
+
+theorem trans {e f g : SetoidStructureEquiv S T} (φ : equivEquiv e f) (ψ : equivEquiv f g) : equivEquiv e g :=
+⟨Setoid.trans φ.left ψ.left, Setoid.trans φ.right ψ.right⟩
+
+instance equivSetoid : Setoid (SetoidStructureEquiv S T) := ⟨equivEquiv, ⟨refl, symm, trans⟩⟩
+
+end equivEquiv
+
+def structureEquiv (S T : Structure) : BundledSetoid := ⟨SetoidStructureEquiv S T⟩
 
 instance equivHasIso : HasIsomorphisms structureEquiv :=
 { comp     := trans,
   assoc    := sorry,
-  id       := refl',
+  id       := refl,
   leftId   := sorry,
   rightId  := sorry,
   inv      := symm,
@@ -743,17 +806,9 @@ instance equivHasIso : HasIsomorphisms structureEquiv :=
   invInv   := sorry,
   idInv    := sorry }
 
--- We can build a `StructureEquiv` from a bijective functor.
+end SetoidStructureEquiv
 
-def functorToEquiv {S T : Structure} (F : StructureFunctor S T) (h : Bijective F) : StructureEquiv S T :=
-{ toFun    := setoidFunctor F,
-  invFun   := setoidFunctor (inverse F h),
-  leftInv  := sorry,
-  rightInv := sorry }
-
-end StructureEquiv
-
-open StructureEquiv
+open SetoidStructureEquiv
 
 
 
