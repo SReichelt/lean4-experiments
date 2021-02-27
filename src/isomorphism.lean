@@ -347,10 +347,6 @@ infix:25 " ≃ " => equiv
 
 instance (α β : S) : HasEquiv (equiv α β) := ⟨(iso α β).s.r⟩
 
-def refl  (α     : S) : α ≃ α                 := (isEquiv S.U).refl α
-def symm  {α β   : S} : α ≃ β → β ≃ α         := (isEquiv S.U).symm
-def trans {α β γ : S} : α ≃ β → β ≃ γ → α ≃ γ := (isEquiv S.U).trans
-
 instance hasCmp : HasComposition  (@iso S) := hasStructure.hasCmp
 instance hasMor : HasMorphisms    (@iso S) := hasStructure.hasMor
 instance hasIso : HasIsomorphisms (@iso S) := hasStructure.hasIso
@@ -400,7 +396,7 @@ variable (S : Structure)
 def SetoidEquiv (α β : S) := Nonempty (α ≃ β)
 def transportToSetoid {α β : S} (e : α ≃ β) : SetoidEquiv S α β := ⟨e⟩
 def setoidEquiv : Equivalence (SetoidEquiv S) :=
-⟨λ α => ⟨Structure.refl α⟩, λ ⟨e⟩ => ⟨Structure.symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨Structure.trans e f⟩⟩
+⟨λ α => ⟨refl α⟩, λ ⟨e⟩ => ⟨symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨trans e f⟩⟩
 
 instance structureToSetoid : Setoid S.U := ⟨SetoidEquiv S, setoidEquiv S⟩
 def setoidStructure : Structure := setoidInstanceStructure S.U
@@ -586,7 +582,7 @@ instance hasMor  : HasMorphisms   @functorSetoid := ⟨sorry, sorry⟩
 -- If we interpret `≃` as equality, we can pretend that functors are just functions and define their
 -- properties accordingly. Again, note that these definitions contain data.
 
-def Injective  (F : StructureFunctor S T) := ∀ α β, F α ≃ F β → α ≃ β
+def Injective  (F : StructureFunctor S T) := ∀ {α β}, F α ≃ F β → α ≃ β
 def Surjective (F : StructureFunctor S T) := ∀ β, Σ α, F α ≃ β
 def Bijective  (F : StructureFunctor S T) := Prod (Injective F) (Surjective F)
 
@@ -607,9 +603,19 @@ def inverseElementIsInverse (F : StructureFunctor S T) (h : Surjective F) (β : 
   F (arbitraryInverseElement F h β) ≃ β :=
 Sigma.snd (h β)
 
+def inverseElement (F : StructureFunctor S T) (h : Bijective F) (β : T) :=
+arbitraryInverseElement F h.snd β
+
+def inverseElementUnique (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
+  inverseElement F h β ≃ inverseElement F h γ :=
+let h₁ : F (inverseElement F h β) ≃ γ := trans (inverseElementIsInverse F h.snd β) e
+let h₂ : γ ≃ F (inverseElement F h γ) := symm (inverseElementIsInverse F h.snd γ)
+let h₃ : F (inverseElement F h β) ≃ F (inverseElement F h γ) := trans h₁ h₂
+h.fst h₃
+
 def inverse (F : StructureFunctor S T) (h : Bijective F) : StructureFunctor T S :=
-{ map       := arbitraryInverseElement F h.snd,
-  transport := sorry,  -- TODO, important: should work using inverseElementIsInverse, congrArg, and symm
+{ map       := inverseElement F h,
+  transport := inverseElementUnique F h,
   isFunctor := sorry }
 
 end StructureFunctor
@@ -664,7 +670,7 @@ Quotient.lift (Quotient.mk ∘ F.map) sorry
 
 def transportToSkeleton {a b : skeletonStructure S} (h : a = b) :
   mapToSkeleton F a ≃ mapToSkeleton F b :=
-Eq.subst (motive := λ x => mapToSkeleton F a ≃ mapToSkeleton F x) h (Structure.refl (mapToSkeleton F a))
+Eq.subst (motive := λ x => mapToSkeleton F a ≃ mapToSkeleton F x) h (refl (mapToSkeleton F a))
 
 def skeletonFunctor : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
 { map       := mapToSkeleton F,
