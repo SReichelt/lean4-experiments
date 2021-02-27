@@ -510,11 +510,11 @@ def FunExt (F G : StructureFunctor S T) := ∀ α, F α ≃ G α
 namespace FunExt
 
 def refl  (F     : StructureFunctor S T)                                   : FunExt F F :=
-  λ α => IsEquivalence.refl  (F α)
+λ α => IsEquivalence.refl  (F α)
 def symm  {F G   : StructureFunctor S T} (φ : FunExt F G)                  : FunExt G F :=
-  λ α => IsEquivalence.symm  (φ α)
+λ α => IsEquivalence.symm  (φ α)
 def trans {F G H : StructureFunctor S T} (φ : FunExt F G) (ψ : FunExt G H) : FunExt F H :=
-  λ α => IsEquivalence.trans (φ α) (ψ α)
+λ α => IsEquivalence.trans (φ α) (ψ α)
 
 def funExtEquiv {F G : StructureFunctor S T} (φ ψ : FunExt F G) := ∀ α, φ α ≈ ψ α
 
@@ -538,17 +538,17 @@ end funExtEquiv
 def funExt (F G : StructureFunctor S T) : BundledSetoid := ⟨FunExt F G⟩
 
 instance funExtHasIso : HasIsomorphisms (@funExt S T) :=
-{ comp     := trans,  -- λ F φ ψ α => ψ α • φ α
-  assoc    := sorry,
-  id       := refl,   -- λ F α => id_ (F α)
-  leftId   := sorry,
-  rightId  := sorry,
-  inv      := symm,   -- λ F φ α => (φ α)⁻¹
-  compInv  := sorry,
-  leftInv  := sorry,
-  rightInv := sorry,
-  invInv   := sorry,
-  idInv    := sorry }
+{ comp     := trans,    -- λ F φ ψ α => ψ α • φ α
+  assoc    := λ φ ψ χ α => assoc    (φ α) (ψ α) (χ α),
+  id       := refl,     -- λ F α => id_ (F α)
+  leftId   := λ φ     α => leftId   (φ α),
+  rightId  := λ φ     α => rightId  (φ α),
+  inv      := symm,     -- λ F φ α => (φ α)⁻¹
+  compInv  := λ φ ψ   α => compInv  (φ α) (ψ α),
+  leftInv  := λ φ     α => leftInv  (φ α),
+  rightInv := λ φ     α => rightInv (φ α),
+  invInv   := λ φ     α => invInv   (φ α),
+  idInv    := λ F     α => idInv    (F α) }
 
 instance functorHasStructure : HasStructure (StructureFunctor S T) := ⟨funExt⟩
 def functorStructure : Structure := ⟨StructureFunctor S T⟩
@@ -599,6 +599,8 @@ instance hasComp : HasComp        @functorSetoid := ⟨@compFun⟩
 instance hasCmp  : HasComposition @functorSetoid := ⟨sorry⟩
 instance hasId   : HasId          @functorSetoid := ⟨@idFun⟩
 instance hasMor  : HasMorphisms   @functorSetoid := ⟨sorry, sorry⟩
+
+
 
 -- If we interpret `≃` as equality, we can pretend that functors are just functions and define their
 -- properties accordingly. Again, note that these definitions contain data.
