@@ -132,7 +132,7 @@
 
 
 
-universes u v
+universes u v w
 
 
 
@@ -435,27 +435,27 @@ open Forgetfulness
 
 namespace Functors
 
-variable {U : Sort u}                {V : Sort v}
-         {X : GeneralizedRelation U} {Y : GeneralizedRelation V}
-         (F  :              U     → V)
-         (FF : ∀ {α β : U}, X α β → Y (F α) (F β))
+variable {U : Sort u} {V : Sort v} {W : Sort w}
+         {X : GeneralizedRelation V} {Y : GeneralizedRelation W}
+         (F : U → V) (G : U → W)
+         (FF : ∀ {α β : U}, X (F α) (F β) → Y (G α) (G β))
 
 -- This corresponds to `FF` also being a functor. With an inductive definition of `Structure`, the
 -- definition of `StructureFunctor` would need to be recursive.
 class IsSetoidFunctor where
-(respectsSetoid {α β : U} {f g : X α β} : f ≈ g → FF f ≈ FF g)
+(respectsSetoid {α β : U} {f g : X (F α) (F β)}                   : f ≈ g → FF f ≈ FF g)
 
 class IsCompositionFunctor [cmpX : HasComposition  X] [cmpY : HasComposition  Y]
-  extends @IsSetoidFunctor      U V X Y F FF                                             where
-(respectsComp {α β γ : U} (f : X α β) (g : X β γ) : FF (g • f)  ≈ FF g • FF f)
+  extends @IsSetoidFunctor      U V W X Y F G FF                                             where
+(respectsComp {α β γ : U} (f : X (F α) (F β)) (g : X (F β) (F γ)) : FF (g • f)      ≈ FF g • FF f)
 
 class IsMorphismFunctor    [morX : HasMorphisms    X] [morY : HasMorphisms    Y]
-  extends @IsCompositionFunctor U V X Y F FF morX.toHasComposition morY.toHasComposition where
-(respectsId   (α     : U)                         : FF (id__ α) ≈ id__ (F α))
+  extends @IsCompositionFunctor U V W X Y F G FF morX.toHasComposition morY.toHasComposition where
+(respectsId   (α     : U)                                         : FF (id__ (F α)) ≈ id__ (G α))
 
 class IsIsomorphismFunctor [isoX : HasIsomorphisms X] [isoY : HasIsomorphisms Y]
-  extends @IsMorphismFunctor    U V X Y F FF isoX.toHasMorphisms   isoY.toHasMorphisms   where
-(respectsInv  {α β   : U} (f : X α β)             : FF f⁻¹      ≈ (FF f)⁻¹)
+  extends @IsMorphismFunctor    U V W X Y F G FF isoX.toHasMorphisms   isoY.toHasMorphisms   where
+(respectsInv  {α β   : U} (f : X (F α) (F β))                     : FF f⁻¹          ≈ (FF f)⁻¹)
 
 end Functors
 
@@ -468,7 +468,7 @@ open Functors
 structure StructureFunctor (S T : Structure) :=
 (map                : S     → T)
 (congrArg {α β : S} : α ≃ β → map α ≃ map β)
-[isFunctor          : IsIsomorphismFunctor map congrArg]
+[isFunctor          : IsIsomorphismFunctor id map congrArg]
 
 namespace StructureFunctor
 
@@ -564,7 +564,7 @@ def mapId             : S     → S                 := id
 def transId {α β : S} : α ≃ β → mapId α ≃ mapId β := id
 
 instance idIsFunctor (S : Structure) :
-  @IsIsomorphismFunctor S.U S.U iso iso mapId transId hasIso hasIso :=
+  @IsIsomorphismFunctor S.U S.U S.U iso iso id mapId transId hasIso hasIso :=
 { respectsSetoid := id,
   respectsComp   := λ f g => Setoid.refl (g • f),
   respectsId     := λ α   => Setoid.refl (id_ α),
@@ -598,7 +598,7 @@ let h₂ : congrArg G (congrArg F f)⁻¹ ≈ (congrArg G (congrArg F f))⁻¹ :
 Setoid.trans h₁ h₂
 
 instance compIsFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) :
-  @IsIsomorphismFunctor S.U U.U iso iso (mapComp F G) (transComp F G) hasIso hasIso :=
+  @IsIsomorphismFunctor S.U S.U U.U iso iso id (mapComp F G) (transComp F G) hasIso hasIso :=
 { respectsSetoid := λ h => respectsSetoid G (respectsSetoid F h),
   respectsComp   := transCompComp,
   respectsId     := transCompId,
@@ -647,25 +647,21 @@ instance hasMor  : HasMorphisms   @functorSetoid := ⟨compFunLeftId', compFunRi
 
 
 
--- We have functors between equivalences of two structures, but we need to convert the setoids to
--- structures first.
+-- A structure for a function that respects a generalized version of the functor axioms but is not
+-- actually a functor in the sense of category theory.
 
-def EquivalenceFunctor (e f : Sort v) [Setoid e] [Setoid f] :=
-StructureFunctor (setoidInstanceStructure e) (setoidInstanceStructure f)
-
--- TODO: rewrite using functor type classes
-structure DependentEquivalenceFunctor (F : StructureFunctor S T) (G : StructureFunctor S U) where
-(cond     {α β   : S}                                 : EquivalenceFunctor (F α ≃ F β) (G α ≃ G β))
-(condComp {α β γ : S} (e : F α ≃ F β) (f : F β ≃ F γ) : cond.map (f • e)     ≈ cond.map f • cond.map e)
-(condId   (α     : S)                                 : cond.map (id_ (F α)) ≈ id_ (G α))
-(condInv  {α β   : S} (e : F α ≃ F β)                 : cond.map e⁻¹         ≈ (cond.map e)⁻¹)
+structure DependentFunctor (F : StructureFunctor S T) (G : StructureFunctor S U) where
+(cond {α β : S} : F α ≃ F β → G α ≃ G β)
+[isFunctor      : IsIsomorphismFunctor F.map G.map cond]
 
 
 
 -- If we interpret `≃` as equality, we can pretend that functors are just functions and define their
 -- properties accordingly. Again, note that these definitions contain data.
+-- For injectivity, this is equivalent to writing `∀ {α β}, F α ≃ F β → α ≃ β` with the additional
+-- requirement that everything must respect setoid and isomorphism operations.
 
-def Injective  (F : StructureFunctor S T) := DependentEquivalenceFunctor F idFun
+def Injective  (F : StructureFunctor S T) := DependentFunctor F idFun
 def Surjective (F : StructureFunctor S T) := ∀ β, Σ α, F α ≃ β
 def Bijective  (F : StructureFunctor S T) := Prod (Injective F) (Surjective F)
 
@@ -679,56 +675,55 @@ def Bijective  (F : StructureFunctor S T) := Prod (Injective F) (Surjective F)
 --
 -- The inverse functor is unique (modulo equivalence, i.e. `FunExt`).
 
-def arbitraryInverseElement (F : StructureFunctor S T) (h : Surjective F) (β : T) : S :=
-Sigma.fst (h β)
-
-def inverseElementIsInverse (F : StructureFunctor S T) (h : Surjective F) (β : T) :
-  F (arbitraryInverseElement F h β) ≃ β :=
-Sigma.snd (h β)
-
 def inverseElement (F : StructureFunctor S T) (h : Bijective F) (β : T) :=
-arbitraryInverseElement F h.snd β
+Sigma.fst (h.snd β)
 
-def inverseElementMapsUniquely (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
+namespace inverseElement
+
+def isInverse (F : StructureFunctor S T) (h : Bijective F) (β : T) :
+  F (inverseElement F h β) ≃ β :=
+Sigma.snd (h.snd β)
+
+def mapsUniquely (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
   F (inverseElement F h β) ≃ F (inverseElement F h γ) :=
-let f := inverseElementIsInverse F h.snd β;
-let g := inverseElementIsInverse F h.snd γ;
+let f := isInverse F h β;
+let g := isInverse F h γ;
 let h₁ : F (inverseElement F h β) ≃ γ := trans f e;
 let h₂ : γ ≃ F (inverseElement F h γ) := symm g;
 trans h₁ h₂
 
-def inverseElementIsUnique (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
+def isUnique (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
   inverseElement F h β ≃ inverseElement F h γ :=
-h.fst.cond.map (inverseElementMapsUniquely F h e)
+h.fst.cond (mapsUniquely F h e)
 
-theorem inverseElement.respectsSetoid {F : StructureFunctor S T} {h : Bijective F} {β γ : T} {e₁ e₂ : β ≃ γ} (φ : e₁ ≈ e₂) :
-  inverseElementIsUnique F h e₁ ≈ inverseElementIsUnique F h e₂ :=
-let f := inverseElementIsInverse F h.snd β;
-let g := inverseElementIsInverse F h.snd γ;
+theorem respectsSetoid {F : StructureFunctor S T} {h : Bijective F} {β γ : T} {e₁ e₂ : β ≃ γ} (φ : e₁ ≈ e₂) :
+  isUnique F h e₁ ≈ isUnique F h e₂ :=
+let f := isInverse F h β;
+let g := isInverse F h γ;
 let h₁ : e₁ • f ≈ e₂ • f := congrArgComp (Setoid.refl f) φ;
-let h₂ : inverseElementMapsUniquely F h e₁ ≈ inverseElementMapsUniquely F h e₂ := congrArgComp h₁ (Setoid.refl g⁻¹);
-congrArg h.fst.cond h₂
+let h₂ : mapsUniquely F h e₁ ≈ mapsUniquely F h e₂ := congrArgComp h₁ (Setoid.refl g⁻¹);
+h.fst.isFunctor.respectsSetoid h₂
 
-theorem inverseElement.respectsId {F : StructureFunctor S T} {h : Bijective F} (β : T) :
-  inverseElementIsUnique F h (id_ β) ≈ id' :=
-let f := inverseElementIsInverse F h.snd β;
-let h₁ : id_ β • f ≈ f := leftId f;
-let h₂ : inverseElementMapsUniquely F h (id_ β) ≈ id' := sorry;
-sorry
+theorem respectsId {F : StructureFunctor S T} {h : Bijective F} (β : T) :
+  isUnique F h (id_ β) ≈ id' :=
+let f := isInverse F h β;
+let h₁ : f⁻¹ • (id_ β • f) ≈ f⁻¹ • f := congrArgComp (leftId f) (Setoid.refl f⁻¹);
+let h₂ : f⁻¹ • (id_ β • f) ≈ id' := Setoid.trans h₁ (leftInv f);
+Setoid.trans (h.fst.isFunctor.respectsSetoid h₂) (h.fst.isFunctor.respectsId (inverseElement F h β))
 
-theorem inverseElement.respectsInv {F : StructureFunctor S T} {h : Bijective F} {β γ : T} (e : β ≃ γ) :
-  inverseElementIsUnique F h e⁻¹ ≈ (inverseElementIsUnique F h e)⁻¹ :=
-let f := inverseElementIsInverse F h.snd β;
-let g := inverseElementIsInverse F h.snd γ;
-let h₂ : f⁻¹ • (e⁻¹ • g) ≈ (g⁻¹ • (e • f))⁻¹ := sorry;
-let h₃ : inverseElementMapsUniquely F h e⁻¹ ≈ (inverseElementMapsUniquely F h e)⁻¹ := h₂;
-let test := StructureFunctor.respectsInv h.fst.cond sorry;
-let testtest := congrArg h.fst.cond h₃;
-sorry
+theorem respectsInv {F : StructureFunctor S T} {h : Bijective F} {β γ : T} (e : β ≃ γ) :
+  isUnique F h e⁻¹ ≈ (isUnique F h e)⁻¹ :=
+let f := isInverse F h β;
+let g := isInverse F h γ;
+let h₁ : (g⁻¹ • (e • f))⁻¹ ≈ (f⁻¹ • e⁻¹) • g := Setoid.trans (compInv (e • f) g⁻¹) (congrArgComp (invInv g) (compInv f e));
+let h₂ : f⁻¹ • (e⁻¹ • g) ≈ (g⁻¹ • (e • f))⁻¹ := Setoid.symm (Setoid.trans h₁ (Setoid.symm (assoc g e⁻¹ f⁻¹)));
+Setoid.trans (h.fst.isFunctor.respectsSetoid h₂) (h.fst.isFunctor.respectsInv (mapsUniquely F h e))
+
+end inverseElement
 
 def inverse (F : StructureFunctor S T) (h : Bijective F) : StructureFunctor T S :=
 { map       := inverseElement F h,
-  congrArg  := inverseElementIsUnique F h,
+  congrArg  := inverseElement.isUnique F h,
   isFunctor := { respectsSetoid := inverseElement.respectsSetoid,
                  respectsComp   := sorry,
                  respectsId     := inverseElement.respectsId,
