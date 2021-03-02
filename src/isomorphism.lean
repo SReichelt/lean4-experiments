@@ -497,12 +497,6 @@ variable {S T U V : Structure}
 
 def FunExt (F G : StructureFunctor S T) := ∀ α, F α ≃ G α
 
--- Remark: If we write `FunExt F G` as `∀ α, C α` with `C : S → Sort v := λ α => F α ≃ G α`, then `C` is
--- actually a functor from `S` to the `universeStructure` we are going to define later.
---
--- TODO: Can we state this here in terms of the functor type classes? That would hopefully shed some
--- light on `funExtEquiv`.
-
 namespace FunExt
 
 def refl  (F     : StructureFunctor S T)                                   : FunExt F F :=
@@ -512,24 +506,24 @@ def symm  {F G   : StructureFunctor S T} (φ : FunExt F G)                  : Fu
 def trans {F G H : StructureFunctor S T} (φ : FunExt F G) (ψ : FunExt G H) : FunExt F H :=
 λ α => IsEquivalence.trans (φ α) (ψ α)
 
-def funExtEquiv {F G : StructureFunctor S T} (φ ψ : FunExt F G) := ∀ α, φ α ≈ ψ α
+def FunExtEquiv {F G : StructureFunctor S T} (φ ψ : FunExt F G) := ∀ α, φ α ≈ ψ α
 
-namespace funExtEquiv
+namespace FunExtEquiv
 
 variable {F G : StructureFunctor S T}
 
-theorem refl  (φ     : FunExt F G)                                             : funExtEquiv φ φ :=
+theorem refl  (φ     : FunExt F G)                                             : FunExtEquiv φ φ :=
 λ α => Setoid.refl  (φ α)
 
-theorem symm  {φ ψ   : FunExt F G} (e : funExtEquiv φ ψ)                       : funExtEquiv ψ φ :=
+theorem symm  {φ ψ   : FunExt F G} (e : FunExtEquiv φ ψ)                       : FunExtEquiv ψ φ :=
 λ α => Setoid.symm  (e α)
 
-theorem trans {φ ψ χ : FunExt F G} (e : funExtEquiv φ ψ) (f : funExtEquiv ψ χ) : funExtEquiv φ χ :=
+theorem trans {φ ψ χ : FunExt F G} (e : FunExtEquiv φ ψ) (f : FunExtEquiv ψ χ) : FunExtEquiv φ χ :=
 λ α => Setoid.trans (e α) (f α)
 
-instance funExtSetoid : Setoid (FunExt F G) := ⟨funExtEquiv, ⟨refl, symm, trans⟩⟩
+instance funExtSetoid : Setoid (FunExt F G) := ⟨FunExtEquiv, ⟨refl, symm, trans⟩⟩
 
-end funExtEquiv
+end FunExtEquiv
 
 def funExt (F G : StructureFunctor S T) : BundledSetoid := ⟨FunExt F G⟩
 
@@ -560,52 +554,52 @@ def functorStructure : Structure := ⟨StructureFunctor S T⟩
 -- Given this definition of equivalence of functors, it makes sense to define identity and composition and
 -- prove that they are well-behaved with respect to equivalence.
 
-def mapId             : S     → S                 := id
-def transId {α β : S} : α ≃ β → mapId α ≃ mapId β := id
+def idMap                : S     → S                 := id
+def idCongrArg {α β : S} : α ≃ β → idMap α ≃ idMap β := id
 
 instance idIsFunctor (S : Structure) :
-  @IsIsomorphismFunctor S.U S.U S.U iso iso id mapId transId hasIso hasIso :=
+  @IsIsomorphismFunctor S.U S.U S.U iso iso id idMap idCongrArg hasIso hasIso :=
 { respectsSetoid := id,
   respectsComp   := λ f g => Setoid.refl (g • f),
   respectsId     := λ α   => Setoid.refl (id_ α),
   respectsInv    := λ f   => Setoid.refl f⁻¹ }
 
-def idFun : StructureFunctor S S := ⟨mapId, transId⟩
+def idFun : StructureFunctor S S := ⟨idMap, idCongrArg⟩
 
-def mapComp   (F : StructureFunctor S T) (G : StructureFunctor T U)           :
+def compMap      (F : StructureFunctor S T) (G : StructureFunctor T U)           :
   S     → U                             := λ f => G (F f)
-def transComp (F : StructureFunctor S T) (G : StructureFunctor T U) {α β : S} :
-  α ≃ β → mapComp F G α ≃ mapComp F G β := λ f => congrArg G (congrArg F f)
+def compCongrArg (F : StructureFunctor S T) (G : StructureFunctor T U) {α β : S} :
+  α ≃ β → compMap F G α ≃ compMap F G β := λ f => congrArg G (congrArg F f)
 
-theorem transCompComp {F : StructureFunctor S T} {G : StructureFunctor T U} {α β γ : S} (f : α ≃ β) (g : β ≃ γ) :
-  transComp F G (g • f) ≈ transComp F G g • transComp F G f :=
+theorem compCongrArgComp {F : StructureFunctor S T} {G : StructureFunctor T U} {α β γ : S} (f : α ≃ β) (g : β ≃ γ) :
+  compCongrArg F G (g • f) ≈ compCongrArg F G g • compCongrArg F G f :=
 let h₁ : congrArg G (congrArg F (g • f)) ≈ congrArg G (congrArg F g • congrArg F f) :=
 respectsSetoid G (respectsComp F f g);
 let h₂ : congrArg G (congrArg F g • congrArg F f) ≈ congrArg G (congrArg F g) • congrArg G (congrArg F f) :=
 respectsComp G (congrArg F f) (congrArg F g);
 Setoid.trans h₁ h₂
 
-theorem transCompId   {F : StructureFunctor S T} {G : StructureFunctor T U} (α     : S) :
-  transComp F G (id_ α) ≈ id' :=
+theorem compCongrArgId   {F : StructureFunctor S T} {G : StructureFunctor T U} (α     : S) :
+  compCongrArg F G (id_ α) ≈ id' :=
 let h₁ : congrArg G (congrArg F (id_ α)) ≈ congrArg G id' := respectsSetoid G (respectsId F α);
 let h₂ : congrArg G id' ≈ id' := respectsId G (id (F α));
 Setoid.trans h₁ h₂
 
-theorem transCompInv  {F : StructureFunctor S T} {G : StructureFunctor T U} {α β   : S} (f : α ≃ β) :
-  transComp F G f⁻¹ ≈ (transComp F G f)⁻¹ :=
+theorem compCongrArgInv  {F : StructureFunctor S T} {G : StructureFunctor T U} {α β   : S} (f : α ≃ β) :
+  compCongrArg F G f⁻¹ ≈ (compCongrArg F G f)⁻¹ :=
 let h₁ : congrArg G (congrArg F f⁻¹) ≈ congrArg G (congrArg F f)⁻¹ := respectsSetoid G (respectsInv F f);
 let h₂ : congrArg G (congrArg F f)⁻¹ ≈ (congrArg G (congrArg F f))⁻¹ := respectsInv G (congrArg F f);
 Setoid.trans h₁ h₂
 
 instance compIsFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) :
-  @IsIsomorphismFunctor S.U S.U U.U iso iso id (mapComp F G) (transComp F G) hasIso hasIso :=
+  @IsIsomorphismFunctor S.U S.U U.U iso iso id (compMap F G) (compCongrArg F G) hasIso hasIso :=
 { respectsSetoid := λ h => respectsSetoid G (respectsSetoid F h),
-  respectsComp   := transCompComp,
-  respectsId     := transCompId,
-  respectsInv    := transCompInv }
+  respectsComp   := compCongrArgComp,
+  respectsId     := compCongrArgId,
+  respectsInv    := compCongrArgInv }
 
 def compFun (F : StructureFunctor S T) (G : StructureFunctor T U) : StructureFunctor S U :=
-⟨mapComp F G, transComp F G⟩
+⟨compMap F G, compCongrArg F G⟩
 
 def compFunCongrArg {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (hF : FunExt F₁ F₂) (hG : FunExt G₁ G₂) :
   FunExt (compFun F₁ G₁) (compFun F₂ G₂) :=
@@ -1007,18 +1001,6 @@ namespace DependentProduct
 instance : CoeSort DependentProduct (Sort _) := ⟨λ ⟨C⟩ => ∀ x, C x⟩
 
 def pi {α : Sort u} (C : α → Sort v) : DependentProduct := ⟨C⟩
-
-
-
-
--- If we wrap `FunExt F G` as a `⟨C⟩ : DependentProduct`, `C` is a functor into `universeStructure`.
-
-def wrappedFunExt {S T : Structure} (F G : StructureFunctor S T) := pi (λ α => F α ≃ G α)
-
-def funExtFunctor {S T : Structure} (F G : StructureFunctor S T) : StructureFunctor S universeStructure :=
-{ map       := λ α => setoidInstanceStructure (F α ≃ G α),
-  congrArg  := λ e => sorry,  -- : SetoidStructureEquiv (setoidInstanceStructure (F α ≃ G α)) (setoidInstanceStructure (F β ≃ G β))
-  isFunctor := sorry }
 
 
 
