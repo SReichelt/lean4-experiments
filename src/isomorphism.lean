@@ -412,8 +412,12 @@ def setoidEquiv : Equivalence (SetoidEquiv S) :=
 instance structureToSetoid : Setoid S.U := ⟨SetoidEquiv S, setoidEquiv S⟩
 def setoidStructure : Structure := setoidInstanceStructure S.U
 
+namespace Classical
+
 def StructureQuotient := Quotient (structureToSetoid S)
 def skeletonStructure : Structure := ⟨StructureQuotient S⟩
+
+end Classical
 
 end Forgetfulness
 
@@ -665,8 +669,6 @@ def Bijective  (F : StructureFunctor S T) := Prod (Injective F) (Surjective F)
 -- using `∃` instead of `Σ`, obtaining the inverse functor would require (or be equivalent to) using
 -- classical logic.
 --
--- TODO: Apparently using `Nonempty` together with `Σ`, as we implicitly do below, is still constructive?
---
 -- The inverse functor is unique (modulo equivalence, i.e. `FunExt`).
 
 def inverseElement (F : StructureFunctor S T) (h : Bijective F) (β : T) :=
@@ -677,6 +679,10 @@ namespace inverseElement
 def isInverse (F : StructureFunctor S T) (h : Bijective F) (β : T) :
   F (inverseElement F h β) ≃ β :=
 Sigma.snd (h.snd β)
+
+def isInverse' (F : StructureFunctor S T) (h : Bijective F) (α : S) :
+  inverseElement F h (F α) ≃ α :=
+h.fst.cond (isInverse F h (F α))
 
 def mapsUniquely (F : StructureFunctor S T) (h : Bijective F) {β γ : T} (e : β ≃ γ) :
   F (inverseElement F h β) ≃ F (inverseElement F h γ) :=
@@ -697,6 +703,20 @@ let g := isInverse F h γ;
 let h₁ : e₁ • f ≈ e₂ • f := congrArgComp (Setoid.refl f) φ;
 let h₂ : mapsUniquely F h e₁ ≈ mapsUniquely F h e₂ := congrArgComp h₁ (Setoid.refl g⁻¹);
 h.fst.isFunctor.respectsSetoid h₂
+
+theorem respectsComp {F : StructureFunctor S T} {h : Bijective F} {β γ δ : T} (e₁ : β ≃ γ) (e₂ : γ ≃ δ) :
+  isUnique F h (e₂ • e₁) ≈ isUnique F h e₂ • isUnique F h e₁ :=
+let f := isInverse F h β;
+let i := isInverse F h γ;
+let g := isInverse F h δ;
+let h₁ : g⁻¹ • ((e₂ • e₁) • f) ≈ g⁻¹ • (((e₂ • id') • e₁) • f) := congrArgComp (congrArgComp (Setoid.refl f) (congrArgComp (Setoid.refl e₁) (Setoid.symm (rightId e₂)))) (Setoid.refl g⁻¹);
+let h₂ : g⁻¹ • ((e₂ • e₁) • f) ≈ g⁻¹ • (((e₂ • (i • i⁻¹)) • e₁) • f) := Setoid.trans h₁ (congrArgComp (congrArgComp (Setoid.refl f) (congrArgComp (Setoid.refl e₁) (congrArgComp (Setoid.symm (rightInv i)) (Setoid.refl e₂)))) (Setoid.refl g⁻¹));
+let h₃ : g⁻¹ • ((e₂ • e₁) • f) ≈ g⁻¹ • ((((e₂ • i) • i⁻¹) • e₁) • f) := Setoid.trans h₂ (congrArgComp (congrArgComp (Setoid.refl f) (congrArgComp (Setoid.refl e₁) (assoc i⁻¹ i e₂))) (Setoid.refl g⁻¹));
+let h₄ : g⁻¹ • ((e₂ • e₁) • f) ≈ g⁻¹ • (((e₂ • i) • (i⁻¹ • e₁)) • f) := Setoid.trans h₃ (congrArgComp (congrArgComp (Setoid.refl f) (Setoid.symm (assoc e₁ i⁻¹ (e₂ • i)))) (Setoid.refl g⁻¹));
+let h₅ : g⁻¹ • ((e₂ • e₁) • f) ≈ g⁻¹ • ((e₂ • i) • ((i⁻¹ • e₁) • f)) := Setoid.trans h₄ (congrArgComp (Setoid.symm (assoc f (i⁻¹ • e₁) (e₂ • i))) (Setoid.refl g⁻¹));
+let h₆ : g⁻¹ • ((e₂ • e₁) • f) ≈ (g⁻¹ • (e₂ • i)) • ((i⁻¹ • e₁) • f) := Setoid.trans h₅ (assoc ((i⁻¹ • e₁) • f) (e₂ • i) g⁻¹);
+let h₇ : g⁻¹ • ((e₂ • e₁) • f) ≈ (g⁻¹ • (e₂ • i)) • (i⁻¹ • (e₁ • f)) := Setoid.trans h₆ (congrArgComp (Setoid.symm (assoc f e₁ i⁻¹)) (Setoid.refl (g⁻¹ • (e₂ • i))));
+Setoid.trans (h.fst.isFunctor.respectsSetoid h₇) (h.fst.isFunctor.respectsComp (mapsUniquely F h e₁) (mapsUniquely F h e₂))
 
 theorem respectsId {F : StructureFunctor S T} {h : Bijective F} (β : T) :
   isUnique F h (id_ β) ≈ id' :=
@@ -719,9 +739,21 @@ def inverse (F : StructureFunctor S T) (h : Bijective F) : StructureFunctor T S 
 { map       := inverseElement F h,
   congrArg  := inverseElement.isUnique F h,
   isFunctor := { respectsSetoid := inverseElement.respectsSetoid,
-                 respectsComp   := sorry,
+                 respectsComp   := inverseElement.respectsComp,
                  respectsId     := inverseElement.respectsId,
                  respectsInv    := inverseElement.respectsInv } }
+
+namespace inverse
+
+def leftInv (F : StructureFunctor S T) (h : Bijective F) :
+  FunExt (compFun F (inverse F h)) idFun :=
+inverseElement.isInverse' F h
+
+def rightInv (F : StructureFunctor S T) (h : Bijective F) :
+  FunExt (compFun (inverse F h) F) idFun :=
+inverseElement.isInverse F h
+
+end inverse
 
 end StructureFunctor
 
@@ -768,8 +800,8 @@ def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) 
 def functorToEquiv {S T : Structure} (F : StructureFunctor S T) (h : Bijective F) : StructureEquiv S T :=
 { toFun    := F,
   invFun   := inverse F h,
-  leftInv  := sorry,
-  rightInv := sorry }
+  leftInv  := inverse.leftInv  F h,
+  rightInv := inverse.rightInv F h }
 
 end StructureEquiv
 
@@ -779,8 +811,9 @@ open StructureEquiv
 
 -- A functor between two structures induces a functor between their setoid structures, and in the
 -- classical setting also between their skeleton structures. More specifically, we have the following
--- commutative diagram (modulo equivalence defined on functors, i.e. `FunExt`), where all the horizontal
--- functors are `Bijective` (and thus we even have instances of `StructureEquiv` via `functorToEquiv`):
+-- commutative diagram (modulo equivalence defined on functors, i.e. `FunExt`). If we assume classical
+-- logic, all the horizontal functors are `Bijective`, thus we can construct corresponding instances of
+-- `StructureEquiv` via `functorToEquiv`.
 --
 --    `S` -≃--> `S_≈` -≃-> `S/≃`
 --     |          |          |
@@ -807,6 +840,18 @@ def toSetoidFunctor (S : Structure) : StructureFunctor S (setoidStructure S) :=
                  respectsId     := λ _   => proofIrrel _ _,
                  respectsInv    := λ _   => proofIrrel _ _ } }
 
+def SetoidStructureFunctor (S T : Structure) := StructureFunctor (setoidStructure S) (setoidStructure T)
+
+def setoidFunctor {S T : Structure} (F : StructureFunctor S T) : SetoidStructureFunctor S T :=
+{ map       := F.map,
+  congrArg  := λ ⟨e⟩ => ⟨F.congrArg e⟩,
+  isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
+                 respectsComp   := λ _ _ => proofIrrel _ _,
+                 respectsId     := λ _   => proofIrrel _ _,
+                 respectsInv    := λ _   => proofIrrel _ _ } }
+
+namespace Classical
+
 def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
 { map       := λ α => Quotient.mk α,
   congrArg  := λ e => Quotient.sound e,
@@ -818,18 +863,9 @@ def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure 
 def toSkeletonFunctor (S : Structure) : StructureFunctor S (skeletonStructure S) :=
 compFun (toSetoidFunctor S) (setoidToSkeletonFunctor S)
 
-def SetoidStructureFunctor   (S T : Structure) := StructureFunctor (setoidStructure   S) (setoidStructure   T)
 def SkeletonStructureFunctor (S T : Structure) := StructureFunctor (skeletonStructure S) (skeletonStructure T)
 
 variable {S T : Structure}
-
-def setoidFunctor (F : StructureFunctor S T) : SetoidStructureFunctor S T :=
-{ map       := F.map,
-  congrArg  := λ ⟨e⟩ => ⟨F.congrArg e⟩,
-  isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
-                 respectsComp   := λ _ _ => proofIrrel _ _,
-                 respectsId     := λ _   => proofIrrel _ _,
-                 respectsInv    := λ _   => proofIrrel _ _ } }
 
 def skeletonMap (F : SetoidStructureFunctor S T) : skeletonStructure S → skeletonStructure T :=
 Quotient.lift (Quotient.mk ∘ F.map) (λ _ _ => Quotient.sound ∘ F.congrArg)
@@ -845,6 +881,8 @@ def skeletonFunctor (F : SetoidStructureFunctor S T) : StructureFunctor (skeleto
                  respectsComp   := λ _ _ => proofIrrel _ _,
                  respectsId     := λ _   => proofIrrel _ _,
                  respectsInv    := λ _   => proofIrrel _ _ } }
+
+end Classical
 
 end Forgetfulness
 
