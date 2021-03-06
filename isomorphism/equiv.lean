@@ -7,7 +7,9 @@ Authors: Leonardo de Moura, Mario Carneiro
 -/
 
 
-structure Equiv (α β : Sort u) where
+universes u₁ u₂ u₃ u₄
+
+structure Equiv (α : Sort u₁) (β : Sort u₂) where
 (toFun    : α → β)
 (invFun   : β → α)
 (leftInv  : ∀ x, invFun (toFun x) = x)
@@ -17,21 +19,21 @@ namespace Equiv
 
 infix:25 " ≃≃ " => Equiv
 
-def refl (α : Sort u) : α ≃≃ α := ⟨id, id, λ x => rfl, λ y => rfl⟩
+def refl (α : Sort u₁) : α ≃≃ α := ⟨id, id, λ x => rfl, λ y => rfl⟩
 
-def symm {α β : Sort u} (e : α ≃≃ β) : β ≃≃ α := ⟨e.invFun, e.toFun, e.rightInv, e.leftInv⟩
+def symm {α : Sort u₁} {β : Sort u₂} (e : α ≃≃ β) : β ≃≃ α := ⟨e.invFun, e.toFun, e.rightInv, e.leftInv⟩
 
-theorem transLeftInv {α β γ : Sort u} (e₁ : α ≃≃ β) (e₂ : β ≃≃ γ) (x : α) :
+theorem transLeftInv {α : Sort u₁} {β : Sort u₂} {γ : Sort u₃} (e₁ : α ≃≃ β) (e₂ : β ≃≃ γ) (x : α) :
   e₁.invFun (e₂.invFun (e₂.toFun (e₁.toFun x))) = x :=
 Eq.trans (congrArg e₁.invFun (e₂.leftInv (e₁.toFun x))) (e₁.leftInv x)
 
-def trans {α β γ : Sort u} (e₁ : α ≃≃ β) (e₂ : β ≃≃ γ) : α ≃≃ γ :=
+def trans {α : Sort u₁} {β : Sort u₂} {γ : Sort u₃} (e₁ : α ≃≃ β) (e₂ : β ≃≃ γ) : α ≃≃ γ :=
 ⟨e₂.toFun ∘ e₁.toFun, e₁.invFun ∘ e₂.invFun, transLeftInv e₁ e₂, transLeftInv (symm e₂) (symm e₁)⟩
 
-protected def cast {α β : Sort u} (h : α = β) : α ≃≃ β :=
+protected def cast {α β : Sort u₁} (h : α = β) : α ≃≃ β :=
 ⟨cast h, cast h.symm, sorry, sorry⟩
 
-variable {α β γ δ : Sort u}
+variable {α : Sort u₁} {β : Sort u₂} {γ : Sort u₃} {δ : Sort u₄}
 
 @[simp] theorem symmSymm (e : α ≃≃ β) : e.symm.symm = e := sorry
 
