@@ -17,6 +17,7 @@ structure Equiv (α : Sort u₁) (β : Sort u₂) where
 
 namespace Equiv
 
+-- We would really like to keep using `≃` in `Structure.Basic`. Not sure how to avoid clashes.
 infix:25 " ≃≃ " => Equiv
 
 def refl (α : Sort u₁) : α ≃≃ α := ⟨id, id, λ x => rfl, λ y => rfl⟩

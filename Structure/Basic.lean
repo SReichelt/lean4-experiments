@@ -2,137 +2,10 @@
 --               An abstract formalization of "isomorphism is equality up to relabeling"
 --              =========================================================================
 --
--- In this file, written for Lean 4, we introduce a generalization of the concept of "isomorphism" beyond
--- the areas traditionally covered by universal algebra and category theory. The goal is to capture the
--- notion of "equality up to relabeling" in a very abstract and composable way, such that it can be
--- applied automatically to many different type-theoretic structures -- ideally without having to write a
--- single proof for any particular structure.
+-- This file contains a very abstract and general definition of `Structure`, which is actually a variant
+-- of an ∞-groupoid.
 --
--- In particular, this can hopefully be used to replace many invocations of the "transport" tactic with
--- simple invocations of theorems, such that all prerequisites of these theorems can be verified
--- syntactically.
---
--- The framework can be extended with automatic generation of richer structure such as morphisms later.
---
---  Initial idea
--- --------------
---
--- The starting point of this formalization is actually quite simple: Frequently in mathematics, we are
--- dealing with a set/type together with some structure on it; in Lean this is most commonly realized as a
--- type class `C : Type u → Type v`. If we have a type `α` together with an instance `x : C α` of the type
--- class `C`, we define the "bundled structure" to be `⟨α, x⟩ : Σ α, C α`. For such bundled structures, we
--- are able to give a definition of "isomorphism" as follows:
---
--- * Given an `e : Equiv α β`, i.e. a "relabeling" operation that maps from one carrier type to another,
---   we need to correspondingly relabel instances of `C α` to `C β`, i.e. transport them along `e`. We
---   axiomatize this as a `transport` map which takes `e` to an `f : Equiv (C α) (C β)` in a way that
---   commutes with `refl`, `symm`, and `trans`.
--- 
--- * Then we can define an isomorphism between two bundled instances `⟨α, x⟩ ⟨β, y⟩ : Σ α, C α` to be an
---   `e : Equiv α β` together with a proof that the equivalence given by `transport e` maps `x` to `y`.
---   In other words, we simply require the `transport` operation to correctly apply the given relabeling
---   operation on the right-hand side of the bundled instance.
---
--- The intent of this generic definition of "isomorphism" is that it should enable us to transport
--- elements and properties along concrete isomorphisms in a generic way, i.e. without writing either
--- individual proofs or tactics.
---
---  Generalization
--- ----------------
---
--- Although the initial version applies to a lot of basic algebraic structures, it does not compose very
--- well, as we require the left side of a bundled structure to be a type, and in Lean not everything is a
--- type. As a consequence, the `transport` map needs to be defined individually for each type class `C`
--- in the example above.
---
--- Instead, we would like to define e.g. the `transport` map for groups as a composition of a `transport`
--- map for semigroups which have have defined earlier, with another map that only takes care of the
--- additional structure of a group compared to a semigroup.
---
--- In general terms, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` canonically also as
--- `⟨⟨α, x₁⟩, x₂⟩` if `⟨α, x₁⟩` has already been defined as a bundled structure. However, in the initial
--- version this would not type-check because `⟨α, x₁⟩` is not a type.
--- (TODO: What about systems where everything _is_ a type?)
---
--- Therefore, we generalize our initial version in two directions:
---
--- * In place of the type `α`, we also allow (among other things) a bundled instance `⟨α, x⟩`, replacing
---   `Equiv` on types with the isomorphism concept we just defined for bundled instances.
---
--- * Moreover, we also need to consider more carefully the case that `x` is again a bundled structure
---   `⟨β, y⟩` where `β` is or contains a type: Although we placed no restrictions on `x` in the
---   description above, we secretly relied on an equality comparison when giving the definition of
---   isomorphism. If the right-hand side is actually a structure with isomorphisms, we need to check for
---   isomorphism instead of equality.
---
---  Preliminary results
--- ---------------------
---
--- In order to unify the different cases, we define a generic `Structure` type which can hold various
--- objects with equivalences between them, such as:
---
---  Type                      | Equivalence
--- ---------------------------+---------------------------------
---  `Prop`                    | `Iff`
---  `α : Sort u`              | `Eq`
---  `α` with `[s : Setoid α]` | `s.r`
---  `Sort u`                  | `Equiv` from `data.equiv.basic`
---  `Structure`               | `StructureEquiv` defined below
---
--- It turns out that the required definition of `Structure` is something quite well-known: In theory, it
--- is best formalized as an ∞-groupoid, but instead of working with the entire infinite hierarchy, in Lean
--- we have to make a compromise by coercing equivalences of equivalences to equivalence _relations_, in
--- effect working with a single level of the hierarchy at a time.
---
--- Side note: The formalization brought to light some surprising properties of groupoids, which may or may
--- not be known. Most strikingly, we obtain the following result:
--- If we understand equivalence (i.e. isomorphism within a groupoid) as generalized equality, then
--- groupoid functors are just generalized functions. If we then define "injective", "surjective", and
--- "bijective" in a straightforward way, each "bijective" functor actually has an inverse functor -- even
--- though the formalization is entirely constructive.
--- More details below at `section Properties`.
---
--- Returning to the goal of defining isomorphism as "equality up to relabeling" for particular structures,
--- we can not only compose bundled structures as described above, but we are actually able to analyze
--- arbitrary structures in terms of their basic type-theoretic building blocks, and in particular:
--- * determine the correct definition of "isomorphism" for each structure,
--- * analyze whether a given property is isomorphism-invariant, and
--- * transport isomorphism-invariant properties along concrete isomorphisms.
---
--- It also looks like much of this analysis can be automated, but this is still WIP.
---
--- While the formalization in terms of ∞-groupoids is strongly related to HoTT, our formalization does not
--- use univalence in any way.
-
-
--- TODO:
--- * Create more examples.
--- * Determine structure automatically via type-class or tactic magic.
--- * Introduce skeletal version, and reference it where appropriate.
--- * Define "canonical isomorphism".
--- * Automatically deduce that properties are isomorphism-invariant.
--- * Introduce structures with morphisms.
--- * Automatically generate those structures automatically where appropriate.
--- * Prove that isomorphism according to those morphisms is the same as isomorphism defined as relabeling.
--- * Generate even more structure automatically.
--- * Explore connection to HLM in more detail.
-
-
--- Regarding the last point: HLM is the logic that is being implemented in the interactive theorem prover
--- Slate (https://slate-prover.org/).
---
--- HLM is classical and set-theoretic, but uses a custom set theory that can also be interpreted as a
--- dependent type theory. In fact, the contents of this file started out as an exploration of how to
--- translate from HLM to other dependently-typed systems such as Lean. The result of this exploration is
--- that a "set" in HLM is exactly an ∞-groupoid on the meta level. So this file should be able to serve
--- as a basis for a translation from HLM to Lean, and also to other theorem provers, especially those that
--- implement HoTT.
-
-
-
--- A quick&dirty port of the parts of data.equiv.basic we need; should be replaced once it becomes
--- available in Lean 4 mathlib.
-import isomorphism.equiv
+-- See `Structure.lean` for an explanation of the use case.
 
 
 
@@ -155,10 +28,11 @@ def eqEquiv  {α : Sort u} : Equivalence (@Eq α) := ⟨Eq.refl,  Eq.symm,  Eq.t
 -- * The equivalences could be instances of the `Structure` type we are going to define. This would
 --   turn that definition into a large mutually inductive type which Lean refuses to accept.
 -- * Fortunately, for comparison of equivalences, a setoid is sufficient. Since it is a different setoid
---   for each pair of inputs, we need a bundled version of `Setoid` here.
+--   for each pair of inputs, we work with a bundled version of `Setoid`.
 --
 -- Even though `α`, `β` are not necessarily types, we use greek letters to raise awareness that they
--- frequently will be.
+-- frequently will be. (However, the code where this is actually the case is outsourced into a separate
+-- file `SortStructure.lean`.)
 
 structure BundledSetoid where
 (α : Sort u)
@@ -189,7 +63,6 @@ instance relGenEquiv {α : Sort u} {r : α → α → Prop} (e : Equivalence r) 
 instance iffGenEquiv                                : IsEquivalence (genRel Iff)     := relGenEquiv iffEquiv
 instance eqGenEquiv     (α : Sort u)                : IsEquivalence (genRel (@Eq α)) := relGenEquiv eqEquiv
 instance setoidGenEquiv (α : Sort u) [s : Setoid α] : IsEquivalence (genRel s.r)     := relGenEquiv s.iseqv
-instance equivGenEquiv                              : IsEquivalence (genRel Equiv)   := ⟨Equiv.refl, Equiv.symm, Equiv.trans⟩
 
 end IsEquivalence
 
@@ -197,7 +70,8 @@ open IsEquivalence
 
 
 
--- Sometimes we need to map instances of a type before comparing them; this definition makes that easier.
+-- Sometimes we need to map instances of a type before comparing them; this structure combines the
+-- necessary data for doing so.
 
 structure MappedRelation (A : Sort w) where
 {U : Sort u}
@@ -218,10 +92,10 @@ instance (U : Sort u) : Coe (GeneralizedRelation U) (MappedRelation U) := ⟨toM
 -- In other words, a structure with its equivalences is a category where every morphism has an inverse (as
 -- guaranteed by `symm`), i.e. it is a groupoid.
 --
--- Of course, this category can be a subcategory of one where not every morphism is invertible, but since
--- we are defining a generalization of an equivalence relation, we wish to ignore such extra structure at
--- this point. Note that for actual equivalence relations, the axioms are trivially satisfied in a
--- proof-irrelevant system such as Lean.
+-- Of course, the same type may also have a category structure with more morphisms, but since we are
+-- defining a generalization of an equivalence relation, not a category, we wish to ignore such extra
+-- structure at this point. Note that for actual equivalence relations, the axioms are trivially satisfied
+-- in a proof-irrelevant system such as Lean.
 --
 -- We add three redundant axioms to avoid unnecessary computations. (Actually, this list of axioms was
 -- originally inspired by the seven corresponding lemmas in `data.equiv.basic` of mathlib in Lean 3:
@@ -242,7 +116,7 @@ instance (U : Sort u) : Coe (GeneralizedRelation U) (MappedRelation U) := ⟨toM
 --
 -- In order to avoid the non-constructive operation of taking quotients when our equivalences have
 -- nontrivial structure, we replace `=` in the axioms with the setoid equivalence `≈` we just introduced.
--- This means `Structure` is not strictly a groupoid, but we are working in some variant of higher
+-- This means `Structure` is not strictly a groupoid, but we are instead working in some variant of higher
 -- groupoid theory.
 -- Using setoid equivalence instead of equality also requires the addition of two new axioms asserting
 -- that composition and inverses are compatible with this equivalence.
@@ -329,37 +203,6 @@ open PropEquiv
 
 
 
-namespace SortEquiv
-
-instance sortEquivHasComp : HasComp         (genRel Equiv) := ⟨Equiv.trans⟩
-
-theorem congrArgComp {α β γ : Sort u} {f₁ f₂ : (genRel Equiv) α β} {g₁ g₂ : (genRel Equiv) β γ} (h₁ : f₁ ≈ f₂) (h₂ : g₁ ≈ g₂) :
-  g₁ • f₁ ≈ g₂ • f₂ :=
-let h := congr (congrArg Equiv.trans h₁) h₂;
-h
-
-instance sortEquivHasCmp  : HasComposition  (genRel Equiv) := ⟨congrArgComp, Equiv.transAssoc⟩
-
-instance sortEquivHasId   : HasId           (genRel Equiv) := ⟨Equiv.refl⟩
-
-theorem leftId  {α β : Sort u} (f : (genRel Equiv) α β) : id__ β • f ≈ f := Equiv.transRefl f
-theorem rightId {α β : Sort u} (f : (genRel Equiv) α β) : f • id__ α ≈ f := Equiv.reflTrans f
-
-instance sortEquivHasMor  : HasMorphisms    (genRel Equiv) := ⟨leftId, rightId⟩
-
-instance sortEquivHasInv  : HasInv          (genRel Equiv) := ⟨Equiv.symm⟩
-
-theorem congrArgInv {α β : Sort u} {f₁ f₂ : (genRel Equiv) α β} (h₁ : f₁ ≈ f₂) :
-  f₁⁻¹ ≈ f₂⁻¹ :=
-congrArg Equiv.symm h₁
-
-instance sortEquivHasIso  : HasIsomorphisms (genRel Equiv) := ⟨congrArgInv, Equiv.transSymm, Equiv.symmTrans,
-                                                               Equiv.symmSymm, Equiv.symmTransSymm, λ _ => Equiv.reflSymm⟩
-
-end SortEquiv
-
-
-
 -- Bundle the generalized equivalence relation and its axioms into a single type class.
 
 class HasStructure (U : Sort u) where
@@ -373,10 +216,9 @@ instance hasMor  (U : Sort u) [h : HasStructure U] : HasMorphisms    h.M := h.h.
 instance hasIso  (U : Sort u) [h : HasStructure U] : HasIsomorphisms h.M := h.h
 instance isEquiv (U : Sort u) [h : HasStructure U] : IsEquivalence   h.M := isoEquiv h.M
 
-instance propHasStructure                                 : HasStructure Prop     := ⟨genRel Iff⟩
-instance instanceHasStructure (α : Sort u)                : HasStructure α        := ⟨genRel Eq⟩
-instance setoidHasStructure   (α : Sort u) [s : Setoid α] : HasStructure α        := ⟨genRel s.r⟩
-instance sortHasStructure                                 : HasStructure (Sort u) := ⟨genRel Equiv⟩
+instance propHasStructure                                 : HasStructure Prop := ⟨genRel Iff⟩
+instance instanceHasStructure (α : Sort u)                : HasStructure α    := ⟨genRel Eq⟩
+instance setoidHasStructure   (α : Sort u) [s : Setoid α] : HasStructure α    := ⟨genRel s.r⟩
 
 end HasStructure
 
@@ -438,7 +280,6 @@ def defaultStructure (U : Sort u) [h : HasStructure U] : Structure := ⟨U⟩
 def instanceStructure (α : Sort u) := @defaultStructure α (instanceHasStructure α)
 def setoidInstanceStructure (α : Sort u) [s : Setoid α] := @defaultStructure α (setoidHasStructure α)
 def bundledSetoidStructure (S : BundledSetoid) := setoidInstanceStructure S.α
-def sortStructure : Structure := ⟨Sort u⟩
 
 def isoStructure {S : Structure} (α β : S) := bundledSetoidStructure (iso α β)
 
@@ -671,20 +512,25 @@ end EquivEquiv
 
 def dependentEquiv (F G : DependentStructure S) : BundledSetoid := ⟨DependentEquiv F G⟩
 
-instance dependentEquivHasIso : HasIsomorphisms (@dependentEquiv A S) :=
-{ comp         := trans,
-  congrArgComp := λ hφ hψ α => congrArgComp (hφ α) (hψ α),
-  assoc        := λ φ ψ χ α => assoc        (φ α) (ψ α) (χ α),
-  id           := refl,
-  leftId       := λ φ     α => leftId       (φ α),
-  rightId      := λ φ     α => rightId      (φ α),
-  inv          := symm,
-  congrArgInv  := λ hφ    α => congrArgInv  (hφ α),
-  leftInv      := λ φ     α => leftInv      (φ α),
-  rightInv     := λ φ     α => rightInv     (φ α),
-  invInv       := λ φ     α => invInv       (φ α),
-  compInv      := λ φ ψ   α => compInv      (φ α) (ψ α),
-  idInv        := λ F     α => idInv        (F α) }
+-- Unfortunately, uncommenting this causes Lean to hang indefinitely, so we have to copy and paste the
+-- code at two other places instead.
+-- This only occured after moving `sortStructure` to a separate file, but `sortStructure` shouldn't be
+-- used here because we are dealing with the arbitrary structure `S α`. Adding this argument explicitly
+-- didn't help.
+--instance dependentEquivHasIso : HasIsomorphisms (@dependentEquiv A S) :=
+--{ comp         := trans,
+--  congrArgComp := λ hφ hψ α => congrArgComp (S := S α) (hφ α) (hψ α),
+--  assoc        := λ φ ψ χ α => assoc        (S := S α) (φ α) (ψ α) (χ α),
+--  id           := refl,
+--  leftId       := λ φ     α => leftId       (S := S α) (φ α),
+--  rightId      := λ φ     α => rightId      (S := S α) (φ α),
+--  inv          := symm,
+--  congrArgInv  := λ hφ    α => congrArgInv  (S := S α) (hφ α),
+--  leftInv      := λ φ     α => leftInv      (S := S α) (φ α),
+--  rightInv     := λ φ     α => rightInv     (S := S α) (φ α),
+--  invInv       := λ φ     α => invInv       (S := S α) (φ α),
+--  compInv      := λ φ ψ   α => compInv      (S := S α) (φ α) (ψ α),
+--  idInv        := λ F     α => idInv        (S := S α) (F α) }
 
 end DependentEquiv
 
@@ -839,8 +685,8 @@ DependentEquiv.trans e f
 
 def funExt (F G : StructureFunctor S T) := DependentEquiv.dependentEquiv F.map G.map
 
--- Unfortunately, uncommenting this line causes Lean to hang indefinitely, so we have to copy and paste
--- the code instead.
+-- Unfortunately, uncommenting this line (after uncommenting DependentEquiv.dependentEquivHasIso first)
+-- causes Lean to hang indefinitely, so we have to copy and paste the code instead.
 --instance funExtHasIso : HasIsomorphisms (@funExt S T) := @DependentEquiv.dependentEquivHasIso S.U (λ _ => T)
 
 instance funExtHasIso : HasIsomorphisms (@funExt S T) :=
@@ -1096,24 +942,6 @@ end InstanceEquiv
 
 
 
--- An equivalence between instance structures is actually the same as `Equiv`.
-
-def InstanceStructureEquiv (α β : Sort u) := StructureEquiv (instanceStructure α) (instanceStructure β)
-
-def instanceStructureEquiv {α β : Sort u} (e : Equiv α β) : InstanceStructureEquiv α β :=
-{ toFun    := instanceStructureFunctor e.toFun,
-  invFun   := instanceStructureFunctor e.invFun,
-  leftInv  := e.leftInv,
-  rightInv := e.rightInv }
-
-instance {α β : Sort u} : Coe (Equiv α β) (InstanceStructureEquiv α β) := ⟨instanceStructureEquiv⟩
-
-@[simp] theorem instanceEquiv {α β : Sort u} (e : Equiv α β) (a : α) (b : β) :
-  InstanceEquiv (instanceStructureEquiv e) a b = (e.toFun a = b) :=
-rfl
-
-
-
 -- A functor between two structures induces a functor between their setoid structures, and in the
 -- classical setting also between their skeleton structures. More specifically, we have the following
 -- commutative diagram (modulo equivalence defined on functors, i.e. `FunExt`). If we assume classical
@@ -1290,6 +1118,8 @@ end SetoidStructureEquiv
 
 
 
+-- We can convert any equivalence to one between setoid structures.
+
 def toSetoidStructureEquiv {S T : Structure} (e : StructureEquiv S T) : SetoidStructureEquiv S T :=
 { toFun    := setoidFunctor e.toFun,
   invFun   := setoidFunctor e.invFun,
@@ -1298,6 +1128,10 @@ def toSetoidStructureEquiv {S T : Structure} (e : StructureEquiv S T) : SetoidSt
 
 
 
+-- Just a minor lemma about `InstanceEquiv` that we can only state with respect to
+-- `SetoidStructureEquiv` because we have not defined any equivalence for the more general
+-- `StructureEquiv`.
+
 theorem InstanceEquiv.congrArg {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T} (h : e₁ ≈ e₂) (a : S) (b : T) :
   InstanceEquiv e₁ a b → InstanceEquiv e₂ a b :=
 let ⟨φ⟩ := h.left;
@@ -1305,288 +1139,10 @@ IsEquivalence.trans (IsEquivalence.symm (φ a))
 
 
 
--- Using this definition of equivalence, now we can actually build a "universe" structure, or
--- equivalently the groupoid of lower-level groupoids. Note that the objects are actual structures
--- (of a lower Lean universe), but the equivalences have been coerced to setoids, i.e. they no
--- longer contain their inner structure.
+-- Using `SetoidStructureEquiv`, now we can actually build a "universe" structure, or equivalently the
+-- groupoid of lower-level groupoids. Note that the objects are actual structures (of a lower Lean
+-- universe), but the equivalences have been coerced to setoids, i.e. they no longer contain their inner
+-- structure.
 
 instance structureHasStructure : HasStructure Structure := ⟨SetoidStructureEquiv.structureEquiv⟩
-
 def universeStructure : Structure := ⟨Structure⟩
-
-
-
--- When using `sortStructure` to encode `Sort u` as a `Structure` with equivalences given by `Equiv`,
--- the framework we have defined so far does not offer a way to transport an individual instance
--- `x : α` of a type `α : Sort u` along an encoded `Equiv`. Since the introductory description
--- contains precisely this operation, we need to provide an abstraction for it.
---
--- The `universeStructure` we have just defined enables us to do exactly that: The function
--- `instanceStructure`, which encodes a given Lean type as a `Structure` with equivalence given by
--- equality, is actually a functor from `sortStructure` to `universeStructure`. This functor
--- transports an `Equiv` between two types to a `StructureEquiv` between the corresponding instance
--- structures. And `StructureEquiv` provides the necessary operation of transporting an instance of
--- one structure to the other.
---
--- The benefit of this encoding is that `StructureEquiv` is much more general than the original
--- `Equiv` because many different objects can be encoded as instances of `Structure`.
-
-theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b :=
-Eq.subst h (Setoid.refl a)
-
-def instanceStructureEquiv' {α β : Sort u} (e : Equiv α β) := toSetoidStructureEquiv (instanceStructureEquiv e)
-
-namespace instanceStructureEquiv'
-
-theorem respectsSetoid {α β   : Sort u} {e₁ e₂ : Equiv α β} (h : e₁ = e₂) :
-  instanceStructureEquiv' e₁ ≈ instanceStructureEquiv' e₂ :=
-Setoid.fromEq (congrArg instanceStructureEquiv' h)
-
-theorem respectsComp   {α β γ : Sort u} (e : Equiv α β) (f : Equiv β γ) :
-  instanceStructureEquiv' (Equiv.trans e f) ≈ SetoidStructureEquiv.trans (instanceStructureEquiv' e) (instanceStructureEquiv' f) :=
-Setoid.refl (instanceStructureEquiv' (Equiv.trans e f))
-
-theorem respectsId     (α     : Sort u) :
-  instanceStructureEquiv' (Equiv.refl α) ≈ SetoidStructureEquiv.refl (instanceStructure α) :=
-Setoid.refl (instanceStructureEquiv' (Equiv.refl α))
-
-theorem respectsInv    {α β   : Sort u} (e : Equiv α β) :
-  instanceStructureEquiv' (Equiv.symm e) ≈ SetoidStructureEquiv.symm (instanceStructureEquiv' e) :=
-Setoid.refl (instanceStructureEquiv' (Equiv.symm e))
-
-end instanceStructureEquiv'
-
-def sortToStructureFunctor : StructureFunctor sortStructure universeStructure :=
-{ map     := instanceStructure,
-  functor := { FF        := instanceStructureEquiv',
-               isFunctor := { respectsSetoid := instanceStructureEquiv'.respectsSetoid,
-                              respectsComp   := instanceStructureEquiv'.respectsComp,
-                              respectsId     := instanceStructureEquiv'.respectsId,
-                              respectsInv    := instanceStructureEquiv'.respectsInv } } }
-
-
-
--- Now we will define some basic building blocks which are closely related to the cases mentioned in the
--- introduction.
-
-namespace BuildingBlocks
-
-structure DependentFunctor where
-(S : Structure)
-(C : StructureFunctor S universeStructure)
-
-def makeDependentFunctor {S : Structure} (C : StructureFunctor S sortStructure) : DependentFunctor :=
-⟨S, compFun C sortToStructureFunctor⟩
-
-structure EncodedPiExpr (T : DependentFunctor) where
-(map (α : T.S) : (T.C α).U)
-
-instance (T : DependentFunctor) : CoeFun (EncodedPiExpr T) (λ F => ∀ α : T.S, (T.C α).U) := ⟨EncodedPiExpr.map⟩
-
--- TODO: Σ may be redundant because everything is built on Π/∀ in Lean.
-
-structure EncodedSigmaExpr (T : DependentFunctor) where
-(α : T.S)
-(x : (T.C α).U)
-
--- Every term of type `∀ x, C x` or `Σ' x, C x` where everything has structures and functors can be
--- converted to an instance of `EncodedPiExpr` or `EncodedSigmaExpr`, respectively.
-
--- TODO: Figure out in which cases we can determine the functor properties of `C` automatically.
--- Easiest case: `C` does not actually depend on `x`, i.e. we have a function...
-
-def encodePiExpr    {α : Sort u} [h : HasStructure α] {C : StructureFunctor (defaultStructure α) sortStructure} (f : ∀  x : α, C x) :
-  EncodedPiExpr    (makeDependentFunctor C) := ⟨f⟩
-
-def encodeSigmaExpr {α : Sort u} [h : HasStructure α] {C : StructureFunctor (defaultStructure α) sortStructure} (f : Σ' x : α, C x) :
-  EncodedSigmaExpr (makeDependentFunctor C) := ⟨f.fst, f.snd⟩
-
-
-
--- We can define equivalences between such Π and Σ expressions. These fulfill the isomorphism axioms
--- and thus turn the types `EncodedPiExpr T` and `EncodedSigmaExpr T` into structures.
-
-def PiEquiv {T : DependentFunctor} (F G : EncodedPiExpr T) := DependentEquiv F.map G.map
-
-namespace PiEquiv
-
-variable {T : DependentFunctor}
-
-def refl  (F     : EncodedPiExpr T)                                     : PiEquiv F F :=
-DependentEquiv.refl  F.map
-def symm  {F G   : EncodedPiExpr T} (φ : PiEquiv F G)                   : PiEquiv G F :=
-DependentEquiv.symm  φ
-def trans {F G H : EncodedPiExpr T} (φ : PiEquiv F G) (ψ : PiEquiv G H) : PiEquiv F H :=
-DependentEquiv.trans φ ψ
-
-def piEquiv (F G : EncodedPiExpr T) := DependentEquiv.dependentEquiv F.map G.map
-
--- Unfortunately, uncommenting this line causes Lean to hang indefinitely, so we have to copy and paste
--- the code instead.
---instance piEquivHasIso : HasIsomorphisms (@piEquiv T) := @DependentEquiv.dependentEquivHasIso T.S T.C.map
-
-instance piEquivHasIso : HasIsomorphisms (@piEquiv T) :=
-{ comp         := trans,
-  congrArgComp := λ hφ hψ α => congrArgComp (hφ α) (hψ α),
-  assoc        := λ φ ψ χ α => assoc        (φ α) (ψ α) (χ α),
-  id           := refl,
-  leftId       := λ φ     α => leftId       (φ α),
-  rightId      := λ φ     α => rightId      (φ α),
-  inv          := symm,
-  congrArgInv  := λ hφ    α => congrArgInv  (hφ α),
-  leftInv      := λ φ     α => leftInv      (φ α),
-  rightInv     := λ φ     α => rightInv     (φ α),
-  invInv       := λ φ     α => invInv       (φ α),
-  compInv      := λ φ ψ   α => compInv      (φ α) (ψ α),
-  idInv        := λ F     α => idInv        (F α) }
-
-end PiEquiv
-
-open PiEquiv
-
-instance piHasStructure (T : DependentFunctor) : HasStructure (EncodedPiExpr T) := ⟨piEquiv⟩
-def piStructure (T : DependentFunctor) : Structure := ⟨EncodedPiExpr T⟩
-
-
-
--- The equivalence between encoded Σ expressions is actually the generalized version of the example
--- in the introduction: A bundled instance of a Lean type class is an instance of the corresponding
--- Σ type. If the type class is a functor, we can define two bundled instances to be isomorphic iff
--- we have an equivalence between the types such that `congrArgMap` maps one instance of the type
--- class to the other.
-
-def SigmaEquiv {T : DependentFunctor} (F G : EncodedSigmaExpr T) :=
-Σ' e : F.α ≃ G.α, InstanceEquiv (T.C.congrArgMap e) F.x G.x
-
-namespace SigmaEquiv
-
-variable {T : DependentFunctor}
-
-def refl  (F     : EncodedSigmaExpr T)                                           : SigmaEquiv F F :=
-let h₁ := InstanceEquiv.refl (setoidStructure (T.C F.α)) F.x;
-let h₂ := Setoid.symm (respectsId   T.C F.α);
-⟨IsEquivalence.refl  F.α,         InstanceEquiv.congrArg h₂ F.x F.x h₁⟩
-
-def symm  {F G   : EncodedSigmaExpr T} (φ : SigmaEquiv F G)                      : SigmaEquiv G F :=
-let h₁ := InstanceEquiv.symm (congrArgMap T.C φ.fst) F.x G.x φ.snd;
-let h₂ := Setoid.symm (respectsInv  T.C φ.fst);
-⟨IsEquivalence.symm  φ.fst,       InstanceEquiv.congrArg h₂ G.x F.x h₁⟩
-
-def trans {F G H : EncodedSigmaExpr T} (φ : SigmaEquiv F G) (ψ : SigmaEquiv G H) : SigmaEquiv F H :=
-let h₁ := InstanceEquiv.trans (congrArgMap T.C φ.fst) (congrArgMap T.C ψ.fst) F.x G.x H.x φ.snd ψ.snd;
-let h₂ := Setoid.symm (respectsComp T.C φ.fst ψ.fst);
-⟨IsEquivalence.trans φ.fst ψ.fst, InstanceEquiv.congrArg h₂ F.x H.x h₁⟩
-
--- No need to compare `φ.snd` and `ψ.snd` because they are proofs.
-def SigmaEquivEquiv {F G : EncodedSigmaExpr T} (φ ψ : SigmaEquiv F G) := φ.fst ≈ ψ.fst
-
-namespace SigmaEquivEquiv
-
-variable {F G : EncodedSigmaExpr T}
-
-theorem refl  (φ     : SigmaEquiv F G)                                                     : SigmaEquivEquiv φ φ :=
-Setoid.refl  φ.fst
-
-theorem symm  {φ ψ   : SigmaEquiv F G} (e : SigmaEquivEquiv φ ψ)                           : SigmaEquivEquiv ψ φ :=
-Setoid.symm  e
-
-theorem trans {φ ψ χ : SigmaEquiv F G} (e : SigmaEquivEquiv φ ψ) (f : SigmaEquivEquiv ψ χ) : SigmaEquivEquiv φ χ :=
-Setoid.trans e f
-
-instance sigmaEquivSetoid : Setoid (SigmaEquiv F G) := ⟨SigmaEquivEquiv, ⟨refl, symm, trans⟩⟩
-
-end SigmaEquivEquiv
-
-def sigmaEquiv (F G : EncodedSigmaExpr T) : BundledSetoid := ⟨SigmaEquiv F G⟩
-
-instance sigmaEquivHasIso : HasIsomorphisms (@sigmaEquiv T) :=
-{ comp         := trans,
-  congrArgComp := λ hφ hψ => congrArgComp hφ hψ,
-  assoc        := λ φ ψ χ => assoc        φ.fst ψ.fst χ.fst,
-  id           := refl,
-  leftId       := λ φ     => leftId       φ.fst,
-  rightId      := λ φ     => rightId      φ.fst,
-  inv          := symm,
-  congrArgInv  := λ hφ    => congrArgInv  hφ,
-  leftInv      := λ φ     => leftInv      φ.fst,
-  rightInv     := λ φ     => rightInv     φ.fst,
-  invInv       := λ φ     => invInv       φ.fst,
-  compInv      := λ φ ψ   => compInv      φ.fst ψ.fst,
-  idInv        := λ F     => idInv        F.α }
-
-end SigmaEquiv
-
-open SigmaEquiv
-
-instance sigmaHasStructure (T : DependentFunctor) : HasStructure (EncodedSigmaExpr T) := ⟨@sigmaEquiv T⟩
-def sigmaStructure (T : DependentFunctor) : Structure := ⟨EncodedSigmaExpr T⟩
-
-
-
--- If we have an `Equiv` with a type that has a structure, we can transport the structure along
--- that `Equiv`.
-
--- TODO: Do we still need this?
-
-instance hasEquivalentStructure {α : Sort u} {β : Sort v} [h : HasStructure β] (e : Equiv α β) : HasStructure α :=
-{ M := λ a b => h.M (e.toFun a) (e.toFun b),
-  h := { comp         := h.h.comp,
-         congrArgComp := h.h.congrArgComp,
-         assoc        := λ _ _ => h.h.assoc    _ _,
-         id           := λ _ => h.h.id _,
-         leftId       := λ _   => h.h.leftId   _,
-         rightId      := λ _   => h.h.rightId  _,
-         inv          := h.h.inv,
-         congrArgInv  := h.h.congrArgInv,
-         leftInv      := λ _   => h.h.leftInv  _,
-         rightInv     := λ _   => h.h.rightInv _,
-         invInv       := λ _   => h.h.invInv   _,
-         compInv      := λ _ _ => h.h.compInv  _ _,
-         idInv        := λ _   => h.h.idInv    _ } }
-
--- Obviously, this turns the `Equiv` into a `StructureEquiv` between the two structures.
-
--- TODO
-
-
-
--- If `C` is a type class, we need to show that it is a functor in order to use our abstract framework.
--- We can do that by providing equivalences between `C α` and `D α`, where `D` is already known to be a
--- functor from `sortStructure` to `sortStructure`.
-
-def TypeClass := Type u → Type v
-
-def TypeClassEquiv (C D : TypeClass) := ∀ α, Equiv (C α) (D α)
-
-def TypeClassFunctor := StructureFunctor sortStructure sortStructure
-
-def toTypeClassFunctor (C : TypeClass) (D : TypeClassFunctor) (φ : TypeClassEquiv C D.map) : TypeClassFunctor :=
-proxyFunctor C D φ
-
-end BuildingBlocks
-
-open BuildingBlocks
-
-
-
-namespace Examples
-
--- As the simplest example of a type class, let us consider `Inhabited` from `Prelude`, which gives a
--- type a "pointed type" structure.
---
--- In order to let our framework determine automatically what an isomorphism between two instances of
--- `Inhabited` should be, we need to show that the function `Inhabited : Sort _ → Sort _` is a
--- `StructureFunctor`.
--- The easiest way to do this is to observe that the content of `Inhabited α` is actually a single
--- instance of `α`, so we have an `Equiv` between `Inhabited α` and `α`. That gives us a `TypeClassEquiv`
--- between `Inhabited` and `id`, and then `toTypeClassFunctor` will return the required functor.
-
-def inhabitedEquivInstance (α : Sort u) : Equiv (Inhabited α) α :=
-{ toFun    := λ ⟨x⟩ =>  x,
-  invFun   := λ  x  => ⟨x⟩,
-  leftInv  := λ ⟨x⟩ => rfl,
-  rightInv := λ  x  => rfl }
-
-def inhabitedFunctor := toTypeClassFunctor Inhabited idFun inhabitedEquivInstance
-
-end Examples
