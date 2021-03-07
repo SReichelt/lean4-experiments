@@ -31,29 +31,30 @@ Eq.trans (congrArg e₁.invFun (e₂.leftInv (e₁.toFun x))) (e₁.leftInv x)
 def trans {α : Sort u₁} {β : Sort u₂} {γ : Sort u₃} (e₁ : α ≃≃ β) (e₂ : β ≃≃ γ) : α ≃≃ γ :=
 ⟨e₂.toFun ∘ e₁.toFun, e₁.invFun ∘ e₂.invFun, transLeftInv e₁ e₂, transLeftInv (symm e₂) (symm e₁)⟩
 
-protected def cast {α β : Sort u₁} (h : α = β) : α ≃≃ β :=
-⟨cast h, cast h.symm, sorry, sorry⟩
-
 variable {α : Sort u₁} {β : Sort u₂} {γ : Sort u₃} {δ : Sort u₄}
 
-@[simp] theorem symmSymm (e : α ≃≃ β) : e.symm.symm = e := sorry
+@[simp] theorem symmSymm (e : α ≃≃ β) : e.symm.symm = e := match e with
+| ⟨toFun, invFun, leftInv, rightInv⟩ => rfl
 
-@[simp] theorem transRefl (e : α ≃≃ β) : e.trans (refl β) = e := sorry
+@[simp] theorem transRefl (e : α ≃≃ β) : e.trans (refl β) = e := match e with
+| ⟨toFun, invFun, leftInv, rightInv⟩ => rfl
 
 @[simp] theorem reflSymm : (refl α).symm = refl α := rfl
 
-@[simp] theorem reflTrans (e : α ≃≃ β) : (refl α).trans e = e := sorry
+@[simp] theorem reflTrans (e : α ≃≃ β) : (refl α).trans e = e := match e with
+| ⟨toFun, invFun, leftInv, rightInv⟩ => rfl
 
-@[simp] theorem symmTrans (e : α ≃≃ β) : e.symm.trans e = refl β := sorry
+@[simp] theorem symmTrans (e : α ≃≃ β) : e.symm.trans e = refl β :=
+let h₁ : e.toFun ∘ e.invFun = id := funext e.rightInv;
+-- No idea how this works in Lean 4.
+sorry
 
-@[simp] theorem transSymm (e : α ≃≃ β) : e.trans e.symm = refl α := sorry
+@[simp] theorem transSymm (e : α ≃≃ β) : e.trans e.symm = refl α := symmTrans (symm e)
 
 @[simp] theorem symmTransSymm (ab : α ≃≃ β) (bc : β ≃≃ γ) :
-  (ab.trans bc).symm = bc.symm.trans ab.symm :=
-sorry
+  (ab.trans bc).symm = bc.symm.trans ab.symm := rfl
 
 theorem transAssoc (ab : α ≃≃ β) (bc : β ≃≃ γ) (cd : γ ≃≃ δ) :
-  (ab.trans bc).trans cd = ab.trans (bc.trans cd) :=
-sorry
+  (ab.trans bc).trans cd = ab.trans (bc.trans cd) := rfl
 
 end Equiv
