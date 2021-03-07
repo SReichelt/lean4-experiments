@@ -8,8 +8,11 @@
 -- applied automatically to many different type-theoretic structures -- ideally without having to write a
 -- single proof for any particular structure.
 --
--- Automatic generation of richer structure such as morphisms will follow once the aforementioned goal has
--- been achieved.
+-- In particular, this can hopefully be used to replace many invocations of the "transport" tactic with
+-- simple invocations of theorems, such that all prerequisites of these theorems can be verified
+-- syntactically.
+--
+-- The framework can be extended with automatic generation of richer structure such as morphisms later.
 --
 --  Initial idea
 -- --------------
@@ -38,16 +41,17 @@
 -- ----------------
 --
 -- Although the initial version applies to a lot of basic algebraic structures, it does not compose very
--- well, as in Lean it is not the case that everything is a type. As a consequence, the `transport` map
--- needs to be defined individually for each type class `C` in the example above.
+-- well, as we require the left side of a bundled structure to be a type, and in Lean not everything is a
+-- type. As a consequence, the `transport` map needs to be defined individually for each type class `C`
+-- in the example above.
 --
 -- Instead, we would like to define e.g. the `transport` map for groups as a composition of a `transport`
 -- map for semigroups which have have defined earlier, with another map that only takes care of the
 -- additional structure of a group compared to a semigroup.
 --
--- In general terms, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` as `⟨⟨α, x₁⟩, x₂⟩`
--- if `⟨α, x₁⟩` has already been defined as a bundled structure. However, in the initial version this
--- would not type-check because the left-hand side must be a type and `⟨α, x₁⟩` is not a type.
+-- In general terms, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` canonically also as
+-- `⟨⟨α, x₁⟩, x₂⟩` if `⟨α, x₁⟩` has already been defined as a bundled structure. However, in the initial
+-- version this would not type-check because `⟨α, x₁⟩` is not a type.
 -- (TODO: What about systems where everything _is_ a type?)
 --
 -- Therefore, we generalize our initial version in two directions:
@@ -58,8 +62,8 @@
 -- * Moreover, we also need to consider more carefully the case that `x` is again a bundled structure
 --   `⟨β, y⟩` where `β` is or contains a type: Although we placed no restrictions on `x` in the
 --   description above, we secretly relied on an equality comparison when giving the definition of
---   `transport`. If the right-hand side is actually a structure with isomorphisms, we need to check for
---   isomorphism instead.
+--   isomorphism. If the right-hand side is actually a structure with isomorphisms, we need to check for
+--   isomorphism instead of equality.
 --
 --  Preliminary results
 -- ---------------------
@@ -80,12 +84,13 @@
 -- we have to make a compromise by coercing equivalences of equivalences to equivalence _relations_, in
 -- effect working with a single level of the hierarchy at a time.
 --
--- The formalization brought to light some surprising properties of groupoids, which may or may not be
--- known. Most strikingly, we obtain the following result:
--- If we treat equivalence (i.e. isomorphism within a groupoid) as generalized equality, then groupoid
--- functors are just generalized functions. If we then define "injective", "surjective", and "bijective"
--- in a straightforward way, each "bijective" functor actually has an inverse -- even though the
--- formalization is entirely constructive.
+-- Side note: The formalization brought to light some surprising properties of groupoids, which may or may
+-- not be known. Most strikingly, we obtain the following result:
+-- If we understand equivalence (i.e. isomorphism within a groupoid) as generalized equality, then
+-- groupoid functors are just generalized functions. If we then define "injective", "surjective", and
+-- "bijective" in a straightforward way, each "bijective" functor actually has an inverse functor -- even
+-- though the formalization is entirely constructive.
+-- More details below at `section Properties`.
 --
 -- Returning to the goal of defining isomorphism as "equality up to relabeling" for particular structures,
 -- we can not only compose bundled structures as described above, but we are actually able to analyze
@@ -518,9 +523,9 @@ open Functors
 
 -- If the target has equivalences in `Prop`, the functor axioms are satisfied trivially.
 
-instance propFunctor {A : Sort w} (R : MappedRelation A) [HasIsomorphisms R.R]
-  {U : Sort u} (S : U → U → Prop) [e : IsEquivalence (genRel S)] (F : A → U)
-  (FF : ∀ {α β : A}, R α β → S (F α) (F β)) :
+instance propFunctor {A : Sort w} {R : MappedRelation A} [HasIsomorphisms R.R]
+  {U : Sort u} {S : U → U → Prop} [e : IsEquivalence (genRel S)] {F : A → U}
+  {FF : ∀ {α β : A}, R α β → S (F α) (F β)} :
   IsIsomorphismFunctor R ⟨genRel S, F⟩ FF :=
 { respectsSetoid := λ _   => proofIrrel _ _,
   respectsComp   := λ _ _ => proofIrrel _ _,
@@ -929,8 +934,18 @@ def Bijective  := Prod (Injective F) (Surjective F)
 
 -- We can even build an inverse functor for any functor that is bijective according to this definition,
 -- even though we do not assume classical logic. This works because the equivalences in `Structure` can
--- hold the data we are defining here. Note that if we were dealing with propositions and using `∃`
--- instead of `Σ`, obtaining the inverse functor would require classical logic.
+-- hold the data we are defining here. Note that if we were dealing with propositions and using `∃` instead
+-- of `Σ`, obtaining the inverse functor would require classical logic.
+--
+-- What we are doing here can be described as working in an internal logic of the `universeStructure` we
+-- are going to define. Our functors model the functions of this internal logic. So in this internal logic,
+-- * function extensionality holds, and
+-- * every bijective function has an inverse,
+-- even when using constructive logic externally.
+--
+-- Given how closely this formalization seems to be related to HoTT, maybe some variant of univalence also
+-- holds in the internal logic. If this turned out to be the case, would it provide a "constructive
+-- interpretation of univalence"?
 --
 -- The inverse functor is unique (modulo equivalence, i.e. `FunExt`).
 
@@ -986,10 +1001,7 @@ end Properties
 
 def congrArgFunctor {α : Sort u} {β : Sort v} (f : α → β) : @GeneralizedFunctor α (instanceStructure α) (instanceStructure β) id f :=
 { FF        := congrArg f,
-  isFunctor := { respectsSetoid := λ _   => rfl,
-                 respectsComp   := λ _ _ => rfl,
-                 respectsId     := λ _   => rfl,
-                 respectsInv    := λ _   => rfl } }
+  isFunctor := propFunctor }
 
 def InstanceStructureFunctor (α β : Sort u) := StructureFunctor (instanceStructure α) (instanceStructure β)
 
@@ -1126,8 +1138,8 @@ rfl
 
 namespace Forgetfulness
 
--- `isFunctor` should be covered by `propFunctor`, but that just causes lots of type class resolution
--- issues.
+-- `isFunctor` should be covered by `propFunctor` as in the quotient case, but that just causes lots of
+-- type class resolution issues.
 
 def toSetoidFunctor (S : Structure) : StructureFunctor S (setoidStructure S) :=
 { map     := id,
@@ -1152,10 +1164,7 @@ namespace Classical
 def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
 { map     := λ α => Quotient.mk α,
   functor := { FF        := λ e => Quotient.sound e,
-               isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
-                              respectsComp   := λ _ _ => proofIrrel _ _,
-                              respectsId     := λ _   => proofIrrel _ _,
-                              respectsInv    := λ _   => proofIrrel _ _ } } }
+               isFunctor := propFunctor } }
 
 def toSkeletonFunctor (S : Structure) : StructureFunctor S (skeletonStructure S) :=
 compFun (toSetoidFunctor S) (setoidToSkeletonFunctor S)
@@ -1174,10 +1183,7 @@ congrArg (skeletonMap F)
 def skeletonFunctor (F : SetoidStructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
 { map     := skeletonMap F,
   functor := { FF        := skeletonCongrArg F,
-               isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
-                              respectsComp   := λ _ _ => proofIrrel _ _,
-                              respectsId     := λ _   => proofIrrel _ _,
-                              respectsInv    := λ _   => proofIrrel _ _ } } }
+               isFunctor := propFunctor } }
 
 end Classical
 
@@ -1548,7 +1554,7 @@ instance hasEquivalentStructure {α : Sort u} {β : Sort v} [h : HasStructure β
 -- We can do that by providing equivalences between `C α` and `D α`, where `D` is already known to be a
 -- functor from `sortStructure` to `sortStructure`.
 
-def TypeClass := Sort u → Sort v
+def TypeClass := Type u → Type v
 
 def TypeClassEquiv (C D : TypeClass) := ∀ α, Equiv (C α) (D α)
 
@@ -1575,12 +1581,12 @@ namespace Examples
 -- instance of `α`, so we have an `Equiv` between `Inhabited α` and `α`. That gives us a `TypeClassEquiv`
 -- between `Inhabited` and `id`, and then `toTypeClassFunctor` will return the required functor.
 
-def inhabitedEquivType (α : Sort u) : Equiv (Inhabited α) α :=
+def inhabitedEquivInstance (α : Sort u) : Equiv (Inhabited α) α :=
 { toFun    := λ ⟨x⟩ =>  x,
   invFun   := λ  x  => ⟨x⟩,
   leftInv  := λ ⟨x⟩ => rfl,
   rightInv := λ  x  => rfl }
 
-def inhabitedFunctor := toTypeClassFunctor Inhabited idFun inhabitedEquivType
+def inhabitedFunctor := toTypeClassFunctor Inhabited idFun inhabitedEquivInstance
 
 end Examples
