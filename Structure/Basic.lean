@@ -317,16 +317,14 @@ def setoidEquiv : Equivalence (SetoidEquiv S) :=
 instance structureToSetoid : Setoid S.U := ⟨SetoidEquiv S, setoidEquiv S⟩
 def setoidStructure : Structure := setoidInstanceStructure S.U
 
-theorem equivInSetoidStructure (a b : setoidStructure S) : a ≃ b ↔ a ≈ b :=
-⟨λ e => ⟨e⟩, λ ⟨e⟩ => e⟩
+theorem equivInSetoidStructure (a b : setoidStructure S) : a ≃ b ↔ a ≈ b := ⟨λ e => ⟨e⟩, λ ⟨e⟩ => e⟩
 
 namespace Classical
 
 def StructureQuotient := Quotient (structureToSetoid S)
 def skeletonStructure : Structure := ⟨StructureQuotient S⟩
 
-theorem equivInSkeletonStructure (a b : skeletonStructure S) : a ≃ b ↔ a = b :=
-⟨id, λ h => h ▸ IsEquivalence.refl a⟩
+theorem equivInSkeletonStructure (a b : skeletonStructure S) : a ≃ b ↔ a = b := ⟨id, id⟩
 
 end Classical
 

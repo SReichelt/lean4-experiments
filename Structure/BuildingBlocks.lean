@@ -227,6 +227,11 @@ def equiv (s t : EncodedSigmaExpr (constantLambda S T)) :
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
   rightInv := λ ⟨h₁, h₂⟩ => rfl }
 
+-- And in particular, if any of the two structures are the unit structure, we just have the equivalence
+-- on the other side.
+
+-- TODO
+
 end constantLambda
 
 -- While in this degenerate case, the left and right side could actually be arbitrary structures, in the
@@ -255,6 +260,11 @@ theorem iso (s t : EncodedSigmaExpr instanceLambda) :
 λ e => setoidInstanceEquiv (congrArgMap instanceLambda.C e) s.x t.x
 
 end instanceLambda
+
+-- TODO: Also define building blocks for everything we need in order to formalize categories and
+-- groupoids, and then define isomorphism for the `HasStructure` type class. This gives us an
+-- interesting and probably quite powerful reflection principle. Maybe it will lead to a proof of
+-- univalence in the internal logic.
 
 end AbstractIsomorphism
 
