@@ -188,25 +188,35 @@ namespace AbstractIsomorphism
 def HasIso {L : EncodedLambda} (s t : EncodedSigmaExpr L) (I : ∀ e : s.α ≃ t.α, Prop) :=
 ∀ e : s.α ≃ t.α, InstanceEquiv (congrArgMap L.C e) s.x t.x ↔ I e
 
-def isoEquiv {L : EncodedLambda} {s t : EncodedSigmaExpr L} {I : ∀ e : s.α ≃ t.α, Prop} (h : HasIso s t I) :
-  SigmaEquiv s t ≃≃ Σ' e : s.α ≃ t.α, I e :=
-{ toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, (h h₁).mp  h₂⟩,
-  invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, (h h₁).mpr h₂⟩,
+structure InstanceIsoCriterion {L : EncodedLambda} (s t : EncodedSigmaExpr L) where
+{I : ∀ e : s.α ≃ t.α, Prop}
+(h : HasIso s t I)
+
+def IsoCriterion (L : EncodedLambda) := ∀ s t : EncodedSigmaExpr L, InstanceIsoCriterion s t
+
+def isoEquiv {L : EncodedLambda} {s t : EncodedSigmaExpr L} (c : InstanceIsoCriterion s t) :
+  SigmaEquiv s t ≃≃ Σ' e : s.α ≃ t.α, c.I e :=
+{ toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, (c.h h₁).mp  h₂⟩,
+  invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, (c.h h₁).mpr h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
   rightInv := λ ⟨h₁, h₂⟩ => rfl }
+
+
 
 -- Degenerate case: If the instance does not actually depend on the type, an isomorphism is just an
 -- equivalence between the types together with an equivalence between the instances.
 
-def constantLambda (S T : Structure) : EncodedLambda := ⟨S, constFun T⟩
+def independentPairLambda (S T : Structure) : EncodedLambda := ⟨S, constFun T⟩
 
-namespace constantLambda
+def IndependentPair (S T : Structure) := EncodedSigmaExpr (independentPairLambda S T)
+
+namespace IndependentPair
 
 variable (S T : Structure)
 
 -- This degenerate case is actually equivalent to `PProd S T`.
 
-def equivProd : EncodedSigmaExpr (constantLambda S T) ≃≃ PProd S.U T.U :=
+def equivProd : IndependentPair S T ≃≃ PProd S.U T.U :=
 { toFun    := λ ⟨x, y⟩ => ⟨x, y⟩,
   invFun   := λ ⟨x, y⟩ => ⟨x, y⟩,
   leftInv  := λ ⟨x, y⟩ => rfl,
@@ -214,57 +224,192 @@ def equivProd : EncodedSigmaExpr (constantLambda S T) ≃≃ PProd S.U T.U :=
 
 -- The theorem about the instance equivalence.
 
-theorem iso (s t : EncodedSigmaExpr (constantLambda S T)) :
-  HasIso s t (λ e => s.x ≈ t.x) :=
+theorem iso (s t : IndependentPair S T) : HasIso s t (λ e => s.x ≈ t.x) :=
 λ e => Iff.refl (s.x ≈ t.x)
+
+def isoCriterion : IsoCriterion (independentPairLambda S T) :=
+λ s t => ⟨iso S T s t⟩
 
 -- For this particular case, we can also specialize `isoEquiv` a bit.
 
-def equiv (s t : EncodedSigmaExpr (constantLambda S T)) :
-  SigmaEquiv s t ≃≃ PProd (s.α ≃ t.α) (s.x ≈ t.x) :=
+def equiv (s t : IndependentPair S T) : SigmaEquiv s t ≃≃ PProd (s.α ≃ t.α) (s.x ≈ t.x) :=
 { toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
   rightInv := λ ⟨h₁, h₂⟩ => rfl }
 
--- And in particular, if any of the two structures are the unit structure, we just have the equivalence
+-- And in particular, if any of the two structures is the unit structure, we just have the equivalence
 -- on the other side.
 
 -- TODO
 
-end constantLambda
+end IndependentPair
 
--- While in this degenerate case, the left and right side could actually be arbitrary structures, in the
--- following cases we will really consider the left side as a type, in particular we need to work with
--- instances of this type.
+
+
+-- While in this degenerate case, the left and right side could actually be instances of arbitrary
+-- structures, in the following cases we will really consider the left side as a type, so we need it to
+-- be a structure, which is our abstraction of a type. In other word, we need it to be an instance of
+-- `universeStructure`.
 --
--- Since in our generalized framework, the instances should actually be arbitrary structure, we represent
--- the type not by an arbitrary structure but by an instance of `universeStructure`.
+-- The target of a `DependentLambda` is always `universeStructure` as well, so now we will be dealing
+-- with functors from `universeStructure` to `universeStructure`. This can be regarded as an abstraction
+-- of a type class, which is a function between two types.
 
--- The first such case is that the instance on the right is just a particular instance of the type on the
+@[reducible] def UniverseFunctor := StructureFunctor universeStructure universeStructure
+
+def universeLambda (F : UniverseFunctor) : EncodedLambda := ⟨universeStructure, F⟩
+
+def BundledInstance (F : UniverseFunctor) := EncodedSigmaExpr (universeLambda F)
+
+def UniverseIsoCriterion (F : UniverseFunctor) := IsoCriterion (universeLambda F)
+
+namespace BundledInstance
+
+
+
+-- First, we define a specialized version of `IndependentPair` under these constraints, i.e. a type
+-- together with a constant.
+
+def ConstantInstance (T : Structure) := BundledInstance (constFun T)
+
+namespace ConstantInstance
+
+variable (T : Structure)
+
+theorem iso (s t : IndependentPair universeStructure T) : HasIso s t (λ e => s.x ≈ t.x) :=
+IndependentPair.iso universeStructure T s t
+
+def isoCriterion : UniverseIsoCriterion (constFun T) :=
+λ s t => ⟨iso T s t⟩
+
+end ConstantInstance
+
+
+
+-- Another simple case is that the instance on the right is just a particular instance of the type on the
 -- left, i.e. we have a generalized "pointed type" structure. Obviously, in that case an isomorphism
 -- should transport the instance along the type equivalence.
 
-def instanceLambda : EncodedLambda := ⟨universeStructure, idFun⟩
+def InstanceInstance := BundledInstance idFun
 
-namespace instanceLambda
+namespace InstanceInstance
 
-def equivSigma : EncodedSigmaExpr instanceLambda ≃≃ Σ' S : Structure, S.U :=
+def equivSigma : InstanceInstance ≃≃ Σ' S : Structure, S.U :=
 { toFun    := λ ⟨S, x⟩ => ⟨S, x⟩,
   invFun   := λ ⟨S, x⟩ => ⟨S, x⟩,
   leftInv  := λ ⟨S, x⟩ => rfl,
   rightInv := λ ⟨S, x⟩ => rfl }
 
-theorem iso (s t : EncodedSigmaExpr instanceLambda) :
-  HasIso s t (λ e => e.toFun s.x ≈ t.x) :=
-λ e => setoidInstanceEquiv (congrArgMap instanceLambda.C e) s.x t.x
+theorem iso (s t : InstanceInstance) : HasIso s t (λ e => e.toFun s.x ≈ t.x) :=
+λ e => setoidInstanceEquiv e s.x t.x
 
-end instanceLambda
+def isoCriterion : UniverseIsoCriterion idFun :=
+λ s t => ⟨iso s t⟩
+
+end InstanceInstance
+
+
+
+-- The next building block is a bit opaque in its full generality. It covers the case where the instance
+-- is a functor from the type into something that is itself represented by a `UniverseFunctor`, i.e. a
+-- generalized type class. This is quite a powerful building block because functors are an abstraction of
+-- functions, so n-ary operations and relations are just special cases of this and the previous two
+-- building blocks composed in different ways.
+--
+-- This is best explained by considering the main use case where the type is really `α : Sort u` and `F`
+-- is a function `Sort u → Sort v`. Then we can consider the function
+-- `mapFun F : Sort u → Sort _ := λ α => α → F α`
+-- to be a type class that assigns to each `α` a function from `α` to something specified rather freely by
+-- `F`.
+--
+-- For example:
+-- * `mapFun (const _ γ)` is a type class that maps `α` to `α → γ`. In particular, if `γ` is `Prop`, we
+--   have a unary relation aka subset of `α`.
+-- * `mapFun (mapFun (const _ γ))` maps `α` to `α → α → γ`. In particular, if `γ` is `Prop`, we have a
+--   binary relation on `α`.
+-- * `mapFun id` maps `α` to `α → α`.
+-- * `mapFun (mapFun id)` maps `α` to `α → α → α`, i.e. a binary operation.
+--
+-- To give a general isomorphism criterion for `mapFun F`, we need to consider `F` as a functor again.
+-- Then we can prove the following: An `e : α ≃ β` is an isomorphism between `⟨α, f⟩` and `⟨β, g⟩` (with
+-- `f : α → _` and `g : β → _`) iff for all `x : α`, `congrArgMap F e` transports `f x` to `g (e x)`.
+--
+-- Applying this criterion to the examples above, we obtain all familiar special cases, e.g.:
+-- * For a function returning a constant, the condition is simply `f x = g (e x)`.
+-- * For a binary relation, the condition is `f x y ↔ g (e x) (e y)`.
+-- * For a function returning an instance of the type, the condition is `e (f x) = g (e x)`.
+-- * For a binary operation, the condition is `e (f x y) = g (e x) (e y)`.
+--
+-- TODO: We will also need to generalize the left side for e.g. outer operations.
+-- Can we generalize to `piStructure`?
+
+def mapFun (F : UniverseFunctor) (S : Structure) := functorStructure (setoidStructure S) (setoidStructure (F S))
+
+def congrArgFunToFun (F : UniverseFunctor) {S T : Structure} (e : SetoidStructureEquiv S T)
+  : SetoidStructureFunctor (mapFun F S) (mapFun F T) :=
+{ map     := λ f => compFun (compFun e.invFun f) (congrArgMap F e).toFun,
+  functor := sorry }  -- TODO: Since we are dealing with setoid functors here, we just need to combine `compFun.congrArg'` etc.
+
+def congrArgFun (F : UniverseFunctor) {S T : Structure} (e : SetoidStructureEquiv S T) :
+  SetoidStructureEquiv (mapFun F S) (mapFun F T) :=
+{ toFun    := congrArgFunToFun F e,
+  invFun   := congrArgFunToFun F (SetoidStructureEquiv.symm e),
+  leftInv  := sorry,  -- TODO: This is a bit similar to `DependentEquiv.transport`; maybe we can reuse something.
+  rightInv := sorry }
+
+def functorFun (F : UniverseFunctor) : UniverseFunctor :=
+{ map     := mapFun F,
+  functor := { FF        := congrArgFun F,
+               isFunctor := sorry } }
+
+def FunctorInstance (F : UniverseFunctor) := BundledInstance (functorFun F)
+
+namespace FunctorInstance
+
+variable (F : UniverseFunctor)
+
+-- The isomorphism criterion for the functors `s.x` and `t.x`, as described above.
+
+theorem iso (s t : FunctorInstance F) :
+  HasIso s t (λ e => ∀ x, InstanceEquiv (congrArgMap F e) (s.x.map x) (t.x.map (e.toFun x))) :=
+sorry
+
+-- If we have an isomorphism criterion for `F`, we can combine it with `iso`. This way, we can not only
+-- compose the building blocks but also their isomorphism criteria.
+
+theorem iso' (s t : FunctorInstance F) (c : UniverseIsoCriterion F) :
+  HasIso s t (λ e => ∀ x, (c ⟨s.α, s.x.map x⟩ ⟨t.α, t.x.map (e.toFun x)⟩).I e) :=
+λ e => let h₁ := iso F s t e;
+       let h₂ := λ x => (c ⟨s.α, s.x.map x⟩ ⟨t.α, t.x.map (e.toFun x)⟩).h e;
+       ⟨λ h x => (h₂ x).mp (h₁.mp h x), λ h => h₁.mpr (λ x => (h₂ x).mpr (h x))⟩
+
+def isoCriterion (c : UniverseIsoCriterion F) : UniverseIsoCriterion (functorFun F) :=
+λ s t => ⟨iso' F s t c⟩
+
+end FunctorInstance
+
+
+
+-- The previous building blocks give us criteria for the individual fields of a type class. To combine
+-- these fields, we need to give an isomorphism criterion for an instance that is a dependent pair.
+
+-- TODO
+
+
+
+-- TODO: Prove that, with our generalized definition of a dependent pair, we have a structure equivalence
+-- between nested pairs that maps `⟨⟨a, b⟩, c⟩` to `⟨a, ⟨b, c⟩⟩`. Could this become part of a general
+-- definition of the word "canonical"?
+
+
 
 -- TODO: Also define building blocks for everything we need in order to formalize categories and
--- groupoids, and then define isomorphism for the `HasStructure` type class. This gives us an
--- interesting and probably quite powerful reflection principle. Maybe it will lead to a proof of
--- univalence in the internal logic.
+-- groupoids, and then define isomorphism for the `HasStructure` type class. This gives us an interesting
+-- and probably quite powerful reflection principle. Maybe it will lead to a proof of univalence in the
+-- internal logic.
+
+end BundledInstance
 
 end AbstractIsomorphism
 
@@ -307,9 +452,7 @@ def TypeClass := Sort u → Sort v
 
 def TypeClassEquiv (C D : TypeClass) := ∀ α, C α ≃≃ D α
 
-def TypeClassFunctor := StructureFunctor sortStructure sortStructure
-
-instance : CoeFun TypeClassFunctor (λ F => Sort u → Sort v) := ⟨λ F => F.map⟩
+@[reducible] def TypeClassFunctor := StructureFunctor sortStructure sortStructure
 
 class StructuralTypeClass (C : TypeClass) where
 (F : TypeClassFunctor)

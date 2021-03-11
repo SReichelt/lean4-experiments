@@ -715,7 +715,7 @@ instance funExtHasIso : HasIsomorphisms (@funExt S T) :=
 end FunExt
 
 instance functorHasStructure : HasStructure (StructureFunctor S T) := ⟨FunExt.funExt⟩
-def functorStructure : Structure := ⟨StructureFunctor S T⟩
+def functorStructure (S T : Structure) : Structure := ⟨StructureFunctor S T⟩
 
 
 
@@ -761,7 +761,7 @@ def constFun (c : T) : StructureFunctor S T :=
 -- (Unfortunately, this does not help us in most cases because we would need to introduce our functors
 -- as instances of `functorSetoid`, which we don't want.)
 
-instance functorIsSetoid : Setoid (StructureFunctor S T) := structureToSetoid functorStructure
+instance functorIsSetoid : Setoid (StructureFunctor S T) := structureToSetoid (functorStructure S T)
 def functorSetoid : BundledSetoid := ⟨StructureFunctor S T⟩
 
 instance hasComp : HasComp        @functorSetoid := ⟨@compFun⟩
