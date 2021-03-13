@@ -137,3 +137,28 @@ def sortToStructureFunctor : StructureFunctor sortStructure universeStructure :=
                               respectsComp   := instanceStructureEquiv'.respectsComp,
                               respectsId     := instanceStructureEquiv'.respectsId,
                               respectsInv    := instanceStructureEquiv'.respectsInv } } }
+
+
+
+-- If we have an `Equiv` with a type that has a structure, we can transport the structure along
+-- that `Equiv`.
+
+instance hasEquivalentStructure {α : Sort u} {β : Sort v} [h : HasStructure β] (e : Equiv α β) : HasStructure α :=
+{ M := λ a b => h.M (e.toFun a) (e.toFun b),
+  h := { comp         := h.h.comp,
+         congrArgComp := h.h.congrArgComp,
+         assoc        := λ _ _ => h.h.assoc    _ _,
+         id           := λ _ => h.h.id _,
+         leftId       := λ _   => h.h.leftId   _,
+         rightId      := λ _   => h.h.rightId  _,
+         inv          := h.h.inv,
+         congrArgInv  := h.h.congrArgInv,
+         leftInv      := λ _   => h.h.leftInv  _,
+         rightInv     := λ _   => h.h.rightInv _,
+         invInv       := λ _   => h.h.invInv   _,
+         compInv      := λ _ _ => h.h.compInv  _ _,
+         idInv        := λ _   => h.h.idInv    _ } }
+
+-- Obviously, this turns the `Equiv` into a `StructureEquiv` between the two structures.
+
+-- TODO

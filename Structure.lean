@@ -52,9 +52,11 @@
 -- map for semigroups which have have defined earlier, with another map that only takes care of the
 -- additional structure of a group compared to a semigroup.
 --
--- In general terms, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` canonically also as
--- `⟨⟨α, x₁⟩, x₂⟩` if `⟨α, x₁⟩` has already been defined as a bundled structure. However, in the initial
--- version this would not type-check because `⟨α, x₁⟩` is not a type.
+-- In general terms, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` (where `x₂` may depend
+-- on both `α` and `x₁`) canonically also as a nested bundled structure `⟨⟨α, x₁⟩, x₂⟩`, with equivalence
+-- between `⟨α, x₁⟩` and some `⟨β, y₁⟩` given by isomorphism. Iterating this transformation would enable
+-- us to compose isomorphisms from basic building blocks. However, in the initial version given above the
+-- term `⟨⟨α, x₁⟩, x₂⟩` does not type-check because `⟨α, x₁⟩` is not a type.
 -- (TODO: What about systems where everything _is_ a type?)
 --
 -- Therefore, we generalize our initial version in two directions:

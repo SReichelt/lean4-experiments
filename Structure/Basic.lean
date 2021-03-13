@@ -906,8 +906,8 @@ open StructureFunctor
 structure StructureEquiv (S T : Structure) where
 (toFun    : StructureFunctor S T)
 (invFun   : StructureFunctor T S)
-(leftInv  : FunExt (compFun toFun invFun) idFun)
-(rightInv : FunExt (compFun invFun toFun) idFun)
+(leftInv  : compFun toFun invFun ≃ idFun)
+(rightInv : compFun invFun toFun ≃ idFun)
 
 namespace StructureEquiv
 
@@ -924,7 +924,7 @@ def symm  {S T   : Structure} (e : StructureEquiv S T)                          
   rightInv := e.leftInv }
 
 def transLeftInv {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) :
-  FunExt (compFun (compFun e.toFun f.toFun) (compFun f.invFun e.invFun)) idFun :=
+  compFun (compFun e.toFun f.toFun) (compFun f.invFun e.invFun) ≃ idFun :=
 λ α => trans (congrArgMap e.invFun (f.leftInv (e.toFun α))) (e.leftInv α)
 
 def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) : StructureEquiv S U :=
@@ -1014,6 +1014,8 @@ def setoidFunctor {S T : Structure} (F : StructureFunctor S T) : SetoidStructure
                               respectsComp   := λ _ _ => proofIrrel _ _,
                               respectsId     := λ _   => proofIrrel _ _,
                               respectsInv    := λ _   => proofIrrel _ _ } } }
+
+def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructure S) (setoidStructure T)
 
 namespace Classical
 
