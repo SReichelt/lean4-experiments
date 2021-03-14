@@ -1,6 +1,11 @@
+-- In this file, we define some basic building blocks which are closely related to the cases mentioned in
+-- the introduction in `Structure.lean`.
+
+
+
 import Structure.Basic
-import Structure.SortStructure
-import Structure.PiSigma
+import Structure.SortStructure  -- TODO: We should probably move everything that depends on this to `ConcreteBuildingBlocks.lean`.
+import Structure.AbstractPiSigma
 
 open Morphisms
 open Structure
@@ -16,9 +21,6 @@ universes u v
 
 
 
--- In this file, we define some basic building blocks which are closely related to the cases mentioned in
--- the introduction in `Basic.lean`.
-
 namespace BuildingBlocks
 
 -- If we think of `SigmaEquiv` as defining our concept of isomorphism, we can actually _prove_ that
@@ -28,8 +30,6 @@ namespace BuildingBlocks
 -- We will call `SigmaExpr.fst` the "type" and `SigmaExpr.snd` the "instance" (that depends on the type).
 -- Correspondingly, `SigmaEquiv.fst` is the "type equivalence", and `SigmaEquiv.snd` is the "instance
 -- equivalence".
-
-namespace AbstractIsomorphism
 
 -- We would like to state our theorems not about the entire `SigmaEquiv` but about how the instance
 -- equivalence depends on the type equivalence.
@@ -223,8 +223,10 @@ end FunctorInstanceDef
 
 
 
--- TODO: Generalize `FunctorInstance` to `PiExpr` in the same manner as `SigmaExpr`. This would be useful
--- because ultimately everything is built on Π types.
+-- TODO: Generalize `FunctorInstance` to `PiExpr`, somewhat similarly to how we treat `SigmaExpr`. This
+-- would be useful because ultimately everything is built on Π types.
+
+-- TODO: At least we need to define some simple cases for dependent propositions.
 
 
 
@@ -236,8 +238,8 @@ end FunctorInstanceDef
 -- consider both the inner and the outer pair as a type with an instance, and if we have isomorphism
 -- criteria for these, we can combine them into an isomorphism criterion for the original term.
 --
--- It turns out that our setoid-based formalization prevents us from generically considering all possible
--- sigma instances on the right side by defining a `StructureDependency` for generic sigma types.
+-- It turns out that our setoid-based formalization prevents us from generically supporting all possible
+-- sigma instances on the right by defining a `StructureDependency` for generic sigma types.
 -- Therefore, the variables `F` and `G` are based on the variant where the dependent types are nested on
 -- the left, and then we convert that to a `StructureDependency` where the structure contained in `F` is
 -- moved to the outside.
@@ -246,23 +248,41 @@ section SigmaInstanceDef
 
 variable (F : StructureDependency) (G : PairToUniverseFunctor F)
 
-def innerSigmaDependency : StructureDependency := ⟨sigmaStructure F, G⟩
-def sigmaDependency      : StructureDependency := ⟨F.fst, dependentSigmaFunctor F G⟩
-
-def InnerSigmaInstance := SigmaExpr (innerSigmaDependency F G)
-def SigmaInstance      := SigmaExpr (sigmaDependency      F G)
+def UncurriedSigmaInstance := SigmaExpr (innerPairDependency   F G)
+def SigmaInstance          := SigmaExpr (nestedSigmaDependency F G)
 
 namespace SigmaInstance
 
+def innerPair (a : SigmaInstance F G) : SigmaExpr F :=
+⟨a.fst, a.snd.fst⟩
+
+def outerPair (a : SigmaInstance F G) : UncurriedSigmaInstance F G :=
+⟨innerPair F G a, a.snd.snd⟩
+
+-- TODO: Make use of `PiSigmaEquivalences` here (and finish those first).
+
+theorem applyInnerEquiv (a b : SigmaInstance F G) (e : a.fst ≃ b.fst)
+                        (h : InstanceEquiv (congrArgMap F.snd e) a.snd.fst b.snd.fst) :
+  SetoidEquiv (sigmaStructure F) (innerPair F G a) (innerPair F G b) :=
+sorry
+
 theorem iso (a b : SigmaInstance F G) :
-  HasIso a b (λ e => sorry) :=
+  HasIso a b (λ e => ∃ h : InstanceEquiv (congrArgMap F.snd e) a.snd.fst b.snd.fst,
+                     InstanceEquiv (congrArgMap G (applyInnerEquiv F G a b e h)) a.snd.snd b.snd.snd) :=
 sorry
 
-theorem iso' (a b : SigmaInstance F G) (cF : IsoCriterion F) (cG : IsoCriterion (innerSigmaDependency F G)) :
-  HasIso a b (λ e => sorry) :=
+theorem applyInnerEquiv' (a b : SigmaInstance F G) (cF : IsoCriterion F) (e : a.fst ≃ b.fst)
+                         (h : (cF (innerPair F G a) (innerPair F G b)).I e) :
+  SetoidEquiv (sigmaStructure F) (innerPair F G a) (innerPair F G b) :=
 sorry
 
-def isoCriterion (cF : IsoCriterion F) (cG : IsoCriterion (innerSigmaDependency F G)) : IsoCriterion (sigmaDependency F G) :=
+theorem iso' (a b : SigmaInstance F G) (cF : IsoCriterion F) (cG : IsoCriterion (innerPairDependency F G)) :
+  HasIso a b (λ e => ∃ h : (cF (innerPair F G a) (innerPair F G b)).I e,
+                     (cG (outerPair F G a) (outerPair F G b)).I (applyInnerEquiv' F G a b cF e h)) :=
+sorry
+
+def isoCriterion (cF : IsoCriterion F) (cG : IsoCriterion (innerPairDependency F G)) :
+  IsoCriterion (nestedSigmaDependency F G) :=
 λ a b => ⟨iso' F G a b cF cG⟩
 
 end SigmaInstance
@@ -275,68 +295,6 @@ end SigmaInstanceDef
 -- groupoids, and then define isomorphism for the `HasStructure` type class. This gives us an interesting
 -- and probably quite powerful reflection principle. Maybe it will lead to a proof of something like
 -- univalence in the internal logic.
-
-end AbstractIsomorphism
-
-
-
-
-
-
-
-
--- If `C` is a type class, we need to show that it is a functor in order to use our abstract framework.
--- We can do that by providing equivalences between `C α` and `D α`, where `D` is already known to be a
--- functor from `sortStructure` to `sortStructure`.
-
-def TypeClass := Sort u → Sort v
-
-def TypeClassEquiv (C D : TypeClass) := ∀ α, C α ≃≃ D α
-
-@[reducible] def TypeClassFunctor := StructureFunctor sortStructure sortStructure
-
-class StructuralTypeClass (C : TypeClass) where
-(F : TypeClassFunctor)
-(φ : TypeClassEquiv C F.map)
-
-def toTypeClassFunctor (C : TypeClass) [h : StructuralTypeClass C] : TypeClassFunctor :=
-proxyFunctor C h.F h.φ
-
-
-
--- A bundled instance of a type class is just a dependent pair. If the type class is a functor, we can
--- build an `SigmaExpr`, which has a structure.
-
-def bundledStructure (C : TypeClass) [h : StructuralTypeClass C] := sigmaStructure (toStructureDependency (toTypeClassFunctor C))
-
-def bundled (C : TypeClass) [h : StructuralTypeClass C] (α : Sort u) (x : C α) : bundledStructure C := ⟨α, x⟩
-
-def bundledType     {C : TypeClass} [h : StructuralTypeClass C] (S : bundledStructure C) : Sort u := S.fst
-def bundledInstance {C : TypeClass} [h : StructuralTypeClass C] (S : bundledStructure C) : C S.fst  := S.snd
-
-
-
--- This lets us define isomorphism of two instances of a type class as equivalence of the corresponding
--- bundled structures.
-
-def Isomorphism {C : TypeClass} [h : StructuralTypeClass C] (α : Sort u) (x : C α) (β : Sort u) (y : C β) :=
-bundled C α x ≃ bundled C β y
-
--- From an isomorphism, we can recover the `Equiv` of the types and the condition on the instances.
-
-def isoTypeEquiv {C : TypeClass} [h : StructuralTypeClass C] {α : Sort u} {x : C α} {β : Sort u} {y : C β} (e : Isomorphism α x β y) :
-  α ≃≃ β :=
-e.fst
-
-def isoInstanceEquiv {C : TypeClass} [h : StructuralTypeClass C] {α : Sort u} {x : C α} {β : Sort u} {y : C β} (e : Isomorphism α x β y) :
-  C α ≃ C β :=
-congrArgMap (toTypeClassFunctor C) e.fst
-
-theorem isoCondition {C : TypeClass} [h : StructuralTypeClass C] {α : Sort u} {x : C α} {β : Sort u} {y : C β} (e : Isomorphism α x β y) :
--- TODO: Write in terms of `congrArgMap D e.fst`.
-  (isoInstanceEquiv e).toFun x = y :=
--- TODO: Need to undo `sortToStructureFunctor`.
-sorry --e.snd
 
 end BuildingBlocks
 

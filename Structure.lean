@@ -11,7 +11,7 @@
 --
 -- In particular, this can hopefully be used to replace many invocations of the "transport" tactic with
 -- simple invocations of theorems, such that all prerequisites of these theorems can be verified
--- syntactically. See `Examples.lean` for some initial examples.
+-- syntactically.
 --
 -- The framework can be extended with automatic generation of richer structure such as morphisms later.
 --
@@ -36,12 +36,15 @@
 --   In other words, we simply require the `transport` operation to correctly apply the given relabeling
 --   operation on the right-hand side of the bundled instance.
 --
--- The intent of this generic definition of "isomorphism" is that it should enable us to transport
--- elements and properties along concrete isomorphisms in a generic way, i.e. without writing either
--- individual proofs or tactics.
+-- The intent of such a generic definition of "isomorphism" is twofold:
 --
--- The correct `transport` map for a type class `C` can be derived from the definition of `C` more
--- directly than the definition of isomorphism.
+-- * By capturing the behavior of isomorphisms in the `transport` map, we should be able to transport
+--   elements and properties along concrete isomorphisms in a generic way, i.e. without writing either
+--   individual proofs or tactics.
+--
+-- * The correct `transport` map for a type class `C` can be derived from the definition of `C` more
+--   directly than the correct definition of isomorphism. Therefore, the necessary analysis can be
+--   automated more easily.
 --
 --
 --  Generalization
@@ -50,8 +53,8 @@
 -- Although the initial version applies to a lot of basic algebraic structures, it does not compose very
 -- well, as we require the left side of a bundled structure to be a type, and in Lean not everything is a
 -- type. As a consequence, the `transport` map needs to be defined individually for each type class `C`.
--- Instead, we would like to compose the `transport` map of a composite structure from the `transport`
--- maps of its parts.
+-- Instead, we would like to define the `transport` map of a composite structure by combining the
+-- `transport` maps of its parts.
 --
 -- Most importantly, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` (where `x₂` may depend
 -- on both `α` and `x₁`) canonically also as a nested bundled structure `⟨⟨α, x₁⟩, x₂⟩`, with equivalence
@@ -63,7 +66,7 @@
 -- Therefore, we generalize our initial version in two directions:
 --
 -- * We generalize the type of the left-hand side from `Type u` to a generic "structure with
---   equivalences", defined in such a way that a bundled instance `⟨α, x⟩` is such a "structure", with
+--   equivalences", defined in such a way that each bundled instance `⟨α, x⟩` is such a "structure", with
 --   equivalence given by the isomorphism concept we just defined.
 --
 -- * Moreover, we also need to consider more carefully the case that `x` is again a bundled structure
@@ -97,36 +100,52 @@
 -- Lean we have to make a compromise by coercing equivalences of equivalences to equivalence _relations_,
 -- in effect working with a single level of the hierarchy at a time.
 --
--- Side note: The formalization brought to light some surprising properties of groupoids, which may or may
--- not be known. Most strikingly, we obtain the following result:
+-- In this groupoid-based framework, we can define basic building blocks of bundled structures, which we
+-- now define to be Σ expressions that satisfy certain functorial properties. For each of the building
+-- blocks, we can prove a _theorem_ that gives an "isomorphism criterion" for this building block, and in
+-- fact all of the known special cases of isomorphisms can be stated very generally as such theorems (see
+-- in particular the table at `FunctorInstanceDef` in `AbstractBuildingBlocks.lean`).
+--
+-- By defining a building block for nested Σ expressions, we can compose those building blocks into larger
+-- structures.
+--
+-- After finishing the basic building blocks, we will be able to obtain the properties of structures by
+-- "describing" them in terms of the framework. In Lean, this can likely be fully automated. However, this
+-- part is still WIP.
+--
+-- In the same way, we can (and need to) define building-blocks for isomorphism-invariant properties. This
+-- is also still WIP, but once finished, isomorphism invariance of a property will directly follow from
+-- its syntactic definition.
+--
+--
+--  Remarks
+-- ---------
+--
+-- While the formalization in terms of ∞-groupoids is strongly related to HoTT, our formalization does not
+-- use univalence in any way.
+--
+-- The formalization brought to light some surprising properties of groupoids, which may or may not be
+-- known. Most strikingly, we obtain the following result:
 -- If we interpret equivalence/isomorphism of objects in a groupoid as generalized equality, then groupoid
 -- functors are just generalized functions. If we then define "injective", "surjective", and "bijective"
 -- in a straightforward way, each "bijective" functor actually has an inverse functor -- even though the
 -- formalization is entirely constructive.
 -- (More details in `Basic.lean` at `section Properties`.)
---
--- Returning to the goal of defining isomorphism as "equality up to relabeling" for particular structures,
--- we can not only compose bundled structures as described above, but we are actually able to analyze
--- arbitrary structures in terms of their basic type-theoretic building blocks, and in particular:
--- * determine the correct definition of "isomorphism" for each structure,
--- * analyze whether a given property is isomorphism-invariant, and
--- * transport isomorphism-invariant properties along concrete isomorphisms.
---
--- It also looks like much of this analysis can be automated, but this is still WIP.
---
--- While the formalization in terms of ∞-groupoids is strongly related to HoTT, our formalization does not
--- use univalence in any way.
 
 
 -- TODO:
+-- * Finish abstract building blocks.
+-- * Define the same building blocks in more concrete terms when restricted to types.
 -- * Fill sorrys.
--- * Create more examples.
--- * Determine structure automatically via type-class or tactic magic.
+-- * Create examples.
+-- * Determine structure automatically via type-class/tactic/attribute magic.
 -- * Automatically deduce that properties are isomorphism-invariant.
--- * Introduce skeletal version, and reference it where appropriate.
+--
+-- Further enhancements:
+-- * Introduce simpler "skeletal" version.
 -- * Define "canonical isomorphism".
 -- * Introduce structures with morphisms.
--- * Automatically generate those structures automatically where appropriate.
+-- * Generate those structures automatically where appropriate.
 -- * Prove that isomorphism according to those morphisms is the same as isomorphism defined as relabeling.
 -- * Generate even more structure automatically.
 -- * Explore connection to HLM in more detail.
@@ -145,6 +164,6 @@
 
 
 import Structure.Basic
-import Structure.SortStructure
-import Structure.PiSigma
-import Structure.BuildingBlocks
+import Structure.FunctorStructure
+import Structure.AbstractPiSigma
+import Structure.AbstractBuildingBlocks

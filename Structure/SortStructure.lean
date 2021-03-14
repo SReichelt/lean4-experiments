@@ -1,7 +1,3 @@
---
---               An abstract formalization of "isomorphism is equality up to relabeling"
---              =========================================================================
---
 -- This file extends `Basic.lean` with definitions that are related to `Equiv` from mathlib.
 --
 -- For more information, see the comment at the top of `Structure.lean`.
@@ -137,8 +133,8 @@ def sortToStructureFunctor : StructureFunctor sortStructure universeStructure :=
 
 
 
--- If we have an `Equiv` with a type that has a structure, we can transport the structure along
--- that `Equiv`.
+-- If we have an `Equiv` between two types where one has a structure, we can transport the structure
+-- along that `Equiv`.
 
 namespace EquivalentStructure
 
@@ -170,16 +166,17 @@ def equivalentEquivInv {x y : β} (f : x ≃ y) : (equivalentStructure e).h.M (e
 let h₁ := congr (congrArg h.M (e.rightInv x)) (e.rightInv y);
 cast (congrArg BundledSetoid.α (Eq.symm h₁)) f
 
--- Obviously, we have a `StructureEquiv` between the two structures, since we have essentially defined
--- them to be equivalent.
+-- That gives us a `StructureEquiv` between the two structures.
 
 def equivalentStructureDefEquivToFun : StructureFunctor (equivalentStructure e) (defaultStructure β) :=
 { map     := e.toFun,
-  functor := sorry }
+  functor := { FF        := equivalentEquiv e,
+               isFunctor := sorry } }
 
 def equivalentStructureDefEquivInvFun : StructureFunctor (defaultStructure β) (equivalentStructure e) :=
 { map     := e.invFun,
-  functor := sorry }
+  functor := { FF        := equivalentEquivInv e,
+               isFunctor := sorry } }
 
 def equivalentStructureDefEquiv : StructureEquiv (equivalentStructure e) (defaultStructure β) :=
 { toFun    := equivalentStructureDefEquivToFun  e,

@@ -516,20 +516,22 @@ end EquivEquiv
 
 def dependentEquiv (F G : DependentStructure S) : BundledSetoid := ⟨DependentEquiv F G⟩
 
-instance dependentEquivHasIso : HasIsomorphisms (@dependentEquiv A S) :=
-{ comp         := trans,
-  congrArgComp := λ hφ hψ α => congrArgComp (S := S α) (hφ α) (hψ α),
-  assoc        := λ φ ψ χ α => assoc        (S := S α) (φ α) (ψ α) (χ α),
-  id           := refl,
-  leftId       := λ φ     α => leftId       (S := S α) (φ α),
-  rightId      := λ φ     α => rightId      (S := S α) (φ α),
-  inv          := symm,
-  congrArgInv  := λ hφ    α => congrArgInv  (S := S α) (hφ α),
-  leftInv      := λ φ     α => leftInv      (S := S α) (φ α),
-  rightInv     := λ φ     α => rightInv     (S := S α) (φ α),
-  invInv       := λ φ     α => invInv       (S := S α) (φ α),
-  compInv      := λ φ ψ   α => compInv      (S := S α) (φ α) (ψ α),
-  idInv        := λ F     α => idInv        (S := S α) (F α) }
+-- Unfortunately, this causes Lean to hang indefinitely. :(
+--
+--instance dependentEquivHasIso : HasIsomorphisms (@dependentEquiv A S) :=
+--{ comp         := trans,
+--  congrArgComp := λ hφ hψ α => congrArgComp (S := S α) (hφ α) (hψ α),
+--  assoc        := λ φ ψ χ α => assoc        (S := S α) (φ α) (ψ α) (χ α),
+--  id           := refl,
+--  leftId       := λ φ     α => leftId       (S := S α) (φ α),
+--  rightId      := λ φ     α => rightId      (S := S α) (φ α),
+--  inv          := symm,
+--  congrArgInv  := λ hφ    α => congrArgInv  (S := S α) (hφ α),
+--  leftInv      := λ φ     α => leftInv      (S := S α) (φ α),
+--  rightInv     := λ φ     α => rightInv     (S := S α) (φ α),
+--  invInv       := λ φ     α => invInv       (S := S α) (φ α),
+--  compInv      := λ φ ψ   α => compInv      (S := S α) (φ α) (ψ α),
+--  idInv        := λ F     α => idInv        (S := S α) (F α) }
 
 end DependentEquiv
 
@@ -754,7 +756,7 @@ def constFun (c : T) : StructureFunctor S T :=
 instance functorIsSetoid : Setoid (StructureFunctor S T) := structureToSetoid (functorStructure S T)
 def functorSetoid : BundledSetoid := ⟨StructureFunctor S T⟩
 
-instance hasComp : HasComp        @functorSetoid := ⟨@compFun⟩
+instance hasComp : HasComp @functorSetoid := ⟨@compFun⟩
 
 theorem compFun.congrArg' {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} :
   F₁ ≈ F₂ → G₁ ≈ G₂ → compFun F₁ G₁ ≈ compFun F₂ G₂ :=
@@ -772,14 +774,14 @@ theorem compFun.assoc'' (F : @functorSetoid S T) (G : @functorSetoid T U) (H : @
   H • (G • F) ≈ (H • G) • F :=
 assoc' F G H
 
-instance hasCmp  : HasComposition @functorSetoid := ⟨compFun.congrArg'', compFun.assoc''⟩
+instance hasCmp : HasComposition @functorSetoid := ⟨compFun.congrArg'', compFun.assoc''⟩
 
-instance hasId   : HasId          @functorSetoid := ⟨@idFun⟩
+instance hasId : HasId @functorSetoid := ⟨@idFun⟩
 
 theorem idFun.leftId'  (F : @functorSetoid S T) : hasId.id T • F ≈ F := ⟨leftId  F⟩
 theorem idFun.rightId' (F : @functorSetoid S T) : F • hasId.id S ≈ F := ⟨rightId F⟩
 
-instance hasMor  : HasMorphisms   @functorSetoid := ⟨idFun.leftId', idFun.rightId'⟩
+instance hasMor : HasMorphisms @functorSetoid := ⟨idFun.leftId', idFun.rightId'⟩
 
 
 
@@ -817,18 +819,12 @@ section Inverse
 
 variable (h : Bijective F)
 
-def inverseElement (β : T) :=
-(h.snd β).fst
+def inverseElement (β : T) := (h.snd β).fst
 
 namespace inverseElement
 
-def isInverse (β : T) :
-  F (inverseElement F h β) ≃ β :=
-(h.snd β).snd
-
-def isInverse' (α : S) :
-  inverseElement F h (F α) ≃ α :=
-h.fst.FF (isInverse F h (F α))
+def isInverse  (β : T) : F (inverseElement F h β) ≃ β := (h.snd β).snd
+def isInverse' (α : S) : inverseElement F h (F α) ≃ α := h.fst.FF (isInverse F h (F α))
 
 end inverseElement
 
@@ -845,13 +841,8 @@ def inverse : StructureFunctor T S :=
 
 namespace inverse
 
-def leftInv  :
-  FunExt (compFun F (inverse F h)) idFun :=
-inverseElement.isInverse' F h
-
-def rightInv :
-  FunExt (compFun (inverse F h) F) idFun :=
-inverseElement.isInverse  F h
+def leftInv  : compFun F (inverse F h) ≃ idFun := inverseElement.isInverse' F h
+def rightInv : compFun (inverse F h) F ≃ idFun := inverseElement.isInverse  F h
 
 end inverse
 
@@ -863,7 +854,8 @@ end Properties
 
 -- A functor between instance structures is actually just a function.
 
-def congrArgFunctor {α : Sort u} {β : Sort v} (f : α → β) : @GeneralizedFunctor α (instanceStructure α) (instanceStructure β) id f :=
+def congrArgFunctor {α : Sort u} {β : Sort v} (f : α → β) :
+  @GeneralizedFunctor α (instanceStructure α) (instanceStructure β) id f :=
 { FF        := congrArg f,
   isFunctor := propFunctor }
 
@@ -877,7 +869,8 @@ def instanceStructureFunctor {α β : Sort u} (f : α → β) : InstanceStructur
 
 -- If we have a function `F` and an equivalent functor `G`, we can turn `F` into a functor as well.
 
-def proxyFunctor {S T : Structure} (F : S → T) (G : StructureFunctor S T) (φ : DependentEquiv F G.map) : StructureFunctor S T :=
+def proxyFunctor {S T : Structure} (F : S → T) (G : StructureFunctor S T) (φ : DependentEquiv F G.map) :
+  StructureFunctor S T :=
 { map     := F,
   functor := comp.genFun G.functor (DependentEquiv.transport.invFunctor φ) }
 
@@ -946,6 +939,10 @@ def refl  (S     : Structure)                                                   
   InstanceEquiv (StructureEquiv.refl S) a a :=
 IsEquivalence.refl a
 
+def refl' (S     : Structure)                                                   {a b : S} (h : a ≃ b)   :
+  InstanceEquiv (StructureEquiv.refl S) a b :=
+h
+
 def symm  {S T   : Structure} (e : StructureEquiv S T)                          (a : S) (b : T)         :
   InstanceEquiv e a b → InstanceEquiv (StructureEquiv.symm e) b a :=
 λ h₁ => IsEquivalence.trans (IsEquivalence.symm (e.invFun.congrArgMap h₁)) (e.leftInv a)
@@ -958,8 +955,7 @@ end InstanceEquiv
 
 
 
-theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b :=
-h ▸ Setoid.refl a
+theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b := h ▸ Setoid.refl a
 
 
 
@@ -1216,60 +1212,8 @@ f
 
 -- Using `SetoidStructureEquiv`, now we can actually build a "universe" structure, or equivalently the
 -- groupoid of lower-level groupoids. Note that the objects are actual structures (of a lower Lean
--- universe), but the equivalences have been coerced to setoids, i.e. they no longer contain their inner
--- structure.
+-- universe), and the equivalences between structures are essentially `Equiv`s between those structures.
+-- However, equivalence of two such equivalences is no longer an object but just a proposition.
 
 instance structureHasStructure : HasStructure Structure := ⟨SetoidStructureEquiv.structureEquiv⟩
 def universeStructure : Structure := ⟨Structure⟩
-
-
-
--- Now we can define functors from/to the universe structure, etc.
--- For example, the two maps from a structure `T` to the functor structure with `T` on one side are
--- themselves functors.
-
-def outgoingFunctorStructure (S T : Structure) := functorStructure S (setoidStructure T)
-
-def outgoingToFun (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
-  SetoidStructureFunctor (outgoingFunctorStructure S T₁) (outgoingFunctorStructure S T₂) :=
-{ map     := λ F => compFun F e.toFun,
-  functor := { FF        := λ h => compFun.congrArg' h (Setoid.refl _),
-               isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
-                              respectsComp   := λ _ _ => proofIrrel _ _,
-                              respectsId     := λ _   => proofIrrel _ _,
-                              respectsInv    := λ _   => proofIrrel _ _ } } }
-
-def outgoingFunctorEquiv (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
-  SetoidStructureEquiv (outgoingFunctorStructure S T₁) (outgoingFunctorStructure S T₂) :=
-{ toFun    := outgoingToFun S e,
-  invFun   := outgoingToFun S (SetoidStructureEquiv.symm e),
-  leftInv  := sorry,
-  rightInv := sorry }
-
-def outgoingFunctorFunctor (S : Structure) : StructureFunctor universeStructure universeStructure :=
-{ map     := outgoingFunctorStructure S,
-  functor := { FF        := outgoingFunctorEquiv S,
-               isFunctor := sorry } }
-
-def incomingFunctorStructure (S T : Structure) := functorStructure (setoidStructure T) S
-
-def incomingToFun (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
-  SetoidStructureFunctor (incomingFunctorStructure S T₁) (incomingFunctorStructure S T₂) :=
-{ map     := λ F => compFun e.invFun F,
-  functor := { FF        := λ h => compFun.congrArg' (Setoid.refl _) h,
-               isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
-                              respectsComp   := λ _ _ => proofIrrel _ _,
-                              respectsId     := λ _   => proofIrrel _ _,
-                              respectsInv    := λ _   => proofIrrel _ _ } } }
-
-def incomingFunctorEquiv (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
-  SetoidStructureEquiv (incomingFunctorStructure S T₁) (incomingFunctorStructure S T₂) :=
-{ toFun    := incomingToFun S e,
-  invFun   := incomingToFun S (SetoidStructureEquiv.symm e),
-  leftInv  := sorry,
-  rightInv := sorry }
-
-def incomingFunctorFunctor (S : Structure) : StructureFunctor universeStructure universeStructure :=
-{ map     := incomingFunctorStructure S,
-  functor := { FF        := incomingFunctorEquiv S,
-               isFunctor := sorry } }
