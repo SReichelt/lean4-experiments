@@ -227,9 +227,9 @@ end HasStructure
 
 open HasStructure
 
-instance propHasStructure                                 : HasStructure Prop := ⟨genRel Iff⟩
-instance instanceHasStructure (α : Sort u)                : HasStructure α    := ⟨genRel Eq⟩
-instance setoidHasStructure   (α : Sort u) [s : Setoid α] : HasStructure α    := ⟨genRel s.r⟩
+instance propHasStructure                               : HasStructure Prop := ⟨genRel Iff⟩
+def      typeHasStructure   (α : Sort u)                : HasStructure α    := ⟨genRel Eq⟩
+instance setoidHasStructure (α : Sort u) [s : Setoid α] : HasStructure α    := ⟨genRel s.r⟩
 
 
 
@@ -281,8 +281,8 @@ end Structure
 open Structure
 
 def defaultStructure (U : Sort u) [h : HasStructure U] : Structure := ⟨U⟩
-def instanceStructure (α : Sort u) := @defaultStructure α (instanceHasStructure α)
-def setoidInstanceStructure (α : Sort u) [s : Setoid α] := @defaultStructure α (setoidHasStructure α)
+def instanceStructure (α : Sort u) := @defaultStructure α (typeHasStructure α)
+def setoidInstanceStructure (α : Sort u) [s : Setoid α] := defaultStructure α
 def bundledSetoidStructure (S : BundledSetoid) := setoidInstanceStructure S.α
 
 def isoStructure {S : Structure} (α β : S) := bundledSetoidStructure (iso S α β)
@@ -295,8 +295,8 @@ def isoStructure {S : Structure} (α β : S) := bundledSetoidStructure (iso S α
 -- 1. We can coerce the equivalence to an equivalence _relation_, obtaining a "setoid structure."
 --    In comments, we will write `setoidStructure S` as `S_≈`.
 --
--- 2. In a classical setting, we can additionally take the quotient with respect to equivalence, obtaining
---    a "skeleton structure" where equivalence is equality.
+-- 2. In Lean, where quotients are available, we can additionally take the quotient with respect to
+--    equivalence, obtaining a "skeleton structure" where equivalence is equality.
 --    In comments, we will write `skeletonStructure S` as `S/≃`.
 --
 -- Later, we will prove some properties of these operations.
@@ -319,14 +319,10 @@ def setoidStructure : Structure := setoidInstanceStructure S.U
 
 theorem equivInSetoidStructure (a b : setoidStructure S) : a ≃ b ↔ a ≈ b := ⟨λ e => ⟨e⟩, λ ⟨e⟩ => e⟩
 
-namespace Classical
-
 def StructureQuotient := Quotient (structureToSetoid S)
-def skeletonStructure : Structure := ⟨StructureQuotient S⟩
+def skeletonStructure : Structure := instanceStructure (StructureQuotient S)
 
 theorem equivInSkeletonStructure (a b : skeletonStructure S) : a ≃ b ↔ a = b := ⟨id, id⟩
-
-end Classical
 
 end Forgetfulness
 
@@ -520,25 +516,20 @@ end EquivEquiv
 
 def dependentEquiv (F G : DependentStructure S) : BundledSetoid := ⟨DependentEquiv F G⟩
 
--- Unfortunately, uncommenting this causes Lean to hang indefinitely, so we have to copy and paste the
--- code at two other places instead.
--- This only occured after moving `sortStructure` to a separate file, but `sortStructure` shouldn't be
--- used here because we are dealing with the arbitrary structure `S α`. Adding this argument explicitly
--- didn't help.
---instance dependentEquivHasIso : HasIsomorphisms (@dependentEquiv A S) :=
---{ comp         := trans,
---  congrArgComp := λ hφ hψ α => congrArgComp (S := S α) (hφ α) (hψ α),
---  assoc        := λ φ ψ χ α => assoc        (S := S α) (φ α) (ψ α) (χ α),
---  id           := refl,
---  leftId       := λ φ     α => leftId       (S := S α) (φ α),
---  rightId      := λ φ     α => rightId      (S := S α) (φ α),
---  inv          := symm,
---  congrArgInv  := λ hφ    α => congrArgInv  (S := S α) (hφ α),
---  leftInv      := λ φ     α => leftInv      (S := S α) (φ α),
---  rightInv     := λ φ     α => rightInv     (S := S α) (φ α),
---  invInv       := λ φ     α => invInv       (S := S α) (φ α),
---  compInv      := λ φ ψ   α => compInv      (S := S α) (φ α) (ψ α),
---  idInv        := λ F     α => idInv        (S := S α) (F α) }
+instance dependentEquivHasIso : HasIsomorphisms (@dependentEquiv A S) :=
+{ comp         := trans,
+  congrArgComp := λ hφ hψ α => congrArgComp (S := S α) (hφ α) (hψ α),
+  assoc        := λ φ ψ χ α => assoc        (S := S α) (φ α) (ψ α) (χ α),
+  id           := refl,
+  leftId       := λ φ     α => leftId       (S := S α) (φ α),
+  rightId      := λ φ     α => rightId      (S := S α) (φ α),
+  inv          := symm,
+  congrArgInv  := λ hφ    α => congrArgInv  (S := S α) (hφ α),
+  leftInv      := λ φ     α => leftInv      (S := S α) (φ α),
+  rightInv     := λ φ     α => rightInv     (S := S α) (φ α),
+  invInv       := λ φ     α => invInv       (S := S α) (φ α),
+  compInv      := λ φ ψ   α => compInv      (S := S α) (φ α) (ψ α),
+  idInv        := λ F     α => idInv        (S := S α) (F α) }
 
 end DependentEquiv
 
@@ -693,8 +684,7 @@ DependentEquiv.trans e f
 
 def funExt (F G : StructureFunctor S T) := DependentEquiv.dependentEquiv F.map G.map
 
--- Unfortunately, uncommenting this line (after uncommenting DependentEquiv.dependentEquivHasIso first)
--- causes Lean to hang indefinitely, so we have to copy and paste the code instead.
+-- Unfortunately, uncommenting this line causes Lean to hang indefinitely, so we have to copy and paste the code instead.
 --instance funExtHasIso : HasIsomorphisms (@funExt S T) := @DependentEquiv.dependentEquivHasIso S.U (λ _ => T)
 
 instance funExtHasIso : HasIsomorphisms (@funExt S T) :=
@@ -883,8 +873,6 @@ def instanceStructureFunctor {α β : Sort u} (f : α → β) : InstanceStructur
 { map     := f,
   functor := congrArgFunctor f }
 
-instance {α β : Sort u} : Coe (α → β) (InstanceStructureFunctor α β) := ⟨instanceStructureFunctor⟩
-
 
 
 -- If we have a function `F` and an equivalent functor `G`, we can turn `F` into a functor as well.
@@ -970,29 +958,32 @@ end InstanceEquiv
 
 
 
--- A functor between two structures induces a functor between their setoid structures, and in the
--- classical setting also between their skeleton structures. More specifically, we have the following
--- commutative diagram (modulo equivalence defined on functors, i.e. `FunExt`). If we assume classical
--- logic, all the horizontal functors are `Bijective`, thus we can construct corresponding instances of
--- `StructureEquiv` via `functorToEquiv`.
+theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b :=
+h ▸ Setoid.refl a
+
+
+
+-- A functor between two structures induces functors between their setoid and skeleton structures. More
+-- specifically, we have the following commutative diagram (modulo equivalence defined on functors, i.e.
+-- `FunExt`).
 --
---    `S` -≃--> `S_≈` -≃-> `S/≃`
+--    `S` ----> `S_≈` ---> `S/≃`
 --     |          |          |
 -- `F` |          |          |
 --     v          v          v
---    `T` -≃--> `T_≈` -≃-> `T/≃`
+--    `T` ----> `T_≈` ---> `T/≃`
+--
+-- The horizontal functors can be "philosophically" regarded as equivalences: Although they cannot be
+-- proved to be equivalences, we can see that all structural properties have an analogue in the setoid
+-- and skeleton structures.
 --
 -- This can be understood as the reason why isomorphism can generally be identified with equality: In all
--- operations that preserve structure, we can take the quotient with respect to equivalence/isomorphism
--- and work on the quotient structures. In particular, if `F` is also `Bijective`, then all structures
--- are equivalent, and thus they are all equal within the quotient structure of the `universeStructure`
--- which we are going to define.
---
--- The HLM logic implemented in Slate can be understood as completely living on the right side of this
--- diagram, as isomorphic structures are always equal in HLM. The same could probably be said about HoTT,
--- but equality in HoTT is a more complex topic.
+-- operations that preserve structure, in theory we can take the quotient with respect to equivalence/
+-- isomorphism and work on the quotient structures.
 
 namespace Forgetfulness
+
+section Setoid
 
 -- `isFunctor` should be covered by `propFunctor` as in the quotient case, but that just causes lots of
 -- type class resolution issues.
@@ -1005,6 +996,20 @@ def toSetoidFunctor (S : Structure) : StructureFunctor S (setoidStructure S) :=
                               respectsId     := λ _   => proofIrrel _ _,
                               respectsInv    := λ _   => proofIrrel _ _ } } }
 
+def setoidIdempotenceFunctor (S : Structure) : StructureFunctor (setoidStructure (setoidStructure S)) (setoidStructure S) :=
+{ map     := id,
+  functor := { FF        := λ ⟨e⟩ => e,
+               isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
+                              respectsComp   := λ _ _ => proofIrrel _ _,
+                              respectsId     := λ _   => proofIrrel _ _,
+                              respectsInv    := λ _   => proofIrrel _ _ } } }
+
+def setoidIdempotence (S : Structure) : StructureEquiv (setoidStructure (setoidStructure S)) (setoidStructure S) :=
+{ toFun    := setoidIdempotenceFunctor S,
+  invFun   := toSetoidFunctor (setoidStructure S),
+  leftInv  := λ α => IsEquivalence.refl α,
+  rightInv := λ α => IsEquivalence.refl α }
+
 def SetoidStructureFunctor (S T : Structure) := StructureFunctor (setoidStructure S) (setoidStructure T)
 
 def setoidFunctor {S T : Structure} (F : StructureFunctor S T) : SetoidStructureFunctor S T :=
@@ -1015,9 +1020,13 @@ def setoidFunctor {S T : Structure} (F : StructureFunctor S T) : SetoidStructure
                               respectsId     := λ _   => proofIrrel _ _,
                               respectsInv    := λ _   => proofIrrel _ _ } } }
 
+-- TODO: Show that `setoidFunctor` respects `setoidIdempotence`.
+
 def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructure S) (setoidStructure T)
 
-namespace Classical
+end Setoid
+
+section Skeleton
 
 def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
 { map     := λ α => Quotient.mk α,
@@ -1026,6 +1035,28 @@ def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure 
 
 def toSkeletonFunctor (S : Structure) : StructureFunctor S (skeletonStructure S) :=
 compFun (toSetoidFunctor S) (setoidToSkeletonFunctor S)
+
+def skeletonSetoidIdempotenceFunctor (S : Structure) : StructureFunctor (setoidStructure (skeletonStructure S)) (skeletonStructure S) :=
+{ map     := id,
+  functor := { FF        := λ ⟨e⟩ => e,
+               isFunctor := propFunctor } }
+
+def skeletonSetoidIdempotence (S : Structure) : StructureEquiv (setoidStructure (skeletonStructure S)) (skeletonStructure S) :=
+{ toFun    := skeletonSetoidIdempotenceFunctor S,
+  invFun   := toSetoidFunctor (skeletonStructure S),
+  leftInv  := λ a => IsEquivalence.refl a,
+  rightInv := λ a => IsEquivalence.refl a }
+
+def skeletonIdempotenceFunctor (S : Structure) : StructureFunctor (skeletonStructure (skeletonStructure S)) (skeletonStructure S) :=
+{ map     := Quotient.lift id (λ a b ⟨e⟩ => e),
+  functor := { FF        := congrArg _,
+               isFunctor := propFunctor } }
+
+def skeletonIdempotence (S : Structure) : StructureEquiv (skeletonStructure (skeletonStructure S)) (skeletonStructure S) :=
+{ toFun    := skeletonIdempotenceFunctor S,
+  invFun   := toSkeletonFunctor (skeletonStructure S),
+  leftInv  := λ a => sorry,
+  rightInv := λ a => sorry }
 
 def SkeletonStructureFunctor (S T : Structure) := StructureFunctor (skeletonStructure S) (skeletonStructure T)
 
@@ -1038,12 +1069,19 @@ def skeletonCongrArg (F : SetoidStructureFunctor S T) {a b : skeletonStructure S
   a = b → skeletonMap F a = skeletonMap F b :=
 congrArg (skeletonMap F)
 
-def skeletonFunctor (F : SetoidStructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
+def skeletonFromSetoidFunctor (F : SetoidStructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
 { map     := skeletonMap F,
   functor := { FF        := skeletonCongrArg F,
                isFunctor := propFunctor } }
 
-end Classical
+-- TODO: Show that `skeletonFromSetoidFunctor` respects `skeletonSetoidIdempotence`.
+
+def skeletonFunctor (F : StructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
+skeletonFromSetoidFunctor (setoidFunctor F)
+
+-- TODO: Show that `skeletonFunctor` respects `skeletonIdempotence`.
+
+end Skeleton
 
 end Forgetfulness
 
@@ -1183,3 +1221,55 @@ f
 
 instance structureHasStructure : HasStructure Structure := ⟨SetoidStructureEquiv.structureEquiv⟩
 def universeStructure : Structure := ⟨Structure⟩
+
+
+
+-- Now we can define functors from/to the universe structure, etc.
+-- For example, the two maps from a structure `T` to the functor structure with `T` on one side are
+-- themselves functors.
+
+def outgoingFunctorStructure (S T : Structure) := functorStructure S (setoidStructure T)
+
+def outgoingToFun (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
+  SetoidStructureFunctor (outgoingFunctorStructure S T₁) (outgoingFunctorStructure S T₂) :=
+{ map     := λ F => compFun F e.toFun,
+  functor := { FF        := λ h => compFun.congrArg' h (Setoid.refl _),
+               isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
+                              respectsComp   := λ _ _ => proofIrrel _ _,
+                              respectsId     := λ _   => proofIrrel _ _,
+                              respectsInv    := λ _   => proofIrrel _ _ } } }
+
+def outgoingFunctorEquiv (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
+  SetoidStructureEquiv (outgoingFunctorStructure S T₁) (outgoingFunctorStructure S T₂) :=
+{ toFun    := outgoingToFun S e,
+  invFun   := outgoingToFun S (SetoidStructureEquiv.symm e),
+  leftInv  := sorry,
+  rightInv := sorry }
+
+def outgoingFunctorFunctor (S : Structure) : StructureFunctor universeStructure universeStructure :=
+{ map     := outgoingFunctorStructure S,
+  functor := { FF        := outgoingFunctorEquiv S,
+               isFunctor := sorry } }
+
+def incomingFunctorStructure (S T : Structure) := functorStructure (setoidStructure T) S
+
+def incomingToFun (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
+  SetoidStructureFunctor (incomingFunctorStructure S T₁) (incomingFunctorStructure S T₂) :=
+{ map     := λ F => compFun e.invFun F,
+  functor := { FF        := λ h => compFun.congrArg' (Setoid.refl _) h,
+               isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
+                              respectsComp   := λ _ _ => proofIrrel _ _,
+                              respectsId     := λ _   => proofIrrel _ _,
+                              respectsInv    := λ _   => proofIrrel _ _ } } }
+
+def incomingFunctorEquiv (S : Structure) {T₁ T₂ : Structure} (e : SetoidStructureEquiv T₁ T₂) :
+  SetoidStructureEquiv (incomingFunctorStructure S T₁) (incomingFunctorStructure S T₂) :=
+{ toFun    := incomingToFun S e,
+  invFun   := incomingToFun S (SetoidStructureEquiv.symm e),
+  leftInv  := sorry,
+  rightInv := sorry }
+
+def incomingFunctorFunctor (S : Structure) : StructureFunctor universeStructure universeStructure :=
+{ map     := incomingFunctorStructure S,
+  functor := { FF        := incomingFunctorEquiv S,
+               isFunctor := sorry } }

@@ -29,8 +29,9 @@
 --   we need to correspondingly relabel instances of `C α` to `C β`, i.e. transport them along `e`. We
 --   axiomatize this as a `transport` map which takes `e` to an `f : Equiv (C α) (C β)` in a way that
 --   commutes with `refl`, `symm`, and `trans`.
--- 
--- * Then we can define an isomorphism between two bundled instances `⟨α, x⟩ ⟨β, y⟩ : Σ α, C α` to be an
+--   We attach this `transport` map to the type class `C`.
+--
+-- * Then we can define an "isomorphism" between two bundled instances `⟨α, x⟩ ⟨β, y⟩ : Σ α, C α` to be an
 --   `e : Equiv α β` together with a proof that the equivalence given by `transport e` maps `x` to `y`.
 --   In other words, we simply require the `transport` operation to correctly apply the given relabeling
 --   operation on the right-hand side of the bundled instance.
@@ -39,36 +40,42 @@
 -- elements and properties along concrete isomorphisms in a generic way, i.e. without writing either
 -- individual proofs or tactics.
 --
+-- The correct `transport` map for a type class `C` can be derived from the definition of `C` more
+-- directly than the definition of isomorphism.
+--
 --
 --  Generalization
 -- ----------------
 --
 -- Although the initial version applies to a lot of basic algebraic structures, it does not compose very
 -- well, as we require the left side of a bundled structure to be a type, and in Lean not everything is a
--- type. As a consequence, the `transport` map needs to be defined individually for each type class `C`
--- in the example above.
+-- type. As a consequence, the `transport` map needs to be defined individually for each type class `C`.
+-- Instead, we would like to compose the `transport` map of a composite structure from the `transport`
+-- maps of its parts.
 --
--- Instead, we would like to define e.g. the `transport` map for groups as a composition of a `transport`
--- map for semigroups which have have defined earlier, with another map that only takes care of the
--- additional structure of a group compared to a semigroup.
---
--- In general terms, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` (where `x₂` may depend
+-- Most importantly, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` (where `x₂` may depend
 -- on both `α` and `x₁`) canonically also as a nested bundled structure `⟨⟨α, x₁⟩, x₂⟩`, with equivalence
 -- between `⟨α, x₁⟩` and some `⟨β, y₁⟩` given by isomorphism. Iterating this transformation would enable
--- us to compose isomorphisms from basic building blocks. However, in the initial version given above the
--- term `⟨⟨α, x₁⟩, x₂⟩` does not type-check because `⟨α, x₁⟩` is not a type.
--- (TODO: What about systems where everything _is_ a type?)
+-- us to compose `transport` maps and thus isomorphisms from basic building blocks. However, in the
+-- initial version given above the term `⟨⟨α, x₁⟩, x₂⟩` does not type-check because `⟨α, x₁⟩` is not a
+-- type (in Lean, at least).
 --
 -- Therefore, we generalize our initial version in two directions:
 --
--- * In place of the type `α`, we also allow (among other things) a bundled instance `⟨α, x⟩`, replacing
---   `Equiv` on types with the isomorphism concept we just defined for bundled instances.
+-- * We generalize the type of the left-hand side from `Type u` to a generic "structure with
+--   equivalences", defined in such a way that a bundled instance `⟨α, x⟩` is such a "structure", with
+--   equivalence given by the isomorphism concept we just defined.
 --
 -- * Moreover, we also need to consider more carefully the case that `x` is again a bundled structure
 --   `⟨β, y⟩` where `β` is or contains a type: Although we placed no restrictions on `x` in the
 --   description above, we secretly relied on an equality comparison when giving the definition of
 --   isomorphism. If the right-hand side is actually a structure with isomorphisms, we need to check for
 --   isomorphism instead of equality.
+--
+--   Therefore, we need to generalize the return type of `C` from `Type v` to the same "structure" type we
+--   use in place of `Type u`. However, in contrast to `α`, this does not actually change the type of `x`;
+--   we only need to "wrap" that type in a structure in order to obtain the correct definition of
+--   equivalence.
 --
 --
 --  Preliminary results
@@ -86,17 +93,17 @@
 --  `Structure`               | `StructureEquiv` defined below
 --
 -- It turns out that the required definition of `Structure` is something quite well-known: In theory, it
--- is best formalized as an ∞-groupoid, but instead of working with the entire infinite hierarchy, in Lean
--- we have to make a compromise by coercing equivalences of equivalences to equivalence _relations_, in
--- effect working with a single level of the hierarchy at a time.
+-- is best formalized as an ∞-groupoid. However, instead of working with the entire infinite hierarchy, in
+-- Lean we have to make a compromise by coercing equivalences of equivalences to equivalence _relations_,
+-- in effect working with a single level of the hierarchy at a time.
 --
 -- Side note: The formalization brought to light some surprising properties of groupoids, which may or may
 -- not be known. Most strikingly, we obtain the following result:
--- If we understand equivalence (i.e. isomorphism within a groupoid) as generalized equality, then
--- groupoid functors are just generalized functions. If we then define "injective", "surjective", and
--- "bijective" in a straightforward way, each "bijective" functor actually has an inverse functor -- even
--- though the formalization is entirely constructive.
--- More details in `Basic.lean` at `section Properties`.
+-- If we interpret equivalence/isomorphism of objects in a groupoid as generalized equality, then groupoid
+-- functors are just generalized functions. If we then define "injective", "surjective", and "bijective"
+-- in a straightforward way, each "bijective" functor actually has an inverse functor -- even though the
+-- formalization is entirely constructive.
+-- (More details in `Basic.lean` at `section Properties`.)
 --
 -- Returning to the goal of defining isomorphism as "equality up to relabeling" for particular structures,
 -- we can not only compose bundled structures as described above, but we are actually able to analyze
@@ -112,6 +119,7 @@
 
 
 -- TODO:
+-- * Fill sorrys.
 -- * Create more examples.
 -- * Determine structure automatically via type-class or tactic magic.
 -- * Automatically deduce that properties are isomorphism-invariant.
@@ -138,4 +146,5 @@
 
 import Structure.Basic
 import Structure.SortStructure
+import Structure.PiSigma
 import Structure.BuildingBlocks

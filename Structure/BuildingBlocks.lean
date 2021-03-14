@@ -8,6 +8,7 @@ open DependentStructure
 open StructureFunctor
 open Forgetfulness
 open PiSigma
+open PiSigmaEquivalences
 
 
 
@@ -24,9 +25,9 @@ namespace BuildingBlocks
 -- isomorphisms between particular structures match their concrete definitions. This even works for
 -- structures that lack an obvious concept of "morphism".
 --
--- We will call `EncodedSigmaExpr.α` the "type" and `EncodedSigmaExpr.x` the "instance" (that depends
--- on the type). Correspondingly, `SigmaEquiv.fst` is the "type equivalence", and `SigmaEquiv.snd` is the
--- corresponding "instance equivalence".
+-- We will call `SigmaExpr.fst` the "type" and `SigmaExpr.snd` the "instance" (that depends on the type).
+-- Correspondingly, `SigmaEquiv.fst` is the "type equivalence", and `SigmaEquiv.snd` is the "instance
+-- equivalence".
 
 namespace AbstractIsomorphism
 
@@ -36,17 +37,17 @@ namespace AbstractIsomorphism
 -- result. Although `isoEquiv` is a _definition_ (of an equivalence), it can also be read as the theorem
 -- that the two types are equivalent.
 
-def HasIso {F : StructureDependency} (a b : EncodedSigmaExpr F) (I : ∀ e : a.α ≃ b.α, Prop) :=
-∀ e : a.α ≃ b.α, InstanceEquiv (congrArgMap F.F e) a.x b.x ↔ I e
+def HasIso {F : StructureDependency} (a b : SigmaExpr F) (I : ∀ e : a.fst ≃ b.fst, Prop) :=
+∀ e : a.fst ≃ b.fst, InstanceEquiv (congrArgMap F.snd e) a.snd b.snd ↔ I e
 
-structure InstanceIsoCriterion {F : StructureDependency} (a b : EncodedSigmaExpr F) where
-{I : ∀ e : a.α ≃ b.α, Prop}
+structure InstanceIsoCriterion {F : StructureDependency} (a b : SigmaExpr F) where
+{I : ∀ e : a.fst ≃ b.fst, Prop}
 (h : HasIso a b I)
 
-def IsoCriterion (F : StructureDependency) := ∀ a b : EncodedSigmaExpr F, InstanceIsoCriterion a b
+def IsoCriterion (F : StructureDependency) := ∀ a b : SigmaExpr F, InstanceIsoCriterion a b
 
-def isoEquiv {F : StructureDependency} {a b : EncodedSigmaExpr F} (c : InstanceIsoCriterion a b) :
-  (a ≃ b) ≃≃ Σ' e : a.α ≃ b.α, c.I e :=
+def isoEquiv {F : StructureDependency} {a b : SigmaExpr F} (c : InstanceIsoCriterion a b) :
+  (a ≃ b) ≃≃ Σ' e : a.fst ≃ b.fst, c.I e :=
 { toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, (c.h h₁).mp  h₂⟩,
   invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, (c.h h₁).mpr h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
@@ -59,7 +60,7 @@ def isoEquiv {F : StructureDependency} {a b : EncodedSigmaExpr F} (c : InstanceI
 
 def independentPairDependency (S T : Structure) : StructureDependency := ⟨S, constFun T⟩
 
-def IndependentPair (S T : Structure) := EncodedSigmaExpr (independentPairDependency S T)
+def IndependentPair (S T : Structure) := SigmaExpr (independentPairDependency S T)
 
 namespace IndependentPair
 
@@ -73,16 +74,16 @@ def equivProd : IndependentPair S T ≃≃ PProd S.U T.U :=
   leftInv  := λ ⟨x, y⟩ => rfl,
   rightInv := λ ⟨x, y⟩ => rfl }
 
--- The theorem about the instance equivalence.
+-- The instance equivalence does not depend on the type equivalence.
 
-theorem iso (a b : IndependentPair S T) : HasIso a b (λ e => a.x ≈ b.x) :=
-λ e => Iff.refl (a.x ≈ b.x)
+theorem iso (a b : IndependentPair S T) : HasIso a b (λ e => a.snd ≈ b.snd) :=
+λ e => Iff.refl (a.snd ≈ b.snd)
 
 def isoCriterion : IsoCriterion (independentPairDependency S T) := λ a b => ⟨iso S T a b⟩
 
 -- For this particular case, we can also specialize `isoEquiv` a bit.
 
-def equiv (a b : IndependentPair S T) : SigmaEquiv a b ≃≃ PProd (a.α ≃ b.α) (a.x ≈ b.x) :=
+def equiv (a b : IndependentPair S T) : SigmaEquiv a b ≃≃ PProd (a.fst ≃ b.fst) (a.snd ≈ b.snd) :=
 { toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
@@ -103,7 +104,7 @@ end IndependentPair
 
 def instanceDependency : StructureDependency := ⟨universeStructure, idFun⟩
 
-def InstanceInstance := EncodedSigmaExpr instanceDependency
+def InstanceInstance := SigmaExpr instanceDependency
 
 namespace InstanceInstance
 
@@ -113,8 +114,8 @@ def equivSigma : InstanceInstance ≃≃ Σ' S : Structure, S.U :=
   leftInv  := λ ⟨S, x⟩ => rfl,
   rightInv := λ ⟨S, x⟩ => rfl }
 
-theorem iso (a b : InstanceInstance) : HasIso a b (λ e => e.toFun a.x ≈ b.x) :=
-λ e => setoidInstanceEquiv e a.x b.x
+theorem iso (a b : InstanceInstance) : HasIso a b (λ e => e.toFun a.snd ≈ b.snd) :=
+λ e => setoidInstanceEquiv e a.snd b.snd
 
 def isoCriterion : IsoCriterion instanceDependency := λ a b => ⟨iso a b⟩
 
@@ -139,7 +140,7 @@ end InstanceInstance
 --   `Prop`, we have a unary relation aka subset of `α`.
 -- * `functorMap id (functorMap id (const _ γ))` maps `α` to `α → α → γ`. In particular, if `γ` is `Prop`,
 --   we have a binary relation on `α`.
--- * `functorMap id id` maps `α` to `α → α`.
+-- * `functorMap id id` maps `α` to `α → α`, i.e. a unary operation.
 -- * `functorMap id (functorMap id id)` maps `α` to `α → α → α`, i.e. a binary operation.
 -- * `functorMap (const _ γ) id` maps `α` to `γ → α`, i.e. we have an instance of `α` that depends on some
 --   external constant.
@@ -150,13 +151,17 @@ end InstanceInstance
 -- `⟨β, g⟩` (with functions `f` and `g`) iff for all `x y : α` such that `congrArgMap F e` transports `x`
 -- to `y`, `congrArgMap G e` transports `f x` to `g y`.
 --
--- Applying this criterion to the examples above, we obtain all familiar special cases, e.g.:
--- * For a function returning a constant, the condition is simply `f x = g (e x)`.
--- * For a binary relation, the condition is `f x y ↔ g (e x) (e y)`.
--- * For a function returning an instance of the type, the condition is `e (f x) = g (e x)`.
--- * For a binary operation, the condition is `e (f x y) = g (e x) (e y)`.
--- * For an instance depending on a constant `c`, the condition is `e (f c) = g c`.
--- * For an outer operation, the condition is `e (f c x) = g c (e x)`.
+-- Applying this criterion to the examples above, we obtain all familiar special cases:
+--
+--  Example                              | Isomorphism criterion
+-- --------------------------------------+-----------------------------
+--  Function returning a constant        | `f x = g (e x)`
+--  Unary relation                       | `f x ↔ g (e x)`
+--  Binary relation                      | `f x y ↔ g (e x) (e y)`
+--  Unary operation                      | `e (f x) = g (e x)`
+--  Binary operation                     | `e (f x y) = g (e x) (e y)`
+--  Instance depending on a constant `c` | `e (f c) = g c`
+--  Outer operation                      | `e (f c x) = g c (e x)`
 
 section FunctorInstanceDef
 
@@ -171,7 +176,7 @@ def functorCongrArgToFun {α β : S} (e : α ≃ β) : SetoidStructureFunctor (f
 def functorCongrArg {α β : S} (e : α ≃ β) : functorMap F G α ≃ functorMap F G β :=
 { toFun    := functorCongrArgToFun F G e,
   invFun   := functorCongrArgToFun F G e⁻¹,
-  leftInv  := sorry,  -- TODO: This is a bit similar to `DependentEquiv.transport`; maybe we can reuse something.
+  leftInv  := sorry,
   rightInv := sorry }
 
 def functorFun : StructureFunctor S universeStructure :=
@@ -181,33 +186,35 @@ def functorFun : StructureFunctor S universeStructure :=
 
 def functorDependency : StructureDependency := ⟨S, functorFun F G⟩
 
-def FunctorInstance := EncodedSigmaExpr (functorDependency F G)
+def FunctorInstance := SigmaExpr (functorDependency F G)
 
 namespace FunctorInstance
 
--- The isomorphism criterion for the functors `a.x` and `b.x`, as described above.
+-- The isomorphism criterion for the functors `a.snd` and `b.snd`, as described above.
 
 theorem iso (a b : FunctorInstance F G) :
-  HasIso a b (λ e => ∀ x y, InstanceEquiv (congrArgMap F e) x y → InstanceEquiv (congrArgMap G e) (a.x.map x) (b.x.map y)) :=
-λ e => ⟨λ h₁ x y h₂ => let h₃ : compFun (congrArgMap F e).invFun (compFun a.x (congrArgMap G e).toFun) ≈ b.x := h₁;
-                       let h₄ : compFun a.x (congrArgMap G e).toFun ≈ compFun (congrArgMap F e).toFun b.x := sorry;
-                       let h₅ : (congrArgMap G e).toFun (a.x.map x) ≈ b.x.map ((congrArgMap F e).toFun x) := sorry;
-                       let h₆ : (congrArgMap G e).toFun (a.x.map x) ≈ b.x.map y := sorry;
-                       (setoidInstanceEquiv (congrArgMap G e) (a.x.map x) (b.x.map y)).mpr h₆,
+  HasIso a b (λ e => ∀ x y, InstanceEquiv (congrArgMap F e) x y → InstanceEquiv (congrArgMap G e) (a.snd.map x) (b.snd.map y)) :=
+λ e => let f := congrArgMap F e;
+       let g := congrArgMap G e;
+       ⟨λ h₁ x y h₂ => let h₃ : compFun f.invFun (compFun a.snd g.toFun) ≈ b.snd := h₁;
+                       let h₄ : compFun a.snd g.toFun ≈ compFun f.toFun b.snd := sorry;
+                       let h₅ : g.toFun (a.snd.map x) ≈ b.snd.map (f.toFun x) := sorry;
+                       let h₆ : g.toFun (a.snd.map x) ≈ b.snd.map y := sorry;
+                       (setoidInstanceEquiv g (a.snd.map x) (b.snd.map y)).mpr h₆,
         sorry⟩
 
 -- If we have isomorphism criteria for `F` and `G`, we can combine them with `iso`. This way, we can not
 -- only compose the building blocks but also their isomorphism criteria.
 
 theorem iso' (a b : FunctorInstance F G) (cF : IsoCriterion ⟨S, F⟩) (cG : IsoCriterion ⟨S, G⟩) :
-  HasIso a b (λ e => ∀ x y, (cF ⟨a.α, x⟩ ⟨b.α, y⟩).I e → (cG ⟨a.α, a.x.map x⟩ ⟨b.α, b.x.map y⟩).I e) :=
+  HasIso a b (λ e => ∀ x y, (cF ⟨a.fst, x⟩ ⟨b.fst, y⟩).I e → (cG ⟨a.fst, a.snd.map x⟩ ⟨b.fst, b.snd.map y⟩).I e) :=
 λ e => let h₁ := iso F G a b e;
-       let h₂ := λ x y => (cF ⟨a.α, x⟩ ⟨b.α, y⟩).h e;
-       let h₃ := λ x y => (cG ⟨a.α, a.x.map x⟩ ⟨b.α, b.x.map y⟩).h e;
+       let h₂ := λ x y => (cF ⟨a.fst, x⟩ ⟨b.fst, y⟩).h e;
+       let h₃ := λ x y => (cG ⟨a.fst, a.snd.map x⟩ ⟨b.fst, b.snd.map y⟩).h e;
        ⟨λ h₄ x y h₅ => (h₃ x y).mp (h₁.mp h₄ x y ((h₂ x y).mpr h₅)),
         λ h₄ => h₁.mpr (λ x y h₅ => (h₃ x y).mpr (h₄ x y ((h₂ x y).mp h₅)))⟩
 
-def isoCriterion (cF : IsoCriterion ⟨S, F⟩) (cG : IsoCriterion ⟨S, G⟩) : IsoCriterion ⟨S, functorFun F G⟩ :=
+def isoCriterion (cF : IsoCriterion ⟨S, F⟩) (cG : IsoCriterion ⟨S, G⟩) : IsoCriterion (functorDependency F G) :=
 λ a b => ⟨iso' F G a b cF cG⟩
 
 end FunctorInstance
@@ -216,28 +223,58 @@ end FunctorInstanceDef
 
 
 
+-- TODO: Generalize `FunctorInstance` to `PiExpr` in the same manner as `SigmaExpr`. This would be useful
+-- because ultimately everything is built on Π types.
+
+
+
 -- The previous building blocks give us criteria for the individual fields of a type class. To combine
 -- these fields, we need to give an isomorphism criterion for an instance that is a dependent pair.
 --
--- To specify the isomorphism criterion for `⟨x, y⟩`, we can consider a bundled instance `⟨α, ⟨x, y⟩⟩`
--- canonically as `⟨⟨α, x⟩, y⟩`, as mentioned in the introduction. In this term, we can consider both the
--- inner and the outer pair as a type with an instance, and if we have isomorphism criteria for these, we
--- can combine them into an isomorphism criterion for the original term.
+-- To specify the isomorphism criterion for a dependent pair `⟨x, y⟩`, we can consider a bundled instance
+-- `⟨α, ⟨x, y⟩⟩` canonically as `⟨⟨α, x⟩, y⟩`, as mentioned in the introduction. In this term, we can
+-- consider both the inner and the outer pair as a type with an instance, and if we have isomorphism
+-- criteria for these, we can combine them into an isomorphism criterion for the original term.
+--
+-- It turns out that our setoid-based formalization prevents us from generically considering all possible
+-- sigma instances on the right side by defining a `StructureDependency` for generic sigma types.
+-- Therefore, the variables `F` and `G` are based on the variant where the dependent types are nested on
+-- the left, and then we convert that to a `StructureDependency` where the structure contained in `F` is
+-- moved to the outside.
+
+section SigmaInstanceDef
+
+variable (F : StructureDependency) (G : PairToUniverseFunctor F)
+
+def innerSigmaDependency : StructureDependency := ⟨sigmaStructure F, G⟩
+def sigmaDependency      : StructureDependency := ⟨F.fst, dependentSigmaFunctor F G⟩
+
+def InnerSigmaInstance := SigmaExpr (innerSigmaDependency F G)
+def SigmaInstance      := SigmaExpr (sigmaDependency      F G)
 
 namespace SigmaInstance
 
--- TODO: Prove that, with our generalized definition of a dependent pair, we have a structure equivalence
--- between nested pairs that maps `⟨⟨a, b⟩, c⟩` to `⟨a, ⟨b, c⟩⟩`. Could this become part of a general
--- definition of the word "canonical"?
+theorem iso (a b : SigmaInstance F G) :
+  HasIso a b (λ e => sorry) :=
+sorry
+
+theorem iso' (a b : SigmaInstance F G) (cF : IsoCriterion F) (cG : IsoCriterion (innerSigmaDependency F G)) :
+  HasIso a b (λ e => sorry) :=
+sorry
+
+def isoCriterion (cF : IsoCriterion F) (cG : IsoCriterion (innerSigmaDependency F G)) : IsoCriterion (sigmaDependency F G) :=
+λ a b => ⟨iso' F G a b cF cG⟩
 
 end SigmaInstance
+
+end SigmaInstanceDef
 
 
 
 -- TODO: Also define building blocks for everything we need in order to formalize categories and
 -- groupoids, and then define isomorphism for the `HasStructure` type class. This gives us an interesting
--- and probably quite powerful reflection principle. Maybe it will lead to a proof of univalence in the
--- internal logic.
+-- and probably quite powerful reflection principle. Maybe it will lead to a proof of something like
+-- univalence in the internal logic.
 
 end AbstractIsomorphism
 
@@ -268,14 +305,14 @@ proxyFunctor C h.F h.φ
 
 
 -- A bundled instance of a type class is just a dependent pair. If the type class is a functor, we can
--- build an `EncodedSigmaExpr`, which has a structure.
+-- build an `SigmaExpr`, which has a structure.
 
 def bundledStructure (C : TypeClass) [h : StructuralTypeClass C] := sigmaStructure (toStructureDependency (toTypeClassFunctor C))
 
 def bundled (C : TypeClass) [h : StructuralTypeClass C] (α : Sort u) (x : C α) : bundledStructure C := ⟨α, x⟩
 
-def bundledType     {C : TypeClass} [h : StructuralTypeClass C] (S : bundledStructure C) : Sort u := S.α
-def bundledInstance {C : TypeClass} [h : StructuralTypeClass C] (S : bundledStructure C) : C S.α  := S.x
+def bundledType     {C : TypeClass} [h : StructuralTypeClass C] (S : bundledStructure C) : Sort u := S.fst
+def bundledInstance {C : TypeClass} [h : StructuralTypeClass C] (S : bundledStructure C) : C S.fst  := S.snd
 
 
 

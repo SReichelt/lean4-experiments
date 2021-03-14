@@ -88,15 +88,15 @@ def sortStructure : Structure := ⟨Sort u⟩
 
 def InstanceStructureEquiv (α β : Sort u) := StructureEquiv (instanceStructure α) (instanceStructure β)
 
-def instanceStructureEquiv {α β : Sort u} (e : Equiv α β) : InstanceStructureEquiv α β :=
+def instanceStructureEquiv {α β : Sort u} (e : α ≃≃ β) : InstanceStructureEquiv α β :=
 { toFun    := instanceStructureFunctor e.toFun,
   invFun   := instanceStructureFunctor e.invFun,
   leftInv  := e.leftInv,
   rightInv := e.rightInv }
 
-instance {α β : Sort u} : Coe (Equiv α β) (InstanceStructureEquiv α β) := ⟨instanceStructureEquiv⟩
+instance {α β : Sort u} : Coe (α ≃≃ β) (InstanceStructureEquiv α β) := ⟨instanceStructureEquiv⟩
 
-@[simp] theorem instanceEquiv {α β : Sort u} (e : Equiv α β) (a : α) (b : β) :
+@[simp] theorem instanceEquiv {α β : Sort u} (e : α ≃≃ β) (a : α) (b : β) :
   InstanceEquiv (instanceStructureEquiv e) a b = (e.toFun a = b) :=
 rfl
 
@@ -105,18 +105,15 @@ rfl
 -- To use `instanceStructure` as a functor into `universeStructure`, we need to coerce equivalences to
 -- setoids after applying `instanceStructureEquiv`.
 
-theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b :=
-h ▸ Setoid.refl a
-
-def instanceStructureEquiv' {α β : Sort u} (e : Equiv α β) := toSetoidStructureEquiv (instanceStructureEquiv e)
+def instanceStructureEquiv' {α β : Sort u} (e : α ≃≃ β) := toSetoidStructureEquiv (instanceStructureEquiv e)
 
 namespace instanceStructureEquiv'
 
-theorem respectsSetoid {α β   : Sort u} {e₁ e₂ : Equiv α β} (h : e₁ = e₂) :
+theorem respectsSetoid {α β   : Sort u} {e₁ e₂ : α ≃≃ β} (h : e₁ = e₂) :
   instanceStructureEquiv' e₁ ≈ instanceStructureEquiv' e₂ :=
 Setoid.fromEq (congrArg instanceStructureEquiv' h)
 
-theorem respectsComp   {α β γ : Sort u} (e : Equiv α β) (f : Equiv β γ) :
+theorem respectsComp   {α β γ : Sort u} (e : α ≃≃ β) (f : β ≃≃ γ) :
   instanceStructureEquiv' (Equiv.trans e f) ≈ SetoidStructureEquiv.trans (instanceStructureEquiv' e) (instanceStructureEquiv' f) :=
 Setoid.refl (instanceStructureEquiv' (Equiv.trans e f))
 
@@ -124,7 +121,7 @@ theorem respectsId     (α     : Sort u) :
   instanceStructureEquiv' (Equiv.refl α) ≈ SetoidStructureEquiv.refl (instanceStructure α) :=
 Setoid.refl (instanceStructureEquiv' (Equiv.refl α))
 
-theorem respectsInv    {α β   : Sort u} (e : Equiv α β) :
+theorem respectsInv    {α β   : Sort u} (e : α ≃≃ β) :
   instanceStructureEquiv' (Equiv.symm e) ≈ SetoidStructureEquiv.symm (instanceStructureEquiv' e) :=
 Setoid.refl (instanceStructureEquiv' (Equiv.symm e))
 
@@ -143,8 +140,12 @@ def sortToStructureFunctor : StructureFunctor sortStructure universeStructure :=
 -- If we have an `Equiv` with a type that has a structure, we can transport the structure along
 -- that `Equiv`.
 
-instance hasEquivalentStructure {α : Sort u} {β : Sort v} [h : HasStructure β] (e : Equiv α β) : HasStructure α :=
-{ M := λ a b => h.M (e.toFun a) (e.toFun b),
+namespace EquivalentStructure
+
+variable {α : Sort u} {β : Sort v} [h : HasStructure β] (e : α ≃≃ β)
+
+def hasEquivalentStructure : HasStructure α :=
+{ M := λ x y => h.M (e.toFun x) (e.toFun y),
   h := { comp         := h.h.comp,
          congrArgComp := h.h.congrArgComp,
          assoc        := λ _ _ => h.h.assoc    _ _,
@@ -159,6 +160,31 @@ instance hasEquivalentStructure {α : Sort u} {β : Sort v} [h : HasStructure β
          compInv      := λ _ _ => h.h.compInv  _ _,
          idInv        := λ _   => h.h.idInv    _ } }
 
--- Obviously, this turns the `Equiv` into a `StructureEquiv` between the two structures.
+def equivalentStructure := @defaultStructure α (hasEquivalentStructure e)
 
--- TODO
+-- In particular, we can map equivalences in both directions.
+
+def equivalentEquiv {x y : α} (f : (equivalentStructure e).h.M x y) : e.toFun x ≃ e.toFun y := f
+
+def equivalentEquivInv {x y : β} (f : x ≃ y) : (equivalentStructure e).h.M (e.invFun x) (e.invFun y) :=
+let h₁ := congr (congrArg h.M (e.rightInv x)) (e.rightInv y);
+cast (congrArg BundledSetoid.α (Eq.symm h₁)) f
+
+-- Obviously, we have a `StructureEquiv` between the two structures, since we have essentially defined
+-- them to be equivalent.
+
+def equivalentStructureDefEquivToFun : StructureFunctor (equivalentStructure e) (defaultStructure β) :=
+{ map     := e.toFun,
+  functor := sorry }
+
+def equivalentStructureDefEquivInvFun : StructureFunctor (defaultStructure β) (equivalentStructure e) :=
+{ map     := e.invFun,
+  functor := sorry }
+
+def equivalentStructureDefEquiv : StructureEquiv (equivalentStructure e) (defaultStructure β) :=
+{ toFun    := equivalentStructureDefEquivToFun  e,
+  invFun   := equivalentStructureDefEquivInvFun e,
+  leftInv  := sorry,
+  rightInv := sorry }
+
+end EquivalentStructure
