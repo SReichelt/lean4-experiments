@@ -766,7 +766,7 @@ theorem compFun.congrArg'' {F₁ F₂ : @functorSetoid S T} {G₁ G₂ : @functo
   F₁ ≈ F₂ → G₁ ≈ G₂ → G₁ • F₁ ≈ G₂ • F₂ :=
 congrArg'
 
-theorem compFun.assoc' (F : @functorSetoid S T) (G : @functorSetoid T U) (H : @functorSetoid U V) :
+theorem compFun.assoc' (F : StructureFunctor S T) (G : StructureFunctor T U) (H : StructureFunctor U V) :
   compFun (compFun F G) H ≈ compFun F (compFun G H) :=
 ⟨assoc F G H⟩
 
@@ -778,10 +778,13 @@ instance hasCmp : HasComposition @functorSetoid := ⟨compFun.congrArg'', compFu
 
 instance hasId : HasId @functorSetoid := ⟨@idFun⟩
 
-theorem idFun.leftId'  (F : @functorSetoid S T) : hasId.id T • F ≈ F := ⟨leftId  F⟩
-theorem idFun.rightId' (F : @functorSetoid S T) : F • hasId.id S ≈ F := ⟨rightId F⟩
+theorem idFun.leftId'  (F : StructureFunctor S T) : compFun F idFun ≈ F := ⟨leftId  F⟩
+theorem idFun.rightId' (F : StructureFunctor S T) : compFun idFun F ≈ F := ⟨rightId F⟩
 
-instance hasMor : HasMorphisms @functorSetoid := ⟨idFun.leftId', idFun.rightId'⟩
+theorem idFun.leftId''  (F : @functorSetoid S T) : hasId.id T • F ≈ F := idFun.leftId'  F
+theorem idFun.rightId'' (F : @functorSetoid S T) : F • hasId.id S ≈ F := idFun.rightId' F
+
+instance hasMor : HasMorphisms @functorSetoid := ⟨idFun.leftId'', idFun.rightId''⟩
 
 
 
@@ -1150,9 +1153,9 @@ theorem leftInv'  {S T : Structure} (e : SetoidStructureEquiv S T) : compFun e.t
 theorem rightInv' {S T : Structure} (e : SetoidStructureEquiv S T) : compFun e.invFun e.toFun ≈ idFun :=
 ⟨e.rightInv⟩
 
-theorem leftInv  {S T : Structure} (e : SetoidStructureEquiv S T) : trans e (symm e) ≈ refl S :=
+theorem leftInv''  {S T : Structure} (e : SetoidStructureEquiv S T) : trans e (symm e) ≈ refl S :=
 ⟨leftInv'  e, leftInv'  e⟩
-theorem rightInv {S T : Structure} (e : SetoidStructureEquiv S T) : trans (symm e) e ≈ refl T :=
+theorem rightInv'' {S T : Structure} (e : SetoidStructureEquiv S T) : trans (symm e) e ≈ refl T :=
 ⟨rightInv' e, rightInv' e⟩
 
 theorem invInv {S T : Structure} (e : SetoidStructureEquiv S T) : symm (symm e) ≈ e := Setoid.refl e
@@ -1172,8 +1175,8 @@ instance equivHasIso : HasIsomorphisms structureEquiv :=
   rightId      := rightId,
   inv          := symm,
   congrArgInv  := congrArgInv,
-  leftInv      := leftInv,
-  rightInv     := rightInv,
+  leftInv      := leftInv'',
+  rightInv     := rightInv'',
   invInv       := invInv,
   compInv      := compInv,
   idInv        := idInv }
