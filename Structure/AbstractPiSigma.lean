@@ -4,6 +4,7 @@
 
 
 import Structure.Basic
+import Structure.UniverseFunctor
 import Structure.FunctorStructure
 
 open Morphisms
@@ -25,7 +26,7 @@ namespace PiSigma
 -- A structure (representing the type on the left-hand side) and a functor that returns a structure
 -- (representing the dependent type on the right-hand side).
 
-def StructureDependency := Σ' S : Structure, StructureFunctor S universeStructure
+def StructureDependency := Σ' S : Structure, UniverseFunctor S
 
 
 
@@ -39,7 +40,7 @@ def StructureDependency := Σ' S : Structure, StructureFunctor S universeStructu
 -- type inference will get confused in places.
 structure PiExpr (F : StructureDependency) where (map : RawPiExpr F)
 
-instance (F : StructureDependency) : CoeFun (PiExpr F) (λ f => ∀ α : F.fst, (F.snd α).U) := ⟨PiExpr.map⟩
+instance (F : StructureDependency) : CoeFun (PiExpr F) (λ f => ∀ α : F.fst, F.snd α) := ⟨PiExpr.map⟩
 
 def PiEquiv {F : StructureDependency} (f g : PiExpr F) := DependentEquiv f.map g.map
 
@@ -83,7 +84,9 @@ def piStructure (F : StructureDependency) : Structure := ⟨PiExpr F⟩
 
 namespace piStructure
 
-def projFunctor (F : StructureDependency) (α : F.fst) : StructureFunctor (piStructure F) (F.snd α) :=
+variable (F : StructureDependency)
+
+def projFunctor (α : F.fst) : StructureFunctor (piStructure F) (F.snd α) :=
 { map     := λ g => g.map α,
   functor := { FF        := λ e => e α,
                isFunctor := { respectsSetoid := λ h   => h α,
@@ -175,35 +178,33 @@ namespace sigmaStructure
 
 variable (F : StructureDependency)
 
-def mkSndEquiv {α β : F.fst} (e : α ≃ β) :
-  incomingFunctorStructure (sigmaStructure F) (F.snd α) ≃ incomingFunctorStructure (sigmaStructure F) (F.snd β) :=
-incomingFunctorEquiv (sigmaStructure F) (congrArgMap F.snd e)
-
-def mkSndFunctor : StructureFunctor F.fst universeStructure :=
-{ map     := λ α => incomingFunctorStructure (sigmaStructure F) (F.snd α),
-  functor := { FF        := mkSndEquiv F,
-               isFunctor := sorry } }
+def mkSndFunctor : UniverseFunctor F.fst :=
+compFun F.snd (incomingFunctorFunctor (sigmaStructure F))
 
 def mkDependency : StructureDependency := ⟨F.fst, mkSndFunctor F⟩
 
 def mkExprFunctor (α : F.fst) : StructureFunctor (setoidStructure (F.snd α)) (sigmaStructure F) :=
 { map     := λ β => ⟨α, β⟩,
-  functor := { FF        := λ {a b} h => ⟨id_ α, InstanceEquiv.congrArg (Setoid.symm (respectsId F.snd α)) a b h⟩,
-               isFunctor := sorry } }
+  functor := { FF        := λ {β γ} e => ⟨id_ α, InstanceEquiv.congrArg (Setoid.symm (respectsId F.snd α)) β γ e⟩,
+               isFunctor := { respectsSetoid := λ _   => Setoid.refl _,
+                              respectsComp   := λ _ _ => Setoid.symm (leftId _),
+                              respectsId     := λ _   => Setoid.refl id',
+                              respectsInv    := λ _   => Setoid.symm (idInv _) } } }
 
 def mkExpr : PiExpr (mkDependency F) := ⟨mkExprFunctor F⟩
 
 def projFstFunctor : StructureFunctor (sigmaStructure F) F.fst :=
 { map     := PSigma.fst,
   functor := { FF        := PSigma.fst,
-               isFunctor := sorry } }
+               isFunctor := { respectsSetoid := id,
+                              respectsComp   := λ e f => Setoid.refl (f • e),
+                              respectsId     := λ α   => Setoid.refl (id_ α),
+                              respectsInv    := λ e   => Setoid.refl e⁻¹ } } }
 
-def projSndFunctor : StructureFunctor (sigmaStructure F) universeStructure :=
-{ map     := λ s => F.snd s.fst,
-  functor := { FF        := λ e => congrArgMap F.snd e.fst,
-               isFunctor := sorry } }
+def projSndDependencyFunctor : UniverseFunctor (sigmaStructure F) :=
+compFun (projFstFunctor F) F.snd
 
-def projSndDependency : StructureDependency := ⟨sigmaStructure F, projSndFunctor F⟩
+def projSndDependency : StructureDependency := ⟨sigmaStructure F, projSndDependencyFunctor F⟩
 
 def projSndExpr : PiExpr (projSndDependency F) := ⟨PSigma.snd⟩
 
@@ -218,7 +219,7 @@ end sigmaStructure
 -- cannot declare `dependencyFunctor` the way we want, and if we use `incomingFunctorFunctor`, it no
 -- longer matches `StructureDependency`.
 
--- def dependencyFunctor : StructureFunctor universeStructure universeStructure :=
+-- def dependencyFunctor : UniverseFunctor universeStructure :=
 -- { map     := λ S => functorStructure S universeStructure,
 --   functor := sorry }
 -- 
@@ -229,11 +230,11 @@ end sigmaStructure
 -- 
 -- -- Now `piStructure` and `sigmaStructure` can be viewed as dependent structures.
 -- 
--- def piFunctor    : StructureFunctor dependencyStructure universeStructure :=
+-- def piFunctor    : UniverseFunctor dependencyStructure :=
 -- { map     := piStructure,
 --   functor := sorry }
 -- 
--- def sigmaFunctor : StructureFunctor dependencyStructure universeStructure :=
+-- def sigmaFunctor : UniverseFunctor dependencyStructure :=
 -- { map     := sigmaStructure,
 --   functor := sorry }
 -- 
@@ -251,42 +252,93 @@ variable (F : StructureDependency)
 
 def innerPairStructure := setoidStructure (sigmaStructure F)
 
-@[reducible] def PairToUniverseFunctor := StructureFunctor (innerPairStructure F) universeStructure
+@[reducible] def PairToUniverseFunctor := UniverseFunctor (innerPairStructure F)
 
 def sndStructure (α : F.fst) := setoidStructure (F.snd α)
+
+-- x ↦ ⟨α, x⟩
+def innerPairFunctor (α : F.fst) : StructureFunctor (sndStructure F α) (innerPairStructure F) :=
+compFun (sigmaStructure.mkExprFunctor F α) (toSetoidFunctor (sigmaStructure F))
 
 variable (G : PairToUniverseFunctor F)
 
 def innerPairDependency : StructureDependency := ⟨innerPairStructure F, G⟩
 
-def makePairFunctor (α : F.fst) : StructureFunctor (sndStructure F α) universeStructure :=
-compFun (sigmaStructure.mkExprFunctor F α) (compFun (toSetoidFunctor (sigmaStructure F)) G)
+-- x ↦ G ⟨α, x⟩
+def resultFunctor (α : F.fst) : UniverseFunctor (sndStructure F α) :=
+compFun (innerPairFunctor F α) G
 
--- TODO: Much of this looks like we could just compose introduction and projection in just the right way.
+-- ∀ x : F.snd α, G ⟨α, x⟩
+def dependentPiStructure (α : F.fst) := piStructure ⟨sndStructure F α, resultFunctor F G α⟩
 
-def dependentPiStructure (α : F.fst) := piStructure ⟨sndStructure F α, makePairFunctor F G α⟩
+def dependentPiFunctorToFunResultFun {α β : F.fst} (e : α ≃ β) (y : sndStructure F β) :=
+let x := (congrArgMap F.snd e).invFun y;
+let se : SigmaEquiv ⟨α, x⟩ ⟨β, y⟩ := ⟨e, (congrArgMap F.snd e).rightInv y⟩;
+let re := congrArgMap G (toSetoidEquiv (sigmaStructure F) se);
+re.toFun
 
-def dependentPiFunctorCongrArgToFun {α β : F.fst} (e : α ≃ β) :
+def dependentPiFunctorToFunMap' {α β : F.fst} (e : α ≃ β) (f : dependentPiStructure F G α) (y : sndStructure F β) :
+  resultFunctor F G β y :=
+dependentPiFunctorToFunResultFun F G e y (f.map ((congrArgMap F.snd e).invFun y))
+
+def dependentPiFunctorToFunMap {α β : F.fst} (e : α ≃ β) (f : dependentPiStructure F G α) :
+  dependentPiStructure F G β :=
+⟨dependentPiFunctorToFunMap' F G e f⟩
+
+theorem dependentPiFunctorToFunCongrArg {α β : F.fst} (e : α ≃ β) {f₁ f₂ : dependentPiStructure F G α} (h : f₁ ≈ f₂) :
+  dependentPiFunctorToFunMap F G e f₁ ≈ dependentPiFunctorToFunMap F G e f₂ :=
+let ⟨eh⟩ := h;
+-- We need choice here to work around the limitation that `congrArg G` returns setoid functors.
+-- With an inductive definition of `Structure`, it would disappear.
+⟨λ y => Classical.choice (congrArgMap (dependentPiFunctorToFunResultFun F G e y) (toSetoidEquiv _ (eh ((congrArgMap F.snd e).invFun y))))⟩
+
+def dependentPiFunctorToFun {α β : F.fst} (e : α ≃ β) :
   SetoidStructureFunctor (dependentPiStructure F G α) (dependentPiStructure F G β) :=
-{ map     := sorry,
-  functor := { FF        := sorry,
-               isFunctor := sorry } }
+makeSetoidStructureFunctor (dependentPiFunctorToFunMap F G e) (dependentPiFunctorToFunCongrArg F G e)
 
-def dependentPiFunctorCongrArg {α β : F.fst} (e : α ≃ β) :
-  dependentPiStructure F G α ≃ dependentPiStructure F G β :=
-{ toFun    := dependentPiFunctorCongrArgToFun F G e,
-  invFun   := dependentPiFunctorCongrArgToFun F G e⁻¹,
-  leftInv  := sorry,
-  rightInv := sorry }
+def dependentPiFunctorRespectsInv {α β : F.fst} (e : α ≃ β) (f : dependentPiStructure F G α) :
+  dependentPiFunctorToFun F G e⁻¹ (dependentPiFunctorToFun F G e f) ≈ f :=
+⟨⟨λ x => let g := dependentPiFunctorToFunMap F G e f;
+         let y := (congrArgMap F.snd e⁻¹).invFun x;
+         let se : SigmaEquiv ⟨β, y⟩ ⟨α, x⟩ := ⟨e⁻¹, (congrArgMap F.snd e⁻¹).rightInv x⟩;
+         let re := congrArgMap G (toSetoidEquiv (sigmaStructure F) se);
+         let x' := (congrArgMap F.snd e).invFun y;
+         let se' : SigmaEquiv ⟨α, x'⟩ ⟨β, y⟩ := ⟨e, (congrArgMap F.snd e).rightInv y⟩;
+         let re' := congrArgMap G (toSetoidEquiv (sigmaStructure F) se');
+         let hh₁ : congrArgMap F.snd e⁻¹ ≈ (congrArgMap F.snd e)⁻¹ := respectsInv F.snd e;
+         let hh₂ := congrArgComp (Setoid.refl (congrArgMap F.snd e)) hh₁;
+         let hh₃ := Setoid.trans hh₂ (leftInv (congrArgMap F.snd e));
+         let hh₄ : x ≃ x' := (Classical.choice (Setoid.symm hh₃.right)) x;
+         --let h₁ : re'.toFun ≃ re.invFun := sorry;
+         let h₂ : re.toFun (re'.toFun (f.map x')) ≃ f.map x := sorry;
+         let h₃ : re.toFun (g.map y) ≃ f.map x := h₂;
+         let h₄ : dependentPiFunctorToFunMap' F G e⁻¹ g x ≃ f.map x := sorry; -- h₃
+         h₄⟩⟩
 
-def dependentPiFunctor    : StructureFunctor F.fst universeStructure :=
-{ map     := dependentPiStructure F G,
-  functor := { FF        := dependentPiFunctorCongrArg F G,
-               isFunctor := sorry } }
+def dependentPiFunctorDesc : UniverseFunctorDesc F.fst :=
+{ map            := dependentPiStructure F G,
+  toFun          := dependentPiFunctorToFun F G,
+  respectsSetoid := λ h     f => ⟨sorry⟩,
+  respectsComp   := λ e₁ e₂ f => ⟨sorry⟩,
+  respectsId     := λ α     f => ⟨sorry⟩,
+  respectsInv    := dependentPiFunctorRespectsInv F G }
 
-def dependentSigmaFunctor : StructureFunctor F.fst universeStructure :=
-{ map     := λ α => sigmaStructure ⟨sndStructure F α, makePairFunctor F G α⟩,
-  functor := sorry }
+-- α ↦ ∀ x : F.snd α, G ⟨α, x⟩
+def dependentPiFunctor : UniverseFunctor F.fst := UniverseFunctorDesc.functor (dependentPiFunctorDesc F G)
+
+-- Σ x : F.snd α, G ⟨α, x⟩
+def dependentSigmaStructure (α : F.fst) := sigmaStructure ⟨sndStructure F α, resultFunctor F G α⟩
+
+def dependentSigmaFunctorDesc : UniverseFunctorDesc F.fst :=
+{ map            := dependentSigmaStructure F G,
+  toFun          := sorry,
+  respectsSetoid := sorry,
+  respectsComp   := sorry,
+  respectsId     := sorry,
+  respectsInv    := sorry }
+
+-- α ↦ Σ x : F.snd α, G ⟨α, x⟩
+def dependentSigmaFunctor : UniverseFunctor F.fst := UniverseFunctorDesc.functor (dependentSigmaFunctorDesc F G)
 
 -- `(∀ x : α, ∀ y : F x, G x y) ≃ (∀ ⟨x, y⟩ : (Σ x : α, F x), G x y)`
 -- (`(λ x y => g x y) ↦ (λ ⟨x, y⟩ => g x y)`)
@@ -297,11 +349,11 @@ def piPiCurried   := piStructure (nestedPiDependency  F G)
 def piPiUncurried := piStructure (innerPairDependency F G)
 
 def piPiEquivToFun  : StructureFunctor (piPiCurried   F G) (piPiUncurried F G) :=
-{ map     := λ g => ⟨λ ⟨α, β⟩ => (g.map α).map β⟩,
+{ map     := λ g => ⟨λ ⟨α, x⟩ => (g.map α).map x⟩,
   functor := sorry }
 
 def piPiEquivInvFun : StructureFunctor (piPiUncurried F G) (piPiCurried   F G) :=
-{ map     := λ g => ⟨λ α => ⟨λ β => g.map ⟨α, β⟩⟩⟩,
+{ map     := λ g => ⟨λ α => ⟨λ x => g.map ⟨α, x⟩⟩⟩,
   functor := sorry }
 
 def piPiEquiv : StructureEquiv (piPiCurried F G) (piPiUncurried F G) :=
@@ -319,11 +371,15 @@ def sigmaSigmaCurried   := sigmaStructure (nestedSigmaDependency F G)
 def sigmaSigmaUncurried := sigmaStructure (innerPairDependency   F G)
 
 def sigmaSigmaEquivToFun  : StructureFunctor (sigmaSigmaCurried   F G) (sigmaSigmaUncurried F G) :=
-{ map     := λ ⟨α, ⟨β, γ⟩⟩ => ⟨⟨α, β⟩, γ⟩,
-  functor := sorry }
+{ map     := λ ⟨α, ⟨x, y⟩⟩ => ⟨⟨α, x⟩, y⟩,
+  functor := { FF        := λ ⟨e, f⟩ => sorry,
+               isFunctor := { respectsSetoid := sorry,
+                              respectsComp   := sorry,
+                              respectsId     := sorry,
+                              respectsInv    := sorry } } }
 
 def sigmaSigmaEquivInvFun : StructureFunctor (sigmaSigmaUncurried F G) (sigmaSigmaCurried   F G) :=
-{ map     := λ ⟨⟨α, β⟩, γ⟩ => ⟨α, ⟨β, γ⟩⟩,
+{ map     := λ ⟨⟨α, x⟩, y⟩ => ⟨α, ⟨x, y⟩⟩,
   functor := sorry }
 
 def sigmaSigmaEquiv : StructureEquiv (sigmaSigmaCurried F G) (sigmaSigmaUncurried F G) :=

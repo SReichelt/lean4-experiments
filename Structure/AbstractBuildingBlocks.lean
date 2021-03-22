@@ -4,6 +4,7 @@
 
 
 import Structure.Basic
+import Structure.UniverseFunctor
 import Structure.SortStructure  -- TODO: We should probably move everything that depends on this to `ConcreteBuildingBlocks.lean`.
 import Structure.AbstractPiSigma
 
@@ -165,24 +166,23 @@ end InstanceInstance
 
 section FunctorInstanceDef
 
-variable {S : Structure} (F G : StructureFunctor S universeStructure)
+variable {S : Structure} (F G : UniverseFunctor S)
 
 def functorMap (α : S) := setoidFunctorStructure (F α) (G α)
 
-def functorCongrArgToFun {α β : S} (e : α ≃ β) : SetoidStructureFunctor (functorMap F G α) (functorMap F G β) :=
+def functorToFun {α β : S} (e : α ≃ β) : SetoidStructureFunctor (functorMap F G α) (functorMap F G β) :=
 { map     := λ f => compFun (congrArgMap F e).invFun (compFun f (congrArgMap G e).toFun),
   functor := sorry }  -- TODO: Since we are dealing with setoid functors here, we just need to combine `compFun.congrArg'` etc.
 
-def functorCongrArg {α β : S} (e : α ≃ β) : functorMap F G α ≃ functorMap F G β :=
-{ toFun    := functorCongrArgToFun F G e,
-  invFun   := functorCongrArgToFun F G e⁻¹,
-  leftInv  := sorry,
-  rightInv := sorry }
+def functorFunDesc : UniverseFunctorDesc S :=
+{ map            := functorMap   F G,
+  toFun          := functorToFun F G,
+  respectsSetoid := sorry,
+  respectsComp   := sorry,
+  respectsId     := sorry,
+  respectsInv    := sorry }
 
-def functorFun : StructureFunctor S universeStructure :=
-{ map     := functorMap F G,
-  functor := { FF        := functorCongrArg F G,
-               isFunctor := sorry } }
+def functorFun : UniverseFunctor S := UniverseFunctorDesc.functor (functorFunDesc F G)
 
 def functorDependency : StructureDependency := ⟨S, functorFun F G⟩
 

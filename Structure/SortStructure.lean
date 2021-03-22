@@ -144,17 +144,17 @@ def hasEquivalentStructure : HasStructure α :=
 { M := λ x y => h.M (e.toFun x) (e.toFun y),
   h := { comp         := h.h.comp,
          congrArgComp := h.h.congrArgComp,
-         assoc        := λ _ _ => h.h.assoc    _ _,
-         id           := λ _ => h.h.id _,
-         leftId       := λ _   => h.h.leftId   _,
-         rightId      := λ _   => h.h.rightId  _,
+         assoc        := λ f g => h.h.assoc    f g,
+         id           := λ x => h.h.id (e.toFun x),
+         leftId       := λ f   => h.h.leftId   f,
+         rightId      := λ f   => h.h.rightId  f,
          inv          := h.h.inv,
          congrArgInv  := h.h.congrArgInv,
-         leftInv      := λ _   => h.h.leftInv  _,
-         rightInv     := λ _   => h.h.rightInv _,
-         invInv       := λ _   => h.h.invInv   _,
-         compInv      := λ _ _ => h.h.compInv  _ _,
-         idInv        := λ _   => h.h.idInv    _ } }
+         leftInv      := λ f   => h.h.leftInv  f,
+         rightInv     := λ f   => h.h.rightInv f,
+         invInv       := λ f   => h.h.invInv   f,
+         compInv      := λ f g => h.h.compInv  f g,
+         idInv        := λ x   => h.h.idInv    (e.toFun x) } }
 
 def equivalentStructure := @defaultStructure α (hasEquivalentStructure e)
 

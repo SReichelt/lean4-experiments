@@ -974,7 +974,7 @@ theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b
 --
 -- The horizontal functors can be "philosophically" regarded as equivalences: Although they cannot be
 -- proved to be equivalences, we can see that all structural properties have an analogue in the setoid
--- and skeleton structures.
+-- and skeleton structures. (Also, we can prove certain idempotence properties.)
 --
 -- This can be understood as the reason why isomorphism can generally be identified with equality: In all
 -- operations that preserve structure, in theory we can take the quotient with respect to equivalence/
@@ -1009,17 +1009,27 @@ def setoidIdempotence (S : Structure) : StructureEquiv (setoidStructure (setoidS
   leftInv  := λ α => IsEquivalence.refl α,
   rightInv := λ α => IsEquivalence.refl α }
 
-def SetoidStructureFunctor (S T : Structure) := StructureFunctor (setoidStructure S) (setoidStructure T)
+@[reducible] def SetoidStructureFunctor (S T : Structure) := StructureFunctor (setoidStructure S) (setoidStructure T)
 
-def setoidFunctor {S T : Structure} (F : StructureFunctor S T) : SetoidStructureFunctor S T :=
-{ map     := F.map,
-  functor := { FF        := λ ⟨e⟩ => ⟨F.congrArgMap e⟩,
+def makeSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {α β : S}, α ≈ β → map α ≈ map β) :
+  SetoidStructureFunctor S T :=
+{ map     := map,
+  functor := { FF        := FF,
                isFunctor := { respectsSetoid := λ _   => proofIrrel _ _,
                               respectsComp   := λ _ _ => proofIrrel _ _,
                               respectsId     := λ _   => proofIrrel _ _,
                               respectsInv    := λ _   => proofIrrel _ _ } } }
 
--- TODO: Show that `setoidFunctor` respects `setoidIdempotence`.
+def setoidFunctor {S T : Structure} (F : StructureFunctor S T) : SetoidStructureFunctor S T :=
+makeSetoidStructureFunctor F.map (λ ⟨e⟩ => ⟨F.congrArgMap e⟩)
+
+def setoidSquare {S T : Structure} (F : StructureFunctor S T) :
+  compFun F (toSetoidFunctor T) ≃ compFun (toSetoidFunctor S) (setoidFunctor F) :=
+λ _ => id'
+
+def setoidIdempotenceSquare {S T : Structure} (F : SetoidStructureFunctor S T) :
+  compFun (setoidIdempotenceFunctor S) F ≃ compFun (setoidFunctor F) (setoidIdempotenceFunctor T) :=
+sorry  -- TODO: build API for composing equivalences and functors
 
 def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructure S) (setoidStructure T)
 
@@ -1054,31 +1064,46 @@ def skeletonIdempotenceFunctor (S : Structure) : StructureFunctor (skeletonStruc
 def skeletonIdempotence (S : Structure) : StructureEquiv (skeletonStructure (skeletonStructure S)) (skeletonStructure S) :=
 { toFun    := skeletonIdempotenceFunctor S,
   invFun   := toSkeletonFunctor (skeletonStructure S),
-  leftInv  := λ a => sorry,
-  rightInv := λ a => sorry }
+  leftInv  := λ a => let aa := Quotient.existsRep a;
+                     let h₁ : (skeletonIdempotenceFunctor S) (Quotient.mk aa.1) = aa.1 := rfl;
+                     let h₂ := congrArg Quotient.mk h₁;
+                     Eq.subst (motive := λ b => Quotient.mk ((skeletonIdempotenceFunctor S) b) = b) aa.2 h₂,
+  rightInv := λ _ => rfl }
 
-def SkeletonStructureFunctor (S T : Structure) := StructureFunctor (skeletonStructure S) (skeletonStructure T)
+@[reducible] def SkeletonStructureFunctor (S T : Structure) := StructureFunctor (skeletonStructure S) (skeletonStructure T)
+
+def makeSkeletonStructureFunctor {S T : Structure} (map : StructureQuotient S → StructureQuotient T) :
+  SkeletonStructureFunctor S T :=
+{ map     := map,
+  functor := { FF        := congrArg map,
+               isFunctor := propFunctor } }
 
 variable {S T : Structure}
 
 def skeletonMap (F : SetoidStructureFunctor S T) : skeletonStructure S → skeletonStructure T :=
 Quotient.lift (Quotient.mk ∘ F.map) (λ _ _ => Quotient.sound ∘ F.congrArgMap)
 
-def skeletonCongrArg (F : SetoidStructureFunctor S T) {a b : skeletonStructure S} :
-  a = b → skeletonMap F a = skeletonMap F b :=
-congrArg (skeletonMap F)
+def skeletonFromSetoidFunctor (F : SetoidStructureFunctor S T) : SkeletonStructureFunctor S T :=
+makeSkeletonStructureFunctor (skeletonMap F)
 
-def skeletonFromSetoidFunctor (F : SetoidStructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
-{ map     := skeletonMap F,
-  functor := { FF        := skeletonCongrArg F,
-               isFunctor := propFunctor } }
+def skeletonSetoidIdempotenceSquare {S T : Structure} (F : SkeletonStructureFunctor S T) :
+  compFun (skeletonSetoidIdempotenceFunctor S) F ≃ compFun (setoidFunctor F) (skeletonSetoidIdempotenceFunctor T) :=
+sorry  -- TODO: build API for composing equivalences and functors
 
--- TODO: Show that `skeletonFromSetoidFunctor` respects `skeletonSetoidIdempotence`.
-
-def skeletonFunctor (F : StructureFunctor S T) : StructureFunctor (skeletonStructure S) (skeletonStructure T) :=
+def skeletonFunctor (F : StructureFunctor S T) : SkeletonStructureFunctor S T :=
 skeletonFromSetoidFunctor (setoidFunctor F)
 
--- TODO: Show that `skeletonFunctor` respects `skeletonIdempotence`.
+def setoidToSkeletonSquare {S T : Structure} (F : StructureFunctor S T) :
+  compFun (setoidFunctor F) (setoidToSkeletonFunctor T) ≃ compFun (setoidToSkeletonFunctor S) (skeletonFunctor F) :=
+λ _ => rfl
+
+def skeletonSquare {S T : Structure} (F : StructureFunctor S T) :
+  compFun F (toSkeletonFunctor T) ≃ compFun (toSkeletonFunctor S) (skeletonFunctor F) :=
+λ _ => rfl
+
+def skeletonIdempotenceSquare {S T : Structure} (F : SkeletonStructureFunctor S T) :
+  compFun (skeletonIdempotenceFunctor S) F ≃ compFun (skeletonFunctor F) (skeletonIdempotenceFunctor T) :=
+sorry  -- TODO: build API for composing equivalences and functors
 
 end Skeleton
 
@@ -1220,3 +1245,5 @@ f
 
 instance structureHasStructure : HasStructure Structure := ⟨SetoidStructureEquiv.structureEquiv⟩
 def universeStructure : Structure := ⟨Structure⟩
+
+instance : CoeSort universeStructure.U (Sort u) := ⟨Structure.U⟩
