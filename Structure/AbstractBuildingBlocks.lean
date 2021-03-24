@@ -59,7 +59,7 @@ def isoEquiv {F : StructureDependency} {a b : SigmaExpr F} (c : InstanceIsoCrite
 -- Degenerate case: If the instance does not actually depend on the type, an isomorphism is just an
 -- equivalence between the types together with an equivalence between the instances.
 
-def independentPairDependency (S T : Structure) : StructureDependency := ⟨S, constFun T⟩
+def independentPairDependency (S T : Structure) := StructureDependency.constDep S T
 
 def IndependentPair (S T : Structure) := SigmaExpr (independentPairDependency S T)
 
@@ -179,8 +179,7 @@ def functorFunDesc : UniverseFunctorDesc S :=
   toFun          := functorToFun F G,
   respectsSetoid := sorry,
   respectsComp   := sorry,
-  respectsId     := sorry,
-  respectsInv    := sorry }
+  respectsId     := sorry }
 
 def functorFun : UniverseFunctor S := UniverseFunctorDesc.functor (functorFunDesc F G)
 
