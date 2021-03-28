@@ -39,7 +39,7 @@ namespace BuildingBlocks
 -- that the two types are equivalent.
 
 def HasIso {F : StructureDependency} (a b : SigmaExpr F) (I : ∀ e : a.fst ≃ b.fst, Prop) :=
-∀ e : a.fst ≃ b.fst, InstanceEquiv (congrArgMap F.snd e) a.snd b.snd ↔ I e
+∀ e : a.fst ≃ b.fst, InstanceEquiv (congrArgMap F.F e) a.snd b.snd ↔ I e
 
 structure InstanceIsoCriterion {F : StructureDependency} (a b : SigmaExpr F) where
 {I : ∀ e : a.fst ≃ b.fst, Prop}
@@ -261,12 +261,12 @@ def outerPair (a : SigmaInstance F) : UncurriedSigmaInstance F :=
 -- TODO: Make use of `PiSigmaEquivalences` here (and finish those first).
 
 def applyInnerEquiv (a b : SigmaInstance F) (e : a.fst ≃ b.fst)
-                    (h : InstanceEquiv (congrArgMap F.fst.snd e) a.snd.fst b.snd.fst) :
+                    (h : InstanceEquiv (congrArgMap F.fst.F e) a.snd.fst b.snd.fst) :
   innerPair F a ≃ innerPair F b :=
 sorry
 
 theorem iso (a b : SigmaInstance F) :
-  HasIso a b (λ e => ∃ h : InstanceEquiv (congrArgMap F.fst.snd e) a.snd.fst b.snd.fst,
+  HasIso a b (λ e => ∃ h : InstanceEquiv (congrArgMap F.fst.F e) a.snd.fst b.snd.fst,
                      InstanceEquiv (congrArgMap F.snd (applyInnerEquiv F a b e h)) a.snd.snd b.snd.snd) :=
 sorry
 
