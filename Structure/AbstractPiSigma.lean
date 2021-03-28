@@ -34,6 +34,10 @@ namespace StructureDependency
 
 def constDep (S T : Structure) : StructureDependency := ⟨S, constFun T⟩
 
+structure StructureDependencyEquiv (F G : StructureDependency) where
+(φ : StructureEquiv F.S G.S)
+(ψ : FunctorEquiv F.F (compFun φ.toFun G.F))
+
 end StructureDependency
 
 
@@ -111,7 +115,7 @@ def piStructure (F : StructureDependency) : Structure := ⟨PiExpr F⟩
 
 namespace piStructure
 
-instance (F : StructureDependency) : CoeFun (piStructure F).U (λ _ => ∀ α : F.S, F.F α) := ⟨PiExpr.map⟩
+instance (F : StructureDependency) : CoeFun (IsType.type (piStructure F)) (λ _ => ∀ α : F.S, F.F α) := ⟨PiExpr.map⟩
 
 -- An independent `PiExpr` is the same as a functor (to a setoid structure).
 
@@ -164,7 +168,10 @@ end piStructure
 
 -- A Σ expression of structures.
 
-def SigmaExpr (F : StructureDependency) := Σ' α : F.S, (F.F α).U
+def SigmaExpr (F : StructureDependency) := Σ' α : F.S, IsType.type ((strictUniverseFunctor F.F) α)
+
+instance (F : StructureDependency) (α : F.S) : Setoid (IsType.type ((strictUniverseFunctor F.F) α)) :=
+structureToSetoid (F.F α)
 
 -- The equivalence between encoded Σ expressions is actually the generalized version of the example
 -- in the introduction: A bundled instance of a Lean type class is an instance of the corresponding

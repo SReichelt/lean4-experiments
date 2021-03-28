@@ -24,9 +24,9 @@ makeSetoidStructureFunctor (λ f => compFun f e.toFun) (λ h => compFun.congrArg
 def outgoingFunctorDesc : UniverseFunctorDesc universeStructure :=
 { map            := outgoingFunctorStructure S,
   toFun          := outgoingToFun S,
-  respectsSetoid := λ h     f => ⟨compFun.congrArg' (Setoid.refl f) h.left⟩,
+  respectsSetoid := λ h     f => ⟨compFun.congrArg' (functorIsSetoid.refl f) h.left⟩,
   respectsComp   := λ e₁ e₂ f => ⟨compFun.assoc' f e₁.toFun e₂.toFun⟩,
-  respectsId     := λ T     f => ⟨Setoid.trans (compFun.congrArg' (idFun.leftId' f) (Setoid.refl idFun)) (idFun.leftId' f)⟩ }
+  respectsId     := λ T     f => ⟨idFun.leftId' f⟩ }
 
 def outgoingFunctorFunctor : UniverseStructureFunctor := UniverseFunctorDesc.functor (outgoingFunctorDesc S)
 
@@ -39,9 +39,9 @@ makeSetoidStructureFunctor (λ f => compFun e.invFun f) (λ h => compFun.congrAr
 def incomingFunctorDesc : UniverseFunctorDesc universeStructure :=
 { map            := incomingFunctorStructure S,
   toFun          := incomingToFun S,
-  respectsSetoid := λ h     f => ⟨compFun.congrArg' h.right (Setoid.refl f)⟩,
+  respectsSetoid := λ h     f => ⟨compFun.congrArg' h.right (functorIsSetoid.refl f)⟩,
   respectsComp   := λ e₁ e₂ f => ⟨compFun.assoc' e₂.invFun e₁.invFun f⟩,
-  respectsId     := λ T     f => ⟨Setoid.trans (compFun.congrArg' (Setoid.refl idFun) (idFun.rightId' f)) (idFun.rightId' f)⟩ }
+  respectsId     := λ T     f => ⟨idFun.rightId' f⟩ }
 
 def incomingFunctorFunctor : UniverseStructureFunctor := UniverseFunctorDesc.functor (incomingFunctorDesc S)
 

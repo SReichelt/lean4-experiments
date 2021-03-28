@@ -12,6 +12,7 @@ import Structure.Data.Equiv
 
 open Morphisms
 open StructureFunctor
+open Forgetfulness
 open SetoidStructureEquiv
 
 
@@ -111,15 +112,22 @@ Setoid.fromEq (congrArg instanceStructureEquiv' h)
 
 theorem respectsComp   {α β γ : Sort u} (e : α ≃≃ β) (f : β ≃≃ γ) :
   instanceStructureEquiv' (Equiv.trans e f) ≈ SetoidStructureEquiv.trans (instanceStructureEquiv' e) (instanceStructureEquiv' f) :=
-Setoid.refl (instanceStructureEquiv' (Equiv.trans e f))
+⟨⟨makeToSetoidStructureFunctorEquiv (λ a => let c : setoidStructure (instanceStructure γ) := f.toFun  (e.toFun  a);
+                                            Setoid.refl c)⟩,
+ ⟨makeToSetoidStructureFunctorEquiv (λ c => let a : setoidStructure (instanceStructure α) := e.invFun (f.invFun c);
+                                            Setoid.refl a)⟩⟩
 
 theorem respectsId     (α     : Sort u) :
   instanceStructureEquiv' (Equiv.refl α) ≈ SetoidStructureEquiv.refl (instanceStructure α) :=
-Setoid.refl (instanceStructureEquiv' (Equiv.refl α))
+⟨⟨makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl a)⟩,
+ ⟨makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl a)⟩⟩
 
 theorem respectsInv    {α β   : Sort u} (e : α ≃≃ β) :
   instanceStructureEquiv' (Equiv.symm e) ≈ SetoidStructureEquiv.symm (instanceStructureEquiv' e) :=
-Setoid.refl (instanceStructureEquiv' (Equiv.symm e))
+⟨⟨makeToSetoidStructureFunctorEquiv (λ b => let a : setoidStructure (instanceStructure α) := e.invFun b;
+                                            Setoid.refl a)⟩,
+ ⟨makeToSetoidStructureFunctorEquiv (λ a => let b : setoidStructure (instanceStructure β) := e.toFun  a;
+                                            Setoid.refl b)⟩⟩
 
 end instanceStructureEquiv'
 
