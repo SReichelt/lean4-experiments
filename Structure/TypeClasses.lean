@@ -5,7 +5,6 @@
 import Structure.Basic
 import Structure.SortStructure
 import Structure.AbstractPiSigma
-import Structure.ConcretePiSigma
 
 open StructureFunctor
 open PiSigma
@@ -38,7 +37,10 @@ proxyFunctor C h.F h.φ
 
 
 -- A bundled instance of a type class is just a dependent pair. If the type class is a functor, we can
--- build an `SigmaExpr`, which has a structure.
+-- build a `SigmaExpr`, which has a structure.
+
+def toStructureDependency {S : Structure} (F : StructureFunctor S sortStructure) : StructureDependency :=
+⟨S, compFun F sortToStructureFunctor⟩
 
 def bundledStructure (C : TypeClass) [h : StructuralTypeClass C] := sigmaStructure (toStructureDependency (toTypeClassFunctor C))
 

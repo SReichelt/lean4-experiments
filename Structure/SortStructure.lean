@@ -87,8 +87,8 @@ def InstanceStructureEquiv (α β : Sort u) := StructureEquiv (instanceStructure
 def instanceStructureEquiv {α β : Sort u} (e : α ≃≃ β) : InstanceStructureEquiv α β :=
 { toFun    := instanceStructureFunctor e.toFun,
   invFun   := instanceStructureFunctor e.invFun,
-  leftInv  := e.leftInv,
-  rightInv := e.rightInv }
+  leftInv  := ⟨e.leftInv,  λ _ => proofIrrel _ _⟩,
+  rightInv := ⟨e.rightInv, λ _ => proofIrrel _ _⟩ }
 
 instance {α β : Sort u} : Coe (α ≃≃ β) (InstanceStructureEquiv α β) := ⟨instanceStructureEquiv⟩
 

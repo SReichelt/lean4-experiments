@@ -13,8 +13,6 @@ open Forgetfulness
 
 namespace FunctorStructure
 
-@[reducible] def UniverseStructureFunctor := StructureFunctor universeStructure universeStructure
-
 variable (S : Structure)
 
 def outgoingFunctorStructure (T : Structure) := functorStructure S (setoidStructure T)
