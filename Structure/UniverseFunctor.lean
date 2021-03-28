@@ -27,14 +27,14 @@ namespace UniverseFunctorDesc
 
 variable {S : Structure} (D : UniverseFunctorDesc S)
 
-def targetLeftInv {α β : S} (e : α ≃ β) : compFun (D.toFun e) (D.toFun e⁻¹) ≃ idFun :=
+def targetLeftInv {α β : S} (e : α ≃ β) : D.toFun e⁻¹ ⊙ D.toFun e ≃ idFun :=
 makeToSetoidStructureFunctorEquiv (λ T => let h₁ := D.respectsComp e e⁻¹ T;
                                           let h₂ := D.respectsSetoid (leftInv e) T;
                                           let h₃ := Setoid.trans (Setoid.symm h₁) h₂
                                           let h₄ := D.respectsId α T;
                                           Setoid.trans h₃ h₄)
 
-def targetRightInv {α β : S} (e : α ≃ β) : compFun (D.toFun e⁻¹) (D.toFun e) ≃ idFun :=
+def targetRightInv {α β : S} (e : α ≃ β) : D.toFun e ⊙ D.toFun e⁻¹ ≃ idFun :=
 makeToSetoidStructureFunctorEquiv (λ T => let h₁ := D.respectsComp e⁻¹ e T;
                                           let h₂ := D.respectsSetoid (rightInv e) T;
                                           let h₃ := Setoid.trans (Setoid.symm h₁) h₂
@@ -52,11 +52,11 @@ theorem targetRespectsSetoid {α β : S} {e₁ e₂ : α ≃ β} (h : e₁ ≈ e
 ⟨makeToSetoidStructureFunctorEquiv (D.respectsSetoid h)⟩
 
 theorem targetRespectsComp {α β γ : S} (e : α ≃ β) (f : β ≃ γ) :
-  D.toFun (f • e) ≈ compFun (D.toFun e) (D.toFun f) :=
+  D.toFun (f • e) ≈ D.toFun f ⊙ D.toFun e :=
 ⟨makeToSetoidStructureFunctorEquiv (D.respectsComp e f)⟩
 
 theorem targetRespectsCompInv {α β γ : S} (e : α ≃ β) (f : β ≃ γ) :
-  D.toFun (f • e)⁻¹ ≈ compFun (D.toFun f⁻¹) (D.toFun e⁻¹) :=
+  D.toFun (f • e)⁻¹ ≈ D.toFun e⁻¹ ⊙ D.toFun f⁻¹ :=
 ⟨makeToSetoidStructureFunctorEquiv (λ T => let h₁ := D.respectsComp f⁻¹ e⁻¹ T;
                                            let h₂ := D.respectsSetoid (compInv e f) T;
                                            Setoid.trans h₂ h₁)⟩
@@ -107,7 +107,7 @@ theorem toSetoidStructureEquivRespectsSetoid {S T : Structure} {e₁ e₂ : Seto
 λ ⟨l, r⟩ => ⟨toSetoidStructureFunctorRespectsSetoid l, toSetoidStructureFunctorRespectsSetoid r⟩
 
 theorem toSetoidStructureFunctorRespectsComp {S T U : Structure} (f : SetoidStructureFunctor S T) (g : SetoidStructureFunctor T U) :
-  setoidFunctor (compFun f g) ≈ compFun (setoidFunctor f) (setoidFunctor g) :=
+  setoidFunctor (g ⊙ f) ≈ setoidFunctor g ⊙ setoidFunctor f :=
 ⟨makeToSetoidStructureFunctorEquiv' (λ α : setoidStructure S => ⟨IsEquivalence.refl (g (f α))⟩)⟩
 
 theorem toSetoidStructureEquivRespectsComp {S T U : Structure} (e : SetoidStructureEquiv S T) (f : SetoidStructureEquiv T U) :
@@ -135,4 +135,4 @@ def toSetoidStructureFunctor : UniverseStructureFunctor :=
                               respectsInv    := toSetoidStructureEquivRespectsInv } } }
 
 def strictUniverseFunctor {S : Structure} (F : UniverseFunctor S) : UniverseFunctor S :=
-compFun F toSetoidStructureFunctor
+toSetoidStructureFunctor ⊙ F

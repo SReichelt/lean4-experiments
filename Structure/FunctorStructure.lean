@@ -19,7 +19,7 @@ def outgoingFunctorStructure (T : Structure) := functorStructure S (setoidStruct
 
 def outgoingToFun {T₁ T₂ : Structure} (e : T₁ ≃ T₂) :
   SetoidStructureFunctor (outgoingFunctorStructure S T₁) (outgoingFunctorStructure S T₂) :=
-makeSetoidStructureFunctor (λ f => compFun f e.toFun) (λ h => compFun.congrArg' h (Setoid.refl _))
+makeSetoidStructureFunctor (λ f => e.toFun ⊙ f) (λ h => compFun.congrArg' h (Setoid.refl _))
 
 def outgoingFunctorDesc : UniverseFunctorDesc universeStructure :=
 { map            := outgoingFunctorStructure S,
@@ -34,7 +34,7 @@ def incomingFunctorStructure (T : Structure) := functorStructure (setoidStructur
 
 def incomingToFun {T₁ T₂ : Structure} (e : T₁ ≃ T₂) :
   SetoidStructureFunctor (incomingFunctorStructure S T₁) (incomingFunctorStructure S T₂) :=
-makeSetoidStructureFunctor (λ f => compFun e.invFun f) (λ h => compFun.congrArg' (Setoid.refl _) h)
+makeSetoidStructureFunctor (λ f => f ⊙ e.invFun) (λ h => compFun.congrArg' (Setoid.refl _) h)
 
 def incomingFunctorDesc : UniverseFunctorDesc universeStructure :=
 { map            := incomingFunctorStructure S,

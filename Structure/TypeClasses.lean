@@ -40,7 +40,7 @@ proxyFunctor C h.F h.φ
 -- build a `SigmaExpr`, which has a structure.
 
 def toStructureDependency {S : Structure} (F : StructureFunctor S sortStructure) : StructureDependency :=
-⟨S, compFun F sortToStructureFunctor⟩
+⟨S, sortToStructureFunctor ⊙ F⟩
 
 def bundledStructure (C : TypeClass) [h : StructuralTypeClass C] := sigmaStructure (toStructureDependency (toTypeClassFunctor C))
 

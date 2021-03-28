@@ -171,7 +171,7 @@ variable {S : Structure} (F G : UniverseFunctor S)
 def functorMap (α : S) := setoidFunctorStructure (F α) (G α)
 
 def functorToFun {α β : S} (e : α ≃ β) : SetoidStructureFunctor (functorMap F G α) (functorMap F G β) :=
-{ map     := λ f => compFun (congrArgMap F e).invFun (compFun f (congrArgMap G e).toFun),
+{ map     := λ f => ((congrArgMap G e).toFun ⊙ f) ⊙ (congrArgMap F e).invFun,
   functor := sorry }  -- TODO: Since we are dealing with setoid functors here, we just need to combine `compFun.congrArg'` etc.
 
 def functorFunDesc : UniverseFunctorDesc S :=
@@ -195,11 +195,11 @@ theorem iso (a b : FunctorInstance F G) :
   HasIso a b (λ e => ∀ x y, InstanceEquiv (congrArgMap F e) x y → InstanceEquiv (congrArgMap G e) (a.snd.map x) (b.snd.map y)) :=
 λ e => let f := congrArgMap F e;
        let g := congrArgMap G e;
-       ⟨λ h₁ x y h₂ => let h₃ : compFun f.invFun (compFun a.snd g.toFun) ≈ b.snd := h₁;
-                       let h₄ : compFun a.snd g.toFun ≈ compFun f.toFun b.snd := sorry;
-                       let h₅ : g.toFun (a.snd.map x) ≈ b.snd.map (f.toFun x) := sorry;
-                       let h₆ : g.toFun (a.snd.map x) ≈ b.snd.map y := sorry;
-                       (setoidInstanceEquiv g (a.snd.map x) (b.snd.map y)).mpr h₆,
+       ⟨λ h₁ x y h₂ => let ⟨h₃⟩ : (g.toFun ⊙ a.snd) ⊙ f.invFun ≈ b.snd := h₁;
+                       let h₄ : g.toFun ⊙ a.snd ≃ b.snd ⊙ f.toFun := sorry;
+                       let h₅ : g.toFun (a.snd.map x) ≃ b.snd.map (f.toFun x) := h₄.ext x;
+                       let h₆ : g.toFun (a.snd.map x) ≃ b.snd.map y := sorry;
+                       (setoidInstanceEquiv g (a.snd.map x) (b.snd.map y)).mpr ⟨h₆⟩,
         sorry⟩
 
 -- If we have isomorphism criteria for `F` and `G`, we can combine them with `iso`. This way, we can not

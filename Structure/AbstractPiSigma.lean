@@ -36,7 +36,7 @@ def constDep (S T : Structure) : StructureDependency := ⟨S, constFun T⟩
 
 structure StructureDependencyEquiv (F G : StructureDependency) where
 (φ : StructureEquiv F.S G.S)
-(ψ : FunctorEquiv F.F (compFun φ.toFun G.F))
+(ψ : F.F ≃ G.F ⊙ φ.toFun)
 
 end StructureDependency
 
@@ -62,7 +62,7 @@ def idPi {S : Structure} : PiExpr (StructureDependency.constDep S S) :=
   congrArg := toSetoidEquiv S }
 
 def compFunPi {S : Structure} {F : StructureDependency} (f : StructureFunctor S F.S) (g : PiExpr F) :
-  PiExpr ⟨S, compFun f F.F⟩ :=
+  PiExpr ⟨S, F.F ⊙ f⟩ :=
 { map      := λ α => g (f α),
   congrArg := λ e => g.congrArg (congrArgMap f e) }
 
@@ -82,7 +82,7 @@ def transportPi {S : Structure} {F₁ F₂ : UniverseFunctor S} (φ : F₁ ≃ F
                                   IsEquivalence.trans (l.ext (f α)) (congrArgMap (φ.ext β).toFun (f.congrArg e)) }
 
 def dependentApplicationFunctor {S T : Structure} {F : UniverseFunctor S}
-                                (f : PiExpr ⟨S, compFun F (incomingFunctorFunctor T)⟩) (a : PiExpr ⟨S, F⟩) :
+                                (f : PiExpr ⟨S, incomingFunctorFunctor T ⊙ F⟩) (a : PiExpr ⟨S, F⟩) :
   SetoidStructureFunctor S T :=
 makeSetoidStructureFunctor (λ α => (f α).map (a α))
                            (λ {α β} ⟨e⟩ => let ⟨h₁⟩ := f.congrArg e;
@@ -250,7 +250,7 @@ namespace sigmaStructure
 variable (F : StructureDependency)
 
 def mkSndFunctor : UniverseFunctor F.S :=
-compFun F.F (incomingFunctorFunctor (sigmaStructure F))
+incomingFunctorFunctor (sigmaStructure F) ⊙ F.F
 
 def mkDependency : StructureDependency := ⟨F.S, mkSndFunctor F⟩
 
@@ -268,9 +268,9 @@ theorem mkExprCongrArg {α₁ α₂ : F.S} (e : α₁ ≃ α₂) :
 
 def mkExpr : PiExpr (mkDependency F) := ⟨mkExprFunctor F, mkExprCongrArg F⟩
 
-def mkFunctor {S : Structure} (mkFst : StructureFunctor S F.S) (mkSnd : PiExpr ⟨S, compFun mkFst F.F⟩) :
+def mkFunctor {S : Structure} (mkFst : StructureFunctor S F.S) (mkSnd : PiExpr ⟨S, F.F ⊙ mkFst⟩) :
   SetoidStructureFunctor S (sigmaStructure F) :=
-let f : PiExpr ⟨S, compFun mkFst (mkSndFunctor F)⟩ := compFunPi (F := mkDependency F) mkFst (mkExpr F);
+let f : PiExpr ⟨S, mkSndFunctor F ⊙ mkFst⟩ := compFunPi (F := mkDependency F) mkFst (mkExpr F);
 dependentApplicationFunctor f mkSnd
 
 def projFstFunctor : StructureFunctor (sigmaStructure F) F.S :=
@@ -282,7 +282,7 @@ def projFstFunctor : StructureFunctor (sigmaStructure F) F.S :=
                               respectsInv    := λ e   => Setoid.refl e⁻¹ } } }
 
 def projSndDependencyFunctor : UniverseFunctor (sigmaStructure F) :=
-compFun (projFstFunctor F) F.F
+F.F ⊙ projFstFunctor F
 
 def projSndDependency : StructureDependency := ⟨sigmaStructure F, projSndDependencyFunctor F⟩
 
@@ -350,7 +350,7 @@ def innerPairDependency : StructureDependency := ⟨sigmaStructure F.fst, F.snd�
 
 -- `x ↦ F.snd ⟨α, x⟩`
 def resultFunctor (α : F.fst.S) : UniverseFunctor (sndStructure F.fst α) :=
-compFun (innerPairFunctor F.fst α) F.snd
+F.snd ⊙ innerPairFunctor F.fst α
 
 -- `∀ x : F.fst.F α, F.snd ⟨α, x⟩`
 -- TODO: Directly construct this as a functor from `F.fst.S` into the dependency.
