@@ -9,6 +9,19 @@
 
 
 
+-- TODO: Improve naming:
+-- * Make variable names consistent:
+--   * Replace most greek letters with latin letters.
+--   * Be more consistent with `e` vs. `φ` etc.
+--   * Rename `F`, `G` etc. in generalized functors to e.g. `f`, `g`.
+--   * Rename `U` to `α`, `V` to `β`, and `A` to `ω`.
+-- * Rename `FF` to `mapEquiv`.
+-- * Use snake case for theorem names.
+
+
+
+set_option autoBoundImplicitLocal false
+
 universes u v w
 
 
@@ -17,21 +30,17 @@ universes u v w
 -- abstraction for something that looks like an equivalence relation except that the codomain is `Sort u`
 -- instead of `Prop`. Therefore, `⟨Equiv.refl, Equiv.symm, Equiv.trans⟩`, where `Equiv` is the Lean 4
 -- version of the `equiv` type in Lean 3 mathlib, is also an instance of this type.
---
--- Even though `α`, `β` are not necessarily types, we use greek letters to raise awareness that they
--- frequently will be. (However, the code where this is actually the case is outsourced into a separate
--- file `SortStructure.lean`.)
 
-class IsType (V : Sort v) where
-(type (s : V) : Sort u)
+class IsType (β : Sort v) where
+(type (b : β) : Sort u)
 
-instance (V : Sort v) [h : IsType V] : CoeSort V (Sort u) := ⟨h.type⟩
+instance (β : Sort v) [h : IsType β] : CoeSort β (Sort u) := ⟨h.type⟩
 instance realType : IsType (Sort u) := ⟨id⟩
 
-class IsEquivalence {U : Sort u} {V : Sort v} [IsType V] (R : U → U → V) where
-(refl  (α     : U) : R α α)
-(symm  {α β   : U} : R α β → R β α)
-(trans {α β γ : U} : R α β → R β γ → R α γ)
+class IsEquivalence {α : Sort u} {β : Sort v} [IsType β] (R : α → α → β) where
+(refl  (a     : α) : R a a)
+(symm  {a b   : α} : R a b → R b a)
+(trans {a b c : α} : R a b → R b c → R a c)
 
 namespace IsEquivalence
 
@@ -71,37 +80,37 @@ def eqSetoid (α : Sort u) : BundledSetoid :=
 { α := α,
   s := ⟨Eq, eqEquiv⟩ }
 
-def GeneralizedRelation (U : Sort u) := U → U → BundledSetoid
+def GeneralizedRelation (α : Sort u) := α → α → BundledSetoid
 
-def unfoldGeneralizedRelation {U : Sort u} (R : GeneralizedRelation U) : U → U → Sort v :=
-λ α β => bundledSetoidIsType.type (R α β)
+def unfoldGeneralizedRelation {α : Sort u} (R : GeneralizedRelation α) : α → α → Sort v :=
+λ a b => bundledSetoidIsType.type (R a b)
 
-def genRel {U : Sort u} (r : U → U → Sort v) : GeneralizedRelation U := λ a b => eqSetoid (r a b)
+def genRel {α : Sort u} (r : α → α → Sort v) : GeneralizedRelation α := λ a b => eqSetoid (r a b)
 
 
 
 -- Sometimes we need to map instances of a type before comparing them; this structure combines the
 -- necessary data for doing so.
 
-structure MappedRelation (A : Sort w) where
-{U : Sort u}
-(R : GeneralizedRelation U)
-(F : A → U)
+structure MappedRelation (ω : Sort w) where
+{α : Sort u}
+(R : GeneralizedRelation α)
+(f : ω → α)
 
-def mappedToGeneralizedRelation {A : Sort w} (R : MappedRelation A) : GeneralizedRelation A :=
-λ α β => R.R (R.F α) (R.F β)
+def mappedToGeneralizedRelation {ω : Sort w} (R : MappedRelation ω) : GeneralizedRelation ω :=
+λ a b => R.R (R.f a) (R.f b)
 
-instance (A : Sort w) : CoeFun (MappedRelation A) (λ _ => GeneralizedRelation A) :=
+instance (ω : Sort w) : CoeFun (MappedRelation ω) (λ _ => GeneralizedRelation ω) :=
 -- Apparently we need to duplicate this here to make type class resolution work.
-⟨λ R α β => R.R (R.F α) (R.F β)⟩
+⟨λ R a b => R.R (R.f a) (R.f b)⟩
 
-def toMappedRelation {U : Sort u} (R : GeneralizedRelation U) : MappedRelation U := ⟨R, id⟩
+def toMappedRelation {α : Sort u} (R : GeneralizedRelation α) : MappedRelation α := ⟨R, id⟩
 
-instance (U : Sort u) : Coe (GeneralizedRelation U) (MappedRelation U) := ⟨toMappedRelation⟩
+instance (α : Sort u) : Coe (GeneralizedRelation α) (MappedRelation α) := ⟨toMappedRelation⟩
 
-def generalizeRelation {U : Sort u} {A : Sort w} (F : A → U) (R : GeneralizedRelation U) :
-  GeneralizedRelation A :=
-mappedToGeneralizedRelation ⟨R, F⟩
+def generalizeRelation {α : Sort u} {ω : Sort w} (f : ω → α) (R : GeneralizedRelation α) :
+  GeneralizedRelation ω :=
+mappedToGeneralizedRelation ⟨R, f⟩
 
 
 
@@ -118,18 +127,18 @@ mappedToGeneralizedRelation ⟨R, F⟩
 -- We add three redundant axioms to avoid unnecessary computations. (Actually, this list of axioms was
 -- originally inspired by the seven corresponding lemmas in `data.equiv.basic` of mathlib in Lean 3:
 -- `symm_symm`, `trans_refl`, etc.)
--- With `α β γ δ : U`, and writing `α ≃ β` for `R α β`, we have:
+-- With `a b c d : α`, and writing `a ≃ b` for `R a b`, we have:
 --
--- ` refl     : α ≃ α                           ` | `id`
--- ` symm     : α ≃ β → β ≃ α                   ` | `⁻¹`
--- ` trans    : α ≃ β → β ≃ γ → α ≃ γ           ` | `∘` (in reverse order)
--- ` assoc    (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h ∘ (g ∘ f) = (h ∘ g) ∘ f `
--- ` leftId   (f : α ≃ β)                         : id ∘ f    = f             `
--- ` rightId  (f : α ≃ β)                         : f ∘ id    = f             `
--- ` leftInv  (f : α ≃ β)                         : f⁻¹ ∘ f   = id            `
--- ` rightInv (f : α ≃ β)                         : f ∘ f⁻¹   = id            `
--- ` invInv   (f : α ≃ β)                         : (f⁻¹)⁻¹   = f             `
--- ` compInv  (f : α ≃ β) (g : β ≃ γ)             : (g ∘ f)⁻¹ = f⁻¹ ∘ g⁻¹     `
+-- ` refl     : a ≃ a                           ` | `id`
+-- ` symm     : a ≃ b → b ≃ a                   ` | `⁻¹`
+-- ` trans    : a ≃ b → b ≃ c → a ≃ c           ` | `∘` (in reverse order)
+-- ` assoc    (f : a ≃ b) (g : b ≃ c) (h : c ≃ d) : h ∘ (g ∘ f) = (h ∘ g) ∘ f `
+-- ` leftId   (f : a ≃ b)                         : id ∘ f    = f             `
+-- ` rightId  (f : a ≃ b)                         : f ∘ id    = f             `
+-- ` leftInv  (f : a ≃ b)                         : f⁻¹ ∘ f   = id            `
+-- ` rightInv (f : a ≃ b)                         : f ∘ f⁻¹   = id            `
+-- ` invInv   (f : a ≃ b)                         : (f⁻¹)⁻¹   = f             `
+-- ` compInv  (f : a ≃ b) (g : b ≃ c)             : (g ∘ f)⁻¹ = f⁻¹ ∘ g⁻¹     `
 -- ` idInv                                        : id⁻¹      = id            `
 --
 -- In order to avoid the non-constructive operation of taking quotients when our equivalences have
@@ -147,46 +156,46 @@ mappedToGeneralizedRelation ⟨R, F⟩
 
 namespace Morphisms
 
-variable {U : Sort u}
+variable {α : Sort u}
 
-class HasComp {V : Sort v} [IsType V] (M : U → U → V) where
-(comp {α β γ : U} : M α β → M β γ → M α γ)
+class HasComp {β : Sort v} [IsType β] (R : α → α → β) where
+(comp {a b c : α} : R a b → R b c → R a c)
 
 -- Note that we use a nonstandard order in `HasComp.comp` so that it directly matches
 -- `IsEquivalence.trans`. When using `•` notation (which we use to avoid clashing with `∘`), we reverse
 -- the order to conform to function/morphism/functor composition.
-def comp {V : Sort v} [h : IsType V] {M : U → U → V} [h : HasComp M] {α β γ : U} (f : M α β) (g : M β γ) := h.comp f g
-@[reducible] def revComp {V : Sort v} [h : IsType V] {M : U → U → V} [h : HasComp M] {α β γ : U} (g : M β γ) (f : M α β) := comp f g
+def comp {β : Sort v} [h : IsType β] {R : α → α → β} [h : HasComp R] {a b c : α} (f : R a b) (g : R b c) := h.comp f g
+@[reducible] def revComp {β : Sort v} [h : IsType β] {R : α → α → β} [h : HasComp R] {a b c : α} (g : R b c) (f : R a b) := comp f g
 infixr:90 " • " => revComp
 
-class HasComposition (M : GeneralizedRelation U) extends HasComp M where
-(congrArgComp {α β γ   : U} {f₁ f₂ : M α β} {g₁ g₂ : M β γ}     : f₁ ≈ f₂ → g₁ ≈ g₂ → g₁ • f₁ ≈ g₂ • f₂)
-(assoc        {α β γ δ : U} (f : M α β) (g : M β γ) (h : M γ δ) : h • (g • f) ≈ (h • g) • f)
+class HasComposition (R : GeneralizedRelation α) extends HasComp R where
+(congrArgComp {a b c   : α} {f₁ f₂ : R a b} {g₁ g₂ : R b c}     : f₁ ≈ f₂ → g₁ ≈ g₂ → g₁ • f₁ ≈ g₂ • f₂)
+(assoc        {a b c d : α} (f : R a b) (g : R b c) (h : R c d) : h • (g • f) ≈ (h • g) • f)
 
-class HasId (M : GeneralizedRelation U) extends HasComposition M where
-(id (α : U) : M α α)
+class HasId (R : GeneralizedRelation α) extends HasComposition R where
+(id (a : α) : R a a)
 
-def id__ {M : GeneralizedRelation U} [h : HasId M] (α : U) := @HasId.id U M h α
+def id__ {R : GeneralizedRelation α} [h : HasId R] (a : α) := @HasId.id α R h a
 
-class HasMorphisms (M : GeneralizedRelation U) extends HasId M where
-(leftId  {α β : U} (f : M α β) : id β • f ≈ f)
-(rightId {α β : U} (f : M α β) : f • id α ≈ f)
+class HasMorphisms (R : GeneralizedRelation α) extends HasId R where
+(leftId  {a b : α} (f : R a b) : id b • f ≈ f)
+(rightId {a b : α} (f : R a b) : f • id a ≈ f)
 
-class HasInv (M : GeneralizedRelation U) extends HasMorphisms M where
-(inv {α β : U} : M α β → M β α)
+class HasInv (R : GeneralizedRelation α) extends HasMorphisms R where
+(inv {a b : α} : R a b → R b a)
 
-def inv {M : GeneralizedRelation U} [h : HasInv M] {α β : U} (f : M α β) := @HasInv.inv U M h α β f 
-postfix:10000 "⁻¹"  => inv
+def inv {R : GeneralizedRelation α} [h : HasInv R] {a b : α} (f : R a b) := @HasInv.inv α R h a b f 
+postfix:max "⁻¹" => inv
 
-class HasIsomorphisms (M : GeneralizedRelation U) extends HasInv M where
-(congrArgInv {α β : U} {f₁ f₂ : M α β}         : f₁ ≈ f₂ → f₁⁻¹ ≈ f₂⁻¹)
-(leftInv     {α β : U} (f : M α β)             : f⁻¹ • f   ≈ id α)
-(rightInv    {α β : U} (f : M α β)             : f • f⁻¹   ≈ id β)
-(invInv      {α β : U} (f : M α β)             : (f⁻¹)⁻¹   ≈ f)
-(compInv     {α β : U} (f : M α β) (g : M β γ) : (g • f)⁻¹ ≈ f⁻¹ • g⁻¹)
-(idInv       (α   : U)                         : (id α)⁻¹  ≈ id α)
+class HasIsomorphisms (R : GeneralizedRelation α) extends HasInv R where
+(congrArgInv {a b   : α} {f₁ f₂ : R a b}         : f₁ ≈ f₂ → f₁⁻¹ ≈ f₂⁻¹)
+(leftInv     {a b   : α} (f : R a b)             : f⁻¹ • f   ≈ id a)
+(rightInv    {a b   : α} (f : R a b)             : f • f⁻¹   ≈ id b)
+(invInv      {a b   : α} (f : R a b)             : (f⁻¹)⁻¹   ≈ f)
+(compInv     {a b c : α} (f : R a b) (g : R b c) : (g • f)⁻¹ ≈ f⁻¹ • g⁻¹)
+(idInv       (a     : α)                         : (id a)⁻¹  ≈ id a)
 
-instance isoEquiv (M : GeneralizedRelation U) [h : HasIsomorphisms M] : IsEquivalence M :=
+instance isoEquiv (R : GeneralizedRelation α) [h : HasIsomorphisms R] : IsEquivalence R :=
 ⟨h.id, h.inv, h.comp⟩
 
 end Morphisms
@@ -206,18 +215,22 @@ namespace PropEquiv
 
 variable {α : Sort u} (r : α → α → Prop) [h : IsEquivalence r]
 
-instance propEquivHasComp : HasComp         (genRel r) := ⟨h.trans⟩
-instance propEquivHasCmp  : HasComposition  (genRel r) := ⟨λ _ _ => proofIrrel _ _, λ _ _ _ => proofIrrel _ _⟩
-instance propEquivHasId   : HasId           (genRel r) := ⟨h.refl⟩
-instance propEquivHasMor  : HasMorphisms    (genRel r) := ⟨λ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
-instance propEquivHasInv  : HasInv          (genRel r) := ⟨h.symm⟩
-instance propEquivHasIso  : HasIsomorphisms (genRel r) := ⟨λ _ => proofIrrel _ _, λ _ => proofIrrel _ _,
-                                                           λ _ => proofIrrel _ _, λ _ => proofIrrel _ _,
-                                                           λ _ _ => proofIrrel _ _, λ _ => proofIrrel _ _⟩
+instance propEquivHasIso : HasIsomorphisms (genRel r) :=
+{ comp         := h.trans,
+  congrArgComp := λ _ _   => proofIrrel _ _,
+  assoc        := λ _ _ _ => proofIrrel _ _,
+  id           := h.refl,
+  leftId       := λ _     => proofIrrel _ _,
+  rightId      := λ _     => proofIrrel _ _,
+  inv          := h.symm,
+  congrArgInv  := λ _     => proofIrrel _ _,
+  leftInv      := λ _     => proofIrrel _ _,
+  rightInv     := λ _     => proofIrrel _ _,
+  invInv       := λ _     => proofIrrel _ _,
+  compInv      := λ _ _   => proofIrrel _ _,
+  idInv        := λ _     => proofIrrel _ _ }
 
 end PropEquiv
-
-open PropEquiv
 
 
 
@@ -247,7 +260,7 @@ open HasStructure
 
 instance propHasStructure                               : HasStructure Prop := ⟨genRel Iff⟩
 def      typeHasStructure   (α : Sort u)                : HasStructure α    := ⟨genRel Eq⟩
-instance setoidHasStructure (α : Sort u) [s : Setoid α] : HasStructure α    := ⟨genRel s.r⟩
+def      setoidHasStructure (α : Sort u) [s : Setoid α] : HasStructure α    := ⟨genRel s.r⟩
 
 
 
@@ -256,7 +269,7 @@ instance setoidHasStructure (α : Sort u) [s : Setoid α] : HasStructure α    :
 -- some new structures we are going to define below.
 --
 -- As mentioned before, this type is also
--- * an ∞-groupoid where higher-level equivalences have been coerced to equivalence relations, and
+-- * an ∞-groupoid where higher-level equivalences have been truncated to equivalence relations, and
 -- * a model of a "set" in the HLM logic of the Slate theorem prover, with equality modeled by the notion of
 --   equivalence we have just defined. This is significant because it inspires treating equivalence like an
 --   abstract notion of equality throughout the rest of this file.
@@ -295,48 +308,78 @@ def id' {α : S} := id_ α
 @[simp] theorem compInv      {α β γ   : S} (f : α ≃ β) (g : β ≃ γ)             : (g • f)⁻¹ ≈ f⁻¹ • g⁻¹                 := hasIso.compInv  f g
 @[simp] theorem idInv        (α       : S)                                     : (id_ α)⁻¹ ≈ id'                       := hasIso.idInv    α
 
+theorem congrArgCompLeft  {α β γ : S} {f : α ≃ β} {g₁ g₂ : β ≃ γ} : g₁ ≈ g₂ → g₁ • f ≈ g₂ • f :=
+λ h => congrArgComp (Setoid.refl f) h
+theorem congrArgCompRight {α β γ : S} {f₁ f₂ : α ≃ β} {g : β ≃ γ} : f₁ ≈ f₂ → g • f₁ ≈ g • f₂ :=
+λ h => congrArgComp h (Setoid.refl g)
+
 theorem substCompLeft   {α β γ : S} {f : α ≃ β} {g₁ g₂ : β ≃ γ} {e : α ≃ γ} : g₁ ≈ g₂ → g₂ • f ≈ e → g₁ • f ≈ e :=
-λ h₁ h₂ => Setoid.trans (congrArgComp (Setoid.refl f) h₁) h₂
-theorem substCompLeft'  {α β γ : S} {f : α ≃ β} {g₁ g₂ : β ≃ γ} {e : α ≃ γ} : g₁ ≈ g₂ → g₁ • f ≈ e → e ≈ g₂ • f :=
-λ h₁ h₂ => Setoid.trans (Setoid.symm h₂) (congrArgComp (Setoid.refl f) h₁)
+λ h₁ h₂ => Setoid.trans (congrArgCompLeft h₁) h₂
+theorem substCompLeft'  {α β γ : S} {f : α ≃ β} {g₁ g₂ : β ≃ γ} {e : α ≃ γ} : g₁ ≈ g₂ → e ≈ g₁ • f → e ≈ g₂ • f :=
+λ h₁ h₂ => Setoid.trans h₂ (congrArgCompLeft h₁)
 
 theorem substCompRight  {α β γ : S} {f₁ f₂ : α ≃ β} {g : β ≃ γ} {e : α ≃ γ} : f₁ ≈ f₂ → g • f₂ ≈ e → g • f₁ ≈ e :=
-λ h₁ h₂ => Setoid.trans (congrArgComp h₁ (Setoid.refl g)) h₂
-theorem substCompRight' {α β γ : S} {f₁ f₂ : α ≃ β} {g : β ≃ γ} {e : α ≃ γ} : f₁ ≈ f₂ → g • f₁ ≈ e → e ≈ g • f₂ :=
-λ h₁ h₂ => Setoid.trans (Setoid.symm h₂) (congrArgComp h₁ (Setoid.refl g))
+λ h₁ h₂ => Setoid.trans (congrArgCompRight h₁) h₂
+theorem substCompRight' {α β γ : S} {f₁ f₂ : α ≃ β} {g : β ≃ γ} {e : α ≃ γ} : f₁ ≈ f₂ → e ≈ g • f₁ → e ≈ g • f₂ :=
+λ h₁ h₂ => Setoid.trans h₂ (congrArgCompRight h₁)
 
 theorem substInv  {α β : S} {f₁ f₂ : α ≃ β} {e : β ≃ α} : f₁ ≈ f₂ → f₂⁻¹ ≈ e → f₁⁻¹ ≈ e :=
 λ h₁ h₂ => Setoid.trans (congrArgInv h₁) h₂
-theorem substInv' {α β : S} {f₁ f₂ : α ≃ β} {e : β ≃ α} : f₁ ≈ f₂ → f₁⁻¹ ≈ e → e ≈ f₂⁻¹ :=
-λ h₁ h₂ => Setoid.symm (substInv (Setoid.symm h₁) h₂)
+theorem substInv' {α β : S} {f₁ f₂ : α ≃ β} {e : β ≃ α} : f₁ ≈ f₂ → e ≈ f₁⁻¹ → e ≈ f₂⁻¹ :=
+λ h₁ h₂ => Setoid.symm (substInv (Setoid.symm h₁) (Setoid.symm h₂))
 
-@[simp] theorem leftCancel'     {α β γ : S} (f : α ≃ β) (g : β ≃ γ) : (g⁻¹ • g) • f ≈ f := substCompLeft  (leftInv  g) (leftId  f)
-@[simp] theorem leftCancel      {α β γ : S} (f : α ≃ β) (g : β ≃ γ) : g⁻¹ • (g • f) ≈ f := Setoid.trans (assoc  f g g⁻¹) (leftCancel'     f g)
-@[simp] theorem leftCancelInv'  {α β γ : S} (f : α ≃ β) (g : γ ≃ β) : (g • g⁻¹) • f ≈ f := substCompLeft  (rightInv g) (leftId  f)
-@[simp] theorem leftCancelInv   {α β γ : S} (f : α ≃ β) (g : γ ≃ β) : g • (g⁻¹ • f) ≈ f := Setoid.trans (assoc  f g⁻¹ g) (leftCancelInv'  f g)
-@[simp] theorem rightCancel'    {α β γ : S} (f : α ≃ β) (g : γ ≃ α) : f • (g • g⁻¹) ≈ f := substCompRight (rightInv g) (rightId f)
-@[simp] theorem rightCancel     {α β γ : S} (f : α ≃ β) (g : γ ≃ α) : (f • g) • g⁻¹ ≈ f := Setoid.trans (assoc' g⁻¹ g f) (rightCancel'    f g)
-@[simp] theorem rightCancelInv' {α β γ : S} (f : α ≃ β) (g : α ≃ γ) : f • (g⁻¹ • g) ≈ f := substCompRight (leftInv  g) (rightId f)
-@[simp] theorem rightCancelInv  {α β γ : S} (f : α ≃ β) (g : α ≃ γ) : (f • g⁻¹) • g ≈ f := Setoid.trans (assoc' g g⁻¹ f) (rightCancelInv' f g)
+theorem leftCancelId  {α β : S} {f : α ≃ β} {e : β ≃ β} : e ≈ id' → e • f ≈ f :=
+λ h => substCompLeft  h (leftId  f)
+theorem rightCancelId {α β : S} {f : α ≃ β} {e : α ≃ α} : e ≈ id' → f • e ≈ f :=
+λ h => substCompRight h (rightId f)
+
+theorem applyAssocLeft   {α β γ δ : S} {f : α ≃ β} {g : β ≃ γ} {h : γ ≃ δ} {e : α ≃ δ} :
+  h • (g • f) ≈ e → (h • g) • f ≈ e :=
+λ h₁ => Setoid.trans (assoc' f g h) h₁
+theorem applyAssocLeft'  {α β γ δ : S} {f : α ≃ β} {g : β ≃ γ} {h : γ ≃ δ} {e : α ≃ δ} :
+  (h • g) • f ≈ e → h • (g • f) ≈ e :=
+λ h₁ => Setoid.trans (assoc f g h) h₁
+theorem applyAssocRight  {α β γ δ : S} {f : α ≃ β} {g : β ≃ γ} {h : γ ≃ δ} {e : α ≃ δ} :
+  e ≈ h • (g • f) → e ≈ (h • g) • f :=
+λ h₁ => Setoid.trans h₁ (assoc f g h)
+theorem applyAssocRight' {α β γ δ : S} {f : α ≃ β} {g : β ≃ γ} {h : γ ≃ δ} {e : α ≃ δ} :
+  e ≈ (h • g) • f → e ≈ h • (g • f) :=
+λ h₁ => Setoid.trans h₁ (assoc' f g h)
+
+theorem applyAssoc  {α β₁ β₂ γ₁ γ₂ δ : S} {f₁ : α ≃ β₁} {f₂ : α ≃ β₂} {g₁ : β₁ ≃ γ₁} {g₂ : β₂ ≃ γ₂} {h₁ : γ₁ ≃ δ} {h₂ : γ₂ ≃ δ} :
+  h₁ • (g₁ • f₁) ≈ h₂ • (g₂ • f₂) → (h₁ • g₁) • f₁ ≈ (h₂ • g₂) • f₂ :=
+λ h => applyAssocRight  (applyAssocLeft  h)
+theorem applyAssoc' {α β₁ β₂ γ₁ γ₂ δ : S} {f₁ : α ≃ β₁} {f₂ : α ≃ β₂} {g₁ : β₁ ≃ γ₁} {g₂ : β₂ ≃ γ₂} {h₁ : γ₁ ≃ δ} {h₂ : γ₂ ≃ δ} :
+  (h₁ • g₁) • f₁ ≈ (h₂ • g₂) • f₂ → h₁ • (g₁ • f₁) ≈ h₂ • (g₂ • f₂) :=
+λ h => applyAssocRight' (applyAssocLeft' h)
+
+@[simp] theorem leftCancel'     {α β γ : S} (f : α ≃ β) (g : β ≃ γ) : (g⁻¹ • g) • f ≈ f := leftCancelId  (leftInv  g)
+@[simp] theorem leftCancel      {α β γ : S} (f : α ≃ β) (g : β ≃ γ) : g⁻¹ • (g • f) ≈ f := applyAssocLeft' (leftCancel'     f g)
+@[simp] theorem leftCancelInv'  {α β γ : S} (f : α ≃ β) (g : γ ≃ β) : (g • g⁻¹) • f ≈ f := leftCancelId  (rightInv g)
+@[simp] theorem leftCancelInv   {α β γ : S} (f : α ≃ β) (g : γ ≃ β) : g • (g⁻¹ • f) ≈ f := applyAssocLeft' (leftCancelInv'  f g)
+@[simp] theorem rightCancel'    {α β γ : S} (f : α ≃ β) (g : γ ≃ α) : f • (g • g⁻¹) ≈ f := rightCancelId (rightInv g)
+@[simp] theorem rightCancel     {α β γ : S} (f : α ≃ β) (g : γ ≃ α) : (f • g) • g⁻¹ ≈ f := applyAssocLeft  (rightCancel'    f g)
+@[simp] theorem rightCancelInv' {α β γ : S} (f : α ≃ β) (g : α ≃ γ) : f • (g⁻¹ • g) ≈ f := rightCancelId (leftInv  g)
+@[simp] theorem rightCancelInv  {α β γ : S} (f : α ≃ β) (g : α ≃ γ) : (f • g⁻¹) • g ≈ f := applyAssocLeft  (rightCancelInv' f g)
 
 theorem leftMulInv  {α β γ : S} (f₁ : α ≃ β) (f₂ : α ≃ γ) (g : β ≃ γ) : g • f₁ ≈ f₂ ↔ f₁ ≈ g⁻¹ • f₂ :=
-⟨λ h => substCompRight' h (leftCancel f₁ g), λ h => substCompRight h (leftCancelInv f₂ g)⟩
+⟨λ h => substCompRight' h (Setoid.symm (leftCancel f₁ g)), λ h => substCompRight h (leftCancelInv f₂ g)⟩
 theorem leftMulInv' {α β γ : S} (f₁ : α ≃ β) (f₂ : α ≃ γ) (g : γ ≃ β) : g⁻¹ • f₁ ≈ f₂ ↔ f₁ ≈ g • f₂ :=
-⟨λ h => substCompRight' h (leftCancelInv f₁ g), λ h => substCompRight h (leftCancel f₂ g)⟩
+⟨λ h => substCompRight' h (Setoid.symm (leftCancelInv f₁ g)), λ h => substCompRight h (leftCancel f₂ g)⟩
 
 @[simp] theorem leftMul {α β γ : S} (f₁ f₂ : α ≃ β) (g : β ≃ γ) : g • f₁ ≈ g • f₂ ↔ f₁ ≈ f₂ :=
-⟨λ h => Setoid.trans ((leftMulInv f₁ (g • f₂) g).mp h) (leftCancel f₂ g), λ h => congrArgComp h (Setoid.refl g)⟩
+⟨λ h => Setoid.trans ((leftMulInv f₁ (g • f₂) g).mp h) (leftCancel f₂ g), congrArgCompRight⟩
 
 theorem rightMulInv  {α β γ : S} (f₁ : α ≃ γ) (f₂ : β ≃ γ) (g : β ≃ α) : f₁ • g ≈ f₂ ↔ f₁ ≈ f₂ • g⁻¹ :=
-⟨λ h => substCompLeft' h (rightCancel f₁ g), λ h => substCompLeft h (rightCancelInv f₂ g)⟩
+⟨λ h => substCompLeft' h (Setoid.symm (rightCancel f₁ g)), λ h => substCompLeft h (rightCancelInv f₂ g)⟩
 theorem rightMulInv' {α β γ : S} (f₁ : α ≃ γ) (f₂ : β ≃ γ) (g : α ≃ β) : f₁ • g⁻¹ ≈ f₂ ↔ f₁ ≈ f₂ • g :=
-⟨λ h => substCompLeft' h (rightCancelInv f₁ g), λ h => substCompLeft h (rightCancel f₂ g)⟩
+⟨λ h => substCompLeft' h (Setoid.symm (rightCancelInv f₁ g)), λ h => substCompLeft h (rightCancel f₂ g)⟩
 
 @[simp] theorem rightMul {α β γ : S} (f₁ f₂ : α ≃ β) (g : γ ≃ α) : f₁ • g ≈ f₂ • g ↔ f₁ ≈ f₂ :=
-⟨λ h => Setoid.trans ((rightMulInv f₁ (f₂ • g) g).mp h) (rightCancel f₂ g), λ h => congrArgComp (Setoid.refl g) h⟩
+⟨λ h => Setoid.trans ((rightMulInv f₁ (f₂ • g) g).mp h) (rightCancel f₂ g), congrArgCompLeft⟩
 
 theorem eqInvIffInvEq {α β : S} (f : α ≃ β) (g : β ≃ α) : f ≈ g⁻¹ ↔ f⁻¹ ≈ g :=
-⟨λ h => substInv h (invInv g), λ h => substInv' h (invInv f)⟩
+⟨λ h => substInv h (invInv g), λ h => substInv' h (Setoid.symm (invInv f))⟩
 
 @[simp] theorem eqIffEqInv {α β : S} (f₁ f₂ : α ≃ β) : f₁⁻¹ ≈ f₂⁻¹ ↔ f₁ ≈ f₂ :=
 ⟨λ h => Setoid.trans ((eqInvIffInvEq f₁ f₂⁻¹).mpr h) (invInv f₂), congrArgInv⟩
@@ -344,10 +387,10 @@ theorem eqInvIffInvEq {α β : S} (f : α ≃ β) (g : β ≃ α) : f ≈ g⁻¹
 @[simp] theorem leftRightMul {α β γ δ : S} (f₁ : α ≃ β) (f₂ : α ≃ γ) (g₁ : β ≃ δ) (g₂ : γ ≃ δ) :
   g₂⁻¹ • g₁ ≈ f₂ • f₁⁻¹ ↔ g₁ • f₁ ≈ g₂ • f₂ :=
 ⟨λ h => let h₁ := (rightMulInv (g₂⁻¹ • g₁) f₂ f₁).mpr h;
-        let h₂ := Setoid.trans (assoc f₁ g₁ g₂⁻¹) h₁;
+        let h₂ := applyAssocLeft' h₁;
         (leftMulInv' (g₁ • f₁) f₂ g₂).mp h₂,
  λ h => let h₁ := (rightMulInv g₁ (g₂ • f₂) f₁).mp h;
-        let h₂ := Setoid.trans h₁ (assoc' f₁⁻¹ f₂ g₂);
+        let h₂ := applyAssocRight' h₁;
         (leftMulInv' g₁ (f₂ • f₁⁻¹) g₂).mpr h₂⟩
 
 theorem swapInv  {α β γ δ : S} (f₁ : α ≃ β) (f₂ : γ ≃ δ) (g₁ : δ ≃ β) (g₂ : γ ≃ α) :
@@ -364,8 +407,13 @@ open Structure
 
 def defaultStructure (U : Sort u) [h : HasStructure U] : Structure := ⟨U⟩
 def instanceStructure (α : Sort u) := @defaultStructure α (typeHasStructure α)
-def setoidInstanceStructure (α : Sort u) [s : Setoid α] := defaultStructure α
+def setoidInstanceStructure (α : Sort u) [s : Setoid α] := @defaultStructure α (setoidHasStructure α)
 def bundledSetoidStructure (S : BundledSetoid) := setoidInstanceStructure (IsType.type S)
+
+
+
+-- Since each equivalence/isomorphism of a structure is a bundled setoid, we can treat it as a
+-- structure as well. This partially recovers the inductive definition of a structure as an ∞-groupoid.
 
 def isoStructure {S : Structure} (α β : S) := bundledSetoidStructure (iso S α β)
 
@@ -374,16 +422,14 @@ def isoStructure {S : Structure} (α β : S) := bundledSetoidStructure (iso S α
 -- We can "forget" the data held inside a `Structure` on two levels, obtaining modified instances of
 -- `Structure`:
 --
--- 1. We can coerce the equivalence to an equivalence _relation_, obtaining a "setoid structure."
---    In comments, we will write `setoidStructure S` as `S_≈`.
+-- 1. We can truncate the equivalence to an equivalence _relation_, obtaining a "setoid structure."
 --
 -- 2. In Lean, where quotients are available, we can additionally take the quotient with respect to
 --    equivalence, obtaining a "skeleton structure" where equivalence is equality.
---    In comments, we will write `skeletonStructure S` as `S/≃`.
 --
--- Later, we will prove some properties of these operations.
+-- In `Forgetfulness.lean`, we prove some properties of these operations.
 --
--- Within this file, we coerce structures to setoids whenever we want to use structures as isomorphisms,
+-- Within this file, we truncate structures to setoids whenever we want to use structures as isomorphisms,
 -- but we never use quotients. With an inductive version of `Structure` (i.e. an actual ∞-groupoid), we
 -- could keep all data instead.
 
@@ -416,6 +462,102 @@ open Forgetfulness
 
 
 
+-- As a simple example of a custom structure, we define a structure for the Cartesian product of two
+-- structures.
+
+def StructureProduct (S T : Structure) := PProd (IsType.type S) (IsType.type T)
+
+namespace StructureProduct
+
+variable {S T : Structure}
+
+def ProductEquiv (P Q : StructureProduct S T) := PProd (P.fst ≃ Q.fst) (P.snd ≃ Q.snd)
+
+namespace ProductEquiv
+
+def refl  (P     : StructureProduct S T)                                               : ProductEquiv P P :=
+⟨IsEquivalence.refl  P.fst,       IsEquivalence.refl  P.snd⟩
+def symm  {P Q   : StructureProduct S T} (e : ProductEquiv P Q)                        : ProductEquiv Q P :=
+⟨IsEquivalence.symm  e.fst,       IsEquivalence.symm  e.snd⟩
+def trans {P Q R : StructureProduct S T} (e : ProductEquiv P Q) (f : ProductEquiv Q R) : ProductEquiv P R :=
+⟨IsEquivalence.trans e.fst f.fst, IsEquivalence.trans e.snd f.snd⟩
+
+def EquivEquiv {P Q : StructureProduct S T} (e f : ProductEquiv P Q) :=
+e.fst ≈ f.fst ∧ e.snd ≈ f.snd
+
+namespace EquivEquiv
+
+variable {P Q : StructureProduct S T}
+
+theorem refl  (e     : ProductEquiv P Q)                                           : EquivEquiv e e :=
+⟨Setoid.refl  e.fst,         Setoid.refl  e.snd⟩
+theorem symm  {e f   : ProductEquiv P Q} (φ : EquivEquiv e f)                      : EquivEquiv f e :=
+⟨Setoid.symm  φ.left,        Setoid.symm  φ.right⟩
+theorem trans {e f g : ProductEquiv P Q} (φ : EquivEquiv e f) (ψ : EquivEquiv f g) : EquivEquiv e g :=
+⟨Setoid.trans φ.left ψ.left, Setoid.trans φ.right ψ.right⟩
+
+instance productEquivSetoid : Setoid (ProductEquiv P Q) := ⟨EquivEquiv, ⟨refl, symm, trans⟩⟩
+
+end EquivEquiv
+
+def productEquiv : GeneralizedRelation (StructureProduct S T) := λ P Q => ⟨ProductEquiv P Q⟩
+
+theorem congrArgComp {P Q R : StructureProduct S T} {e₁ e₂ : ProductEquiv P Q} {f₁ f₂ : ProductEquiv Q R} (he : e₁ ≈ e₂) (hf : f₁ ≈ f₂) :
+  trans e₁ f₁ ≈ trans e₂ f₂ :=
+⟨Structure.congrArgComp he.left hf.left,   Structure.congrArgComp he.right hf.right⟩
+
+theorem assoc {P Q R Z : StructureProduct S T} (e : ProductEquiv P Q) (f : ProductEquiv Q R) (g : ProductEquiv R Z) :
+  trans (trans e f) g ≈ trans e (trans f g) :=
+⟨Structure.assoc        e.fst f.fst g.fst, Structure.assoc        e.snd f.snd g.snd⟩
+
+theorem leftId  {P Q : StructureProduct S T} (e : ProductEquiv P Q) : trans e (refl Q) ≈ e :=
+⟨Structure.leftId       e.fst,             Structure.leftId       e.snd⟩
+theorem rightId {P Q : StructureProduct S T} (e : ProductEquiv P Q) : trans (refl P) e ≈ e :=
+⟨Structure.rightId      e.fst,             Structure.rightId      e.snd⟩
+
+theorem congrArgInv {P Q : StructureProduct S T} {e₁ e₂ : ProductEquiv P Q} (he : e₁ ≈ e₂) :
+  symm e₁ ≈ symm e₂ :=
+⟨Structure.congrArgInv  he.left,           Structure.congrArgInv  he.right⟩
+
+theorem leftInv  {P Q : StructureProduct S T} (e : ProductEquiv P Q) : trans e (symm e) ≈ refl P :=
+⟨Structure.leftInv      e.fst,             Structure.leftInv      e.snd⟩
+theorem rightInv {P Q : StructureProduct S T} (e : ProductEquiv P Q) : trans (symm e) e ≈ refl Q :=
+⟨Structure.rightInv     e.fst,             Structure.rightInv     e.snd⟩
+
+theorem invInv {P Q : StructureProduct S T} (e : ProductEquiv P Q) : symm (symm e) ≈ e :=
+⟨Structure.invInv       e.fst,             Structure.invInv       e.snd⟩
+
+theorem compInv {P Q R : StructureProduct S T} (e : ProductEquiv P Q) (f : ProductEquiv Q R) :
+  symm (trans e f) ≈ trans (symm f) (symm e) :=
+⟨Structure.compInv      e.fst f.fst,       Structure.compInv      e.snd f.snd⟩
+
+theorem idInv (P : StructureProduct S T) : symm (refl P) ≈ refl P :=
+⟨Structure.idInv        P.fst,             Structure.idInv        P.snd⟩
+
+instance productEquivHasIso : HasIsomorphisms (@productEquiv S T) :=
+{ comp         := trans,
+  congrArgComp := congrArgComp,
+  assoc        := assoc,
+  id           := refl,
+  leftId       := leftId,
+  rightId      := rightId,
+  inv          := symm,
+  congrArgInv  := congrArgInv,
+  leftInv      := leftInv,
+  rightInv     := rightInv,
+  invInv       := invInv,
+  compInv      := compInv,
+  idInv        := idInv }
+
+end ProductEquiv
+
+instance productHasStructure (S T : Structure) : HasStructure (StructureProduct S T) := ⟨ProductEquiv.productEquiv⟩
+def productStructure (S T : Structure) : Structure := ⟨StructureProduct S T⟩
+
+end StructureProduct
+
+
+
 -- We will be dealing with many different operations that respect composition, identity, and inverses,
 -- or equivalently reflexivity, symmetry, and transitivity. We formalize all such operations using a
 -- generalized definition of a functor. An actual functor between two structures is a special case of
@@ -442,7 +584,7 @@ class IsCompositionFunctor [HasComposition  R.R] [HasComposition  S.R]
 
 class IsMorphismFunctor    [HasMorphisms    R.R] [HasMorphisms    S.R]
   extends IsCompositionFunctor R S FF where
-(respectsId     (α     : A)                         : FF (id__ (R.F α)) ≈ id__ (S.F α))
+(respectsId     (α     : A)                         : FF (id__ (R.f α)) ≈ id__ (S.f α))
 
 class IsIsomorphismFunctor [HasIsomorphisms R.R] [HasIsomorphisms S.R]
   extends IsMorphismFunctor    R S FF where
@@ -473,12 +615,13 @@ structure GeneralizedFunctor {A : Sort w} {S T : Structure} (F : A → S) (G : A
 
 namespace GeneralizedFunctor
 
+@[reducible] def Functor {S T : Structure} (F : S → T) := GeneralizedFunctor id F
+
 variable {A : Sort w} {S T U : Structure}
 
--- This doesn't work, unfortunately.
---instance (F : A → S) (G : A → T) {α β : A} :
---  CoeFun (GeneralizedFunctor F G) (λ φ => F α ≃ F β → G α ≃ G β) :=
---⟨λ φ => φ.FF⟩
+instance (F : A → S) (G : A → T) :
+  CoeFun (GeneralizedFunctor F G) (λ _ => ∀ {α β : A}, F α ≃ F β → G α ≃ G β) :=
+⟨GeneralizedFunctor.FF⟩
 
 def generalizeFunctor {B : Sort v} {F : A → S} {G : A → T} (H : B → A) (φ : GeneralizedFunctor F G) :
   GeneralizedFunctor (F ∘ H) (G ∘ H) :=
@@ -510,7 +653,7 @@ namespace comp
 
 variable {F : A → S} {G : A → T} {H : A → U} (φ : GeneralizedFunctor F G) (ψ : GeneralizedFunctor G H)
 
-def compFF {α β : A} (e : F α ≃ F β) := ψ.FF (φ.FF e)
+def compFF {α β : A} (e : F α ≃ F β) := ψ (φ e)
 
 namespace compFF
 
@@ -520,20 +663,20 @@ theorem respectsSetoid {α β :   A} {e f : F α ≃ F β} (h : e ≈ f) :
 
 theorem respectsComp   {α β γ : A} (e : F α ≃ F β) (f : F β ≃ F γ) :
   compFF φ ψ (f • e) ≈ compFF φ ψ f • compFF φ ψ e :=
-let h₁ : ψ.FF (φ.FF (f • e))    ≈ ψ.FF (φ.FF f • φ.FF e)        := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsComp e f);
-let h₂ : ψ.FF (φ.FF f • φ.FF e) ≈ ψ.FF (φ.FF f) • ψ.FF (φ.FF e) := ψ.isFunctor.respectsComp (φ.FF e) (φ.FF f);
+let h₁ : ψ (φ (f • e)) ≈ ψ (φ f • φ e)     := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsComp e f);
+let h₂ : ψ (φ f • φ e) ≈ ψ (φ f) • ψ (φ e) := ψ.isFunctor.respectsComp (φ e) (φ f);
 Setoid.trans h₁ h₂
 
 theorem respectsId     (α     : A) :
   compFF φ ψ (id_ (F α)) ≈ id' :=
-let h₁ : ψ.FF (φ.FF (id_ (F α))) ≈ ψ.FF (id_ (G α)) := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsId α);
-let h₂ : ψ.FF (id_ (G α))        ≈ id_ (H α)        := ψ.isFunctor.respectsId α;
+let h₁ : ψ (φ (id_ (F α))) ≈ ψ (id_ (G α)) := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsId α);
+let h₂ : ψ (id_ (G α))     ≈ id_ (H α)     := ψ.isFunctor.respectsId α;
 Setoid.trans h₁ h₂
 
 theorem respectsInv    {α β   : A} (e : F α ≃ F β) :
   compFF φ ψ e⁻¹ ≈ (compFF φ ψ e)⁻¹ :=
-let h₁ : ψ.FF (φ.FF e⁻¹) ≈ ψ.FF (φ.FF e)⁻¹   := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsInv e);
-let h₂ : ψ.FF (φ.FF e)⁻¹ ≈ (ψ.FF (φ.FF e))⁻¹ := ψ.isFunctor.respectsInv (φ.FF e);
+let h₁ : ψ (φ e⁻¹) ≈ ψ (φ e)⁻¹   := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsInv e);
+let h₂ : ψ (φ e)⁻¹ ≈ (ψ (φ e))⁻¹ := ψ.isFunctor.respectsInv (φ e);
 Setoid.trans h₁ h₂
 
 instance isFunctor : IsIsomorphismFunctor ⟨iso S, F⟩ ⟨iso U, H⟩ (compFF φ ψ) :=
@@ -547,6 +690,24 @@ end compFF
 def genFun : GeneralizedFunctor F H := ⟨compFF φ ψ⟩
 
 end comp
+
+def comp.genFun' {B : Sort v} {F : A → S} {G : B → T} {H : B → U} (I : A → B)
+                 (φ : GeneralizedFunctor F (G ∘ I)) (ψ : GeneralizedFunctor G H) :
+  GeneralizedFunctor F (H ∘ I) :=
+comp.genFun φ (generalizeFunctor I ψ)
+
+namespace const
+
+variable {F : A → S} (c : T)
+
+def genFun : GeneralizedFunctor F (Function.const A c) :=
+{ FF        := λ _ => IsEquivalence.refl c,
+  isFunctor := { respectsSetoid := λ _   => Setoid.refl (id_ c),
+                 respectsComp   := λ _ _ => Setoid.symm (leftId (id_ c)),
+                 respectsId     := λ _   => Setoid.refl (id_ c),
+                 respectsInv    := λ _   => Setoid.symm (idInv c) } }
+
+end const
 
 end GeneralizedFunctor
 
@@ -596,11 +757,11 @@ namespace EquivEquiv
 
 variable {F G : DependentStructure C}
 
-def refl  (φ     : DependentEquiv F G)                                           : EquivEquiv φ φ :=
+theorem refl  (φ     : DependentEquiv F G)                                           : EquivEquiv φ φ :=
 @DependentEquiv.refl A (dependentIsoStructure F G) φ
-def symm  {φ ψ   : DependentEquiv F G} (e : EquivEquiv φ ψ)                      : EquivEquiv ψ φ :=
+theorem symm  {φ ψ   : DependentEquiv F G} (e : EquivEquiv φ ψ)                      : EquivEquiv ψ φ :=
 DependentEquiv.symm  e
-def trans {φ ψ χ : DependentEquiv F G} (e : EquivEquiv φ ψ) (f : EquivEquiv ψ χ) : EquivEquiv φ χ :=
+theorem trans {φ ψ χ : DependentEquiv F G} (e : EquivEquiv φ ψ) (f : EquivEquiv ψ χ) : EquivEquiv φ χ :=
 DependentEquiv.trans e f
 
 instance dependentEquivSetoid : Setoid (DependentEquiv F G) := ⟨EquivEquiv, ⟨refl, symm, trans⟩⟩
@@ -668,36 +829,31 @@ namespace transport
 
 theorem isInverse {α β : A} (e : G α ≃ G β) :
   transport (DependentEquiv.symm φ) e ≈ invTransport φ e :=
-let a := φ α;
-let b := φ β;
-congrArgComp (congrArgComp (invInv a) (Setoid.refl e)) (Setoid.refl b⁻¹)
+congrArgCompRight (congrArgCompRight (invInv (φ α)))
 
 theorem respectsSetoid {α β   : A} {e₁ e₂ : F α ≃ F β} (h : e₁ ≈ e₂) :
   transport φ e₁ ≈ transport φ e₂ :=
-let a := φ α;
-let b := φ β;
-congrArgComp (congrArgComp (Setoid.refl a⁻¹) h) (Setoid.refl b)
+congrArgCompRight (congrArgCompLeft h)
 
 theorem respectsComp   {α β γ : A} (e : F α ≃ F β) (f : F β ≃ F γ) :
   transport φ (f • e) ≈ transport φ f • transport φ e :=
 let a := φ α;
 let b := φ β;
 let c := φ γ;
-let h₁ : c • (f • e) • a⁻¹ ≈ c • (f • (id' • e)) • a⁻¹         := congrArgComp (congrArgComp (Setoid.refl a⁻¹) (congrArgComp (Setoid.symm (leftId e)) (Setoid.refl f))) (Setoid.refl c);
-let h₂ : c • (f • e) • a⁻¹ ≈ c • (f • ((b⁻¹ • b) • e)) • a⁻¹   := Setoid.trans h₁ (congrArgComp (congrArgComp (Setoid.refl a⁻¹) (congrArgComp (congrArgComp (Setoid.refl e) (Setoid.symm (leftInv b))) (Setoid.refl f))) (Setoid.refl c));
-let h₃ : c • (f • e) • a⁻¹ ≈ c • (f • (b⁻¹ • (b • e))) • a⁻¹   := Setoid.trans h₂ (congrArgComp (congrArgComp (Setoid.refl a⁻¹) (congrArgComp (Setoid.symm (assoc e b b⁻¹)) (Setoid.refl f))) (Setoid.refl c));
-let h₄ : c • (f • e) • a⁻¹ ≈ c • ((f • b⁻¹) • (b • e)) • a⁻¹   := Setoid.trans h₃ (congrArgComp (congrArgComp (Setoid.refl a⁻¹) (assoc (b • e) b⁻¹ f)) (Setoid.refl c));
-let h₅ : c • (f • e) • a⁻¹ ≈ c • (f • b⁻¹) • ((b • e) • a⁻¹)   := Setoid.trans h₄ (congrArgComp (Setoid.symm (assoc a⁻¹ (b • e) (f • b⁻¹))) (Setoid.refl c));
+let h₁ : c • (f • e) • a⁻¹ ≈ c • (f • (id' • e)) • a⁻¹         := congrArgCompRight (congrArgCompLeft (congrArgCompRight (Setoid.symm (leftId e))));
+let h₂ : c • (f • e) • a⁻¹ ≈ c • (f • ((b⁻¹ • b) • e)) • a⁻¹   := Setoid.trans h₁ (congrArgCompRight (congrArgCompLeft (congrArgCompRight (congrArgCompLeft (Setoid.symm (leftInv b))))));
+let h₃ : c • (f • e) • a⁻¹ ≈ c • (f • (b⁻¹ • (b • e))) • a⁻¹   := Setoid.trans h₂ (congrArgCompRight (congrArgCompLeft (congrArgCompRight (Setoid.symm (assoc e b b⁻¹)))));
+let h₄ : c • (f • e) • a⁻¹ ≈ c • ((f • b⁻¹) • (b • e)) • a⁻¹   := Setoid.trans h₃ (congrArgCompRight (congrArgCompLeft (assoc (b • e) b⁻¹ f)));
+let h₅ : c • (f • e) • a⁻¹ ≈ c • (f • b⁻¹) • ((b • e) • a⁻¹)   := Setoid.trans h₄ (congrArgCompRight (Setoid.symm (assoc a⁻¹ (b • e) (f • b⁻¹))));
 let h₆ : c • (f • e) • a⁻¹ ≈ (c • (f • b⁻¹)) • ((b • e) • a⁻¹) := Setoid.trans h₅ (assoc ((b • e) • a⁻¹) (f • b⁻¹) c);
-let h₇ : c • (f • e) • a⁻¹ ≈ (c • f • b⁻¹) • (b • e • a⁻¹)     := Setoid.trans h₆ (congrArgComp (Setoid.symm (assoc a⁻¹ e b)) (Setoid.refl (c • f • b⁻¹)));
+let h₇ : c • (f • e) • a⁻¹ ≈ (c • f • b⁻¹) • (b • e • a⁻¹)     := Setoid.trans h₆ (congrArgCompRight (Setoid.symm (assoc a⁻¹ e b)));
 h₇
 
 theorem respectsId     (α     : A) :
   transport φ (id_ (F α)) ≈ id' :=
 let a := φ α;
-let h₁ : a • id' • a⁻¹ ≈ a • a⁻¹ := congrArgComp (leftId a⁻¹) (Setoid.refl a);
-let h₂ : a • id' • a⁻¹ ≈ id'     := substCompRight (leftId a⁻¹) (rightInv a);
-h₂
+let h₁ : a • id' • a⁻¹ ≈ id' := substCompRight (leftId a⁻¹) (rightInv a);
+h₁
 
 theorem respectsInv    {α β   : A} (e : F α ≃ F β) :
   transport φ e⁻¹ ≈ (transport φ e)⁻¹ :=
@@ -748,34 +904,68 @@ end DependentEquiv
 
 
 
+def GeneralizedNaturalityCondition {A : Sort w} {S T : Structure} {F : A → S} {G₁ G₂ : A → T}
+                                   (φ : GeneralizedFunctor F G₁) (ψ : GeneralizedFunctor F G₂)
+                                   (ext : DependentEquiv G₁ G₂) :=
+∀ {α β : A} (e : F α ≃ F β), ψ e • ext α ≈ ext β • φ e
+
+namespace GeneralizedNaturalityCondition
+
+variable {A : Sort w} {S T : Structure}
+
+theorem refl  {F : A → S} {G₁       : A → T}
+              (φ : GeneralizedFunctor F G₁) :
+  GeneralizedNaturalityCondition φ φ (DependentEquiv.refl G₁) :=
+λ e => Setoid.trans (rightId (φ e)) (Setoid.symm (leftId (φ e)))
+
+theorem symm  {F : A → S} {G₁ G₂    : A → T}
+              {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂}
+              {ext : DependentEquiv G₁ G₂}
+              (nat : GeneralizedNaturalityCondition φ ψ ext) :
+  GeneralizedNaturalityCondition ψ φ (DependentEquiv.symm ext) :=
+λ {α β} e => Setoid.symm ((leftRightMul (ext α) (φ e) (ψ e) (ext β)).mpr (nat e))
+
+theorem trans {F : A → S} {G₁ G₂ G₃ : A → T}
+              {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂} {χ : GeneralizedFunctor F G₃}
+              {ext₁ : DependentEquiv G₁ G₂}                    {ext₂ : DependentEquiv G₂ G₃}
+              (nat₁ : GeneralizedNaturalityCondition φ ψ ext₁) (nat₂ : GeneralizedNaturalityCondition ψ χ ext₂) :
+  GeneralizedNaturalityCondition φ χ (DependentEquiv.trans ext₁ ext₂) :=
+λ {α β} e => let h₁ := (rightMulInv (ψ e) (ext₁ β • φ e) (ext₁ α)).mp  (nat₁ e);
+             let h₂ := (leftMulInv' (χ e • ext₂ α) (ψ e) (ext₂ β)).mpr (nat₂ e);
+             let h₃ := (leftRightMul (ext₁ α) (ext₁ β • φ e) (χ e • ext₂ α) (ext₂ β)).mp (Setoid.trans h₂ h₁);
+             applyAssocLeft' (applyAssocRight h₃)
+
+end GeneralizedNaturalityCondition
+
+
+
 structure GeneralizedNaturalTransformation {A : Sort w} {S T : Structure} {F : A → S} {G₁ G₂ : A → T}
                                            (φ : GeneralizedFunctor F G₁) (ψ : GeneralizedFunctor F G₂) where
-(ext                           : DependentEquiv G₁ G₂)
-(nat {α β : A} (e : F α ≃ F β) : ψ.FF e • ext α ≈ ext β • φ.FF e)
+(ext : DependentEquiv G₁ G₂)
+(nat : GeneralizedNaturalityCondition φ ψ ext)
 
 namespace GeneralizedNaturalTransformation
 
 variable {A : Sort w} {S T : Structure}
 
-theorem refl  {F : A → S} {G₁       : A → T} (φ : GeneralizedFunctor F G₁)
-              {α β : A} (e : F α ≃ F β) :
-  φ.FF e • id_ (G₁ α) ≈ id_ (G₁ β) • φ.FF e :=
-Setoid.trans (rightId (φ.FF e)) (Setoid.symm (leftId (φ.FF e)))
+def refl  {F : A → S} {G₁       : A → T} (φ : GeneralizedFunctor F G₁) :
+  GeneralizedNaturalTransformation φ φ :=
+⟨DependentEquiv.refl  G₁,          GeneralizedNaturalityCondition.refl  φ⟩
 
-theorem symm  {F : A → S} {G₁ G₂    : A → T} {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂}
-              (m : GeneralizedNaturalTransformation φ ψ)
-              {α β : A} (e : F α ≃ F β) :
-  φ.FF e • (m.ext α)⁻¹ ≈ (m.ext β)⁻¹ • ψ.FF e :=
-Setoid.symm ((leftRightMul (m.ext α) (φ.FF e) (ψ.FF e) (m.ext β)).mpr (m.nat e))
+def symm  {F : A → S} {G₁ G₂    : A → T} {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂}
+          (m : GeneralizedNaturalTransformation φ ψ) :
+  GeneralizedNaturalTransformation ψ φ :=
+⟨DependentEquiv.symm  m.ext,       GeneralizedNaturalityCondition.symm  m.nat⟩
 
-theorem trans {F : A → S} {G₁ G₂ G₃ : A → T} {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂} {χ : GeneralizedFunctor F G₃}
-              (m : GeneralizedNaturalTransformation φ ψ) (n : GeneralizedNaturalTransformation ψ χ)
-              {α β : A} (e : F α ≃ F β) :
-  χ.FF e • (n.ext α • m.ext α) ≈ (n.ext β • m.ext β) • φ.FF e :=
-let h₁ := (rightMulInv (ψ.FF e) (m.ext β • φ.FF e) (m.ext α)).mp  (m.nat e);
-let h₂ := (leftMulInv' (χ.FF e • n.ext α) (ψ.FF e) (n.ext β)).mpr (n.nat e);
-let h₃ := (leftRightMul (m.ext α) (m.ext β • φ.FF e) (χ.FF e • n.ext α) (n.ext β)).mp (Setoid.trans h₂ h₁);
-Setoid.trans (assoc (m.ext α) (n.ext α) (χ.FF e)) (Setoid.trans h₃ (assoc (φ.FF e) (m.ext β) (n.ext β)))
+def trans {F : A → S} {G₁ G₂ G₃ : A → T} {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂} {χ : GeneralizedFunctor F G₃}
+          (m : GeneralizedNaturalTransformation φ ψ) (n : GeneralizedNaturalTransformation ψ χ) :
+  GeneralizedNaturalTransformation φ χ :=
+⟨DependentEquiv.trans m.ext n.ext, GeneralizedNaturalityCondition.trans m.nat n.nat⟩
+
+instance naturalTransformationSetoid {F : A → S} {G₁ G₂ : A → T} (φ : GeneralizedFunctor F G₁) (ψ : GeneralizedFunctor F G₂) :
+  Setoid (GeneralizedNaturalTransformation φ ψ) :=
+⟨λ e f => DependentEquiv.EquivEquiv e.ext f.ext,
+ ⟨λ e => DependentEquiv.EquivEquiv.refl e.ext, DependentEquiv.EquivEquiv.symm, DependentEquiv.EquivEquiv.trans⟩⟩
 
 def generalizeNaturalTransformation {B : Sort v} {F : A → S} {G₁ G₂ : A → T} (H : B → A)
                                     {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂}
@@ -791,33 +981,33 @@ end GeneralizedNaturalTransformation
 -- one hand, this is just a groupoid functor, but on the other hand, the mapping of equivalences also
 -- matches exactly the `transport` map mentioned in the introduction.
 --
--- Moreover, if we interpret `≃` as a generalization of equality, the `transport` map is actually the
--- generalized version of `congrArg`, so we name it `congrArgMap`. Under this interpretation, it can also
--- be regarded as a well-definedness condition for the map: equality of arguments implies equality of
+-- Moreover, if we interpret `≃` as a generalization of equality, the mapping of equivalences is actually
+-- the generalized version of `congrArg`, so we name it `congrArgMap`. Under this interpretation, it can
+-- also be regarded as a well-definedness condition for the map: equality of arguments implies equality of
 -- results.
 
 structure StructureFunctor (S T : Structure) :=
 (map     : S → T)
-(functor : GeneralizedFunctor id map)
+(functor : Functor map)
 
 namespace StructureFunctor
 
 variable {S T U V : Structure}
 
-instance functorCoeFun : CoeFun (StructureFunctor S T) (λ F => S → T) := ⟨StructureFunctor.map⟩
-
-def congrArgMap (F : StructureFunctor S T) {α β : S} : α ≃ β → F α ≃ F β := F.functor.FF
-
--- Restate the axioms as theorems about `congrArgMap`.
+instance functorCoeFun : CoeFun (StructureFunctor S T) (λ _ => S → T) := ⟨StructureFunctor.map⟩
 
         theorem respectsSetoid (F : StructureFunctor S T) {α β   : S} {f₁ f₂ : α ≃ β} :
-  f₁ ≈ f₂ → congrArgMap F f₁ ≈ congrArgMap F f₂             := F.functor.isFunctor.respectsSetoid
+  f₁ ≈ f₂ → F.functor f₁ ≈ F.functor f₂         := F.functor.isFunctor.respectsSetoid
 @[simp] theorem respectsComp   (F : StructureFunctor S T) {α β γ : S} (f : α ≃ β) (g : β ≃ γ) :
-  congrArgMap F (g • f) ≈ congrArgMap F g • congrArgMap F f := F.functor.isFunctor.respectsComp f g
+  F.functor (g • f) ≈ F.functor g • F.functor f := F.functor.isFunctor.respectsComp f g
 @[simp] theorem respectsId     (F : StructureFunctor S T) (α     : S) :
-  congrArgMap F (id_ α) ≈ id'                               := F.functor.isFunctor.respectsId   α
+  F.functor (id_ α) ≈ id'                       := F.functor.isFunctor.respectsId   α
 @[simp] theorem respectsInv    (F : StructureFunctor S T) {α β   : S} (f : α ≃ β) :
-  congrArgMap F f⁻¹     ≈ (congrArgMap F f)⁻¹               := F.functor.isFunctor.respectsInv  f
+  F.functor f⁻¹     ≈ (F.functor f)⁻¹           := F.functor.isFunctor.respectsInv  f
+
+
+
+def congrArgMap (F : StructureFunctor S T) {α β : S} : α ≃ β → F α ≃ F β := F.functor.FF
 
 
 
@@ -835,8 +1025,7 @@ namespace FunExt
 instance {F G : StructureFunctor S T} : Setoid (FunExt F G) :=
 DependentEquiv.DependentDependentEquiv.EquivEquiv.dependentDependentEquivSetoid
 
-def funExt : GeneralizedRelation (StructureFunctor S T) :=
-λ F G => ⟨FunExt F G⟩
+def funExt : GeneralizedRelation (StructureFunctor S T) := λ F G => ⟨FunExt F G⟩
 
 instance funExtHasIso : HasIsomorphisms (@funExt S T) := DependentEquiv.DependentDependentEquiv.dependentDependentEquivHasIso
 
@@ -847,18 +1036,16 @@ def FunctorEquiv (F G : StructureFunctor S T) := GeneralizedNaturalTransformatio
 namespace FunctorEquiv
 
 def refl  (F     : StructureFunctor S T)                                               : FunctorEquiv F F :=
-⟨DependentEquiv.DependentDependentEquiv.refl  F,           GeneralizedNaturalTransformation.refl  F.functor⟩
+GeneralizedNaturalTransformation.refl  F.functor
 def symm  {F G   : StructureFunctor S T} (φ : FunctorEquiv F G)                        : FunctorEquiv G F :=
-⟨DependentEquiv.DependentDependentEquiv.symm  φ.ext,       GeneralizedNaturalTransformation.symm  φ⟩
+GeneralizedNaturalTransformation.symm  φ
 def trans {F G H : StructureFunctor S T} (φ : FunctorEquiv F G) (ψ : FunctorEquiv G H) : FunctorEquiv F H :=
-⟨DependentEquiv.DependentDependentEquiv.trans φ.ext ψ.ext, GeneralizedNaturalTransformation.trans φ ψ⟩
+GeneralizedNaturalTransformation.trans φ ψ
 
 instance (F G : StructureFunctor S T) : Setoid (FunctorEquiv F G) :=
-⟨λ e f => DependentEquiv.EquivEquiv e.ext f.ext,
- ⟨λ e => DependentEquiv.EquivEquiv.refl e.ext, DependentEquiv.EquivEquiv.symm, DependentEquiv.EquivEquiv.trans⟩⟩
+GeneralizedNaturalTransformation.naturalTransformationSetoid F.functor G.functor
 
-def functorEquiv : GeneralizedRelation (StructureFunctor S T) :=
-λ F G => ⟨FunctorEquiv F G⟩
+def functorEquiv : GeneralizedRelation (StructureFunctor S T) := λ F G => ⟨FunctorEquiv F G⟩
 
 instance functorEquivHasIso : HasIsomorphisms (@functorEquiv S T) :=
 { comp         := trans,
@@ -880,20 +1067,35 @@ end FunctorEquiv
 instance functorHasStructure : HasStructure (StructureFunctor S T) := ⟨FunctorEquiv.functorEquiv⟩
 def functorStructure (S T : Structure) : Structure := ⟨StructureFunctor S T⟩
 
-instance : CoeFun (IsType.type (functorStructure S T)) (λ F => S → T) := functorCoeFun
+instance : CoeFun (IsType.type (functorStructure S T)) (λ _ => S → T) := functorCoeFun
 
 
 
--- Given this definition of equivalence of functors, it makes sense to define identity and composition and
--- prove that they are well-behaved with respect to equivalence.
+-- We have two alternative definitions of `congr` for functors, depending on the order in which we apply
+-- the functor and argument equivalences. The natural transformation axiom says exactly that the order
+-- does not matter.
+
+def congrMap  {F₁ F₂ : StructureFunctor S T} {α β : S} : F₁ ≃ F₂ → α ≃ β → F₁ α ≃ F₂ β :=
+λ φ e => trans (φ.ext α) (F₂.functor e)
+
+def congrMap' {F₁ F₂ : StructureFunctor S T} {α β : S} : F₁ ≃ F₂ → α ≃ β → F₁ α ≃ F₂ β :=
+λ φ e => trans (F₁.functor e) (φ.ext β)
+
+theorem congrMap.wd {F₁ F₂ : StructureFunctor S T} {α β : S} (φ : F₁ ≃ F₂) (e : α ≃ β) :
+  congrMap φ e ≈ congrMap' φ e :=
+φ.nat e
+
+
+
+-- Now we define identity and composition and prove that they are well-behaved with respect to equivalence.
 
 def idFun : StructureFunctor S S := ⟨id, id.genFun⟩
 
 def compMap     (F : StructureFunctor S T) (G : StructureFunctor T U) : S → U :=
 λ f => G (F f)
 
-def compFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) : GeneralizedFunctor id (compMap F G) :=
-comp.genFun F.functor (generalizeFunctor F.map G.functor)
+def compFunctor (F : StructureFunctor S T) (G : StructureFunctor T U) : Functor (compMap F G) :=
+comp.genFun' F.map F.functor G.functor
 
 def compFun     (F : StructureFunctor S T) (G : StructureFunctor T U) : StructureFunctor S U :=
 ⟨compMap F G, compFunctor F G⟩
@@ -907,21 +1109,110 @@ infixr:90 " ⊙ " => revCompFun
 
 
 
-def compFun.congrArg {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (hF : F₁ ≃ F₂) (hG : G₁ ≃ G₂) :
-  G₁ ⊙ F₁ ≃ G₂ ⊙ F₂ :=
-⟨λ α => trans (congrArgMap G₁ (hF.ext α)) (hG.ext (F₂ α)), sorry⟩
+namespace compFun
 
-def compFun.assoc (F : StructureFunctor S T) (G : StructureFunctor T U) (H : StructureFunctor U V) :
+def congrArgLeft {F : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} :
+  G₁ ≃ G₂ → G₁ ⊙ F ≃ G₂ ⊙ F :=
+λ φ => { ext := λ α => φ.ext (F α),
+         nat := λ e => φ.nat (F.functor e) }
+
+namespace congrArgLeft
+
+theorem respectsComp {F : StructureFunctor S T} {G₁ G₂ G₃ : StructureFunctor T U}
+                     (φ₁ : G₁ ≃ G₂) (φ₂ : G₂ ≃ G₃) :
+  congrArgLeft (F := F) (φ₂ • φ₁) ≈ congrArgLeft φ₂ • congrArgLeft φ₁ :=
+λ α => Setoid.refl (φ₂.ext (F α) • φ₁.ext (F α))
+
+theorem respectsId {F : StructureFunctor S T} (G : StructureFunctor T U) :
+  congrArgLeft (id_ (S := functorStructure T U) G) ≈ id_ (S := functorStructure S U) (G ⊙ F) :=
+λ α => Setoid.refl (id_ (G (F α)))
+
+theorem respectsInv {F : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (φ : G₁ ≃ G₂) :
+  congrArgLeft (F := F) φ⁻¹ ≈ (congrArgLeft φ)⁻¹ :=
+λ α => Setoid.refl (φ.ext (F α))⁻¹
+
+end congrArgLeft
+
+def congrArgRight {F₁ F₂ : StructureFunctor S T} {G : StructureFunctor T U} :
+  F₁ ≃ F₂ → G ⊙ F₁ ≃ G ⊙ F₂ :=
+λ φ => { ext := λ α => G.functor (φ.ext α),
+         nat := λ {α β} e => let h₁ := respectsSetoid G (φ.nat e);
+                             let h₂ := Setoid.trans (Setoid.symm (respectsComp G (φ.ext α) (F₂.functor e))) h₁;
+                             let h₄ := Setoid.trans h₂ (respectsComp G (F₁.functor e) (φ.ext β));
+                             h₄ }
+
+namespace congrArgRight
+
+theorem respectsComp {F₁ F₂ F₃ : StructureFunctor S T} {G : StructureFunctor T U}
+                     (φ₁ : F₁ ≃ F₂) (φ₂ : F₂ ≃ F₃) :
+  congrArgRight (G := G) (φ₂ • φ₁) ≈ congrArgRight φ₂ • congrArgRight φ₁ :=
+λ α => StructureFunctor.respectsComp G (φ₁.ext α) (φ₂.ext α)
+
+theorem respectsId (F : StructureFunctor S T) {G : StructureFunctor T U} :
+  congrArgRight (id_ (S := functorStructure S T) F) ≈ id_ (S := functorStructure S U) (G ⊙ F) :=
+λ α => StructureFunctor.respectsId G (F α)
+
+theorem respectsInv {F₁ F₂ : StructureFunctor S T} {G : StructureFunctor T U} (φ : F₁ ≃ F₂) :
+  congrArgRight (G := G) φ⁻¹ ≈ (congrArgRight φ)⁻¹ :=
+λ α => StructureFunctor.respectsInv G (φ.ext α)
+
+end congrArgRight
+
+def congrArg  {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} :
+  F₁ ≃ F₂ → G₁ ≃ G₂ → G₁ ⊙ F₁ ≃ G₂ ⊙ F₂ :=
+λ φ ψ => FunctorEquiv.trans (congrArgLeft ψ) (congrArgRight φ)
+
+def congrArg' {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} :
+  F₁ ≃ F₂ → G₁ ≃ G₂ → G₁ ⊙ F₁ ≃ G₂ ⊙ F₂ :=
+λ φ ψ => FunctorEquiv.trans (congrArgRight φ) (congrArgLeft ψ)
+
+namespace congrArg
+
+theorem wd {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (φ : F₁ ≃ F₂) (ψ : G₁ ≃ G₂) :
+  congrArg φ ψ ≈ congrArg' φ ψ :=
+λ α => ψ.nat (φ.ext α)
+
+theorem respectsComp {F₁ F₂ F₃ : StructureFunctor S T} {G₁ G₂ G₃ : StructureFunctor T U}
+                     (φ₁ : F₁ ≃ F₂) (φ₂ : F₂ ≃ F₃) (ψ₁ : G₁ ≃ G₂) (ψ₂ : G₂ ≃ G₃) :
+  congrArg (φ₂ • φ₁) (ψ₂ • ψ₁) ≈ congrArg φ₂ ψ₂ • congrArg φ₁ ψ₁ :=
+let h₁ := FunctorEquiv.functorEquivHasIso.congrArgComp (congrArgLeft.respectsComp ψ₁ ψ₂) (congrArgRight.respectsComp φ₁ φ₂);
+let h₂ := congrArgCompLeft (S := functorStructure S U) (f := congrArgLeft ψ₁) (wd φ₁ ψ₂);
+let h₃ := applyAssoc' (S := functorStructure S U) h₂;
+let h₄ := congrArgCompRight (S := functorStructure S U) (g := congrArgRight φ₂) h₃;
+let h₅ := applyAssoc (S := functorStructure S U) h₄;
+Setoid.trans h₁ h₅
+
+theorem respectsId (F : StructureFunctor S T) (G : StructureFunctor T U) :
+  congrArg (id_ (S := functorStructure S T) F) (id_ (S := functorStructure T U) G) ≈ id_ (S := functorStructure S U) (G ⊙ F) :=
+let h₁ := FunctorEquiv.functorEquivHasIso.congrArgComp (congrArgLeft.respectsId G) (congrArgRight.respectsId F);
+Setoid.trans h₁ (leftId (S := functorStructure S U) (id_ (S := functorStructure S U) (G ⊙ F)))
+
+theorem respectsInv {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (φ : F₁ ≃ F₂) (ψ : G₁ ≃ G₂) :
+  congrArg φ⁻¹ ψ⁻¹ ≈ (congrArg φ ψ)⁻¹ :=
+let h₁ := FunctorEquiv.functorEquivHasIso.congrArgComp (congrArgLeft.respectsInv ψ) (congrArgRight.respectsInv φ);
+let h₂ := congrArgInv (S := functorStructure S U) (wd φ ψ);
+let h₃ := compInv (S := functorStructure S U) (congrArgRight φ) (congrArgLeft ψ);
+Setoid.trans h₁ (Setoid.symm (Setoid.trans h₂ h₃))
+
+end congrArg
+
+def assoc (F : StructureFunctor S T) (G : StructureFunctor T U) (H : StructureFunctor U V) :
   H ⊙ (G ⊙ F) ≃ (H ⊙ G) ⊙ F :=
-⟨λ α => refl (H (G (F α))), sorry⟩
+FunctorEquiv.refl (H ⊙ G ⊙ F)
 
-def idFun.leftId  (F : StructureFunctor S T) : idFun ⊙ F ≃ F :=
-⟨λ α => refl (F α),
- λ e => Setoid.trans (Structure.rightId (congrArgMap F e)) (Setoid.symm (Structure.leftId (congrArgMap F e)))⟩
+end compFun
 
-def idFun.rightId (F : StructureFunctor S T) : F ⊙ idFun ≃ F :=
-⟨λ α => refl (F α),
- λ e => Setoid.trans (Structure.rightId (congrArgMap F e)) (Setoid.symm (Structure.leftId (congrArgMap F e)))⟩
+namespace idFun
+
+def leftId  (F : StructureFunctor S T) : idFun ⊙ F ≃ F :=
+{ ext := λ α => refl (F α),
+  nat := GeneralizedNaturalityCondition.refl F.functor }
+
+def rightId (F : StructureFunctor S T) : F ⊙ idFun ≃ F :=
+{ ext := λ α => refl (F α),
+  nat := GeneralizedNaturalityCondition.refl F.functor }
+
+end idFun
 
 
 
@@ -929,98 +1220,159 @@ def idFun.rightId (F : StructureFunctor S T) : F ⊙ idFun ≃ F :=
 
 def constFun (c : T) : StructureFunctor S T :=
 { map     := Function.const (IsType.type S) c,
-  functor := { FF        := λ _ => IsEquivalence.refl c,
-               isFunctor := { respectsSetoid := λ _   => Setoid.refl (id_ c),
-                              respectsComp   := λ _ _ => Setoid.symm (leftId (id_ c)),
-                              respectsId     := λ _   => Setoid.refl (id_ c),
-                              respectsInv    := λ _   => Setoid.symm (idInv c) } } }
+  functor := const.genFun c }
 
 
 
--- We have two alternative definitions of `congr` for functors, depending on the order in which we apply
--- the functor and argument equivalences. The natural transformation axiom says exactly that the order
--- does not matter.
+@[reducible] def IsId (F : StructureFunctor S S) := F ≃ idFun
 
-def congrMap  {F₁ F₂ : StructureFunctor S T} {α β : S} : F₁ ≃ F₂ → α ≃ β → F₁ α ≃ F₂ β :=
-λ φ e => trans (φ.ext α) (congrArgMap F₂ e)
+namespace IsId
 
-def congrMap' {F₁ F₂ : StructureFunctor S T} {α β : S} : F₁ ≃ F₂ → α ≃ β → F₁ α ≃ F₂ β :=
-λ φ e => trans (congrArgMap F₁ e) (φ.ext β)
+def extDef {F : StructureFunctor S S} (φ : IsId F) (α : S) : F α ≃ α :=
+φ.ext α
 
-theorem congrMapWd {F₁ F₂ : StructureFunctor S T} {α β : S} (φ : F₁ ≃ F₂) (e : α ≃ β) :
-  congrMap φ e ≈ congrMap' φ e :=
+theorem natDef {F : StructureFunctor S S} (φ : IsId F) {α β : S} (e : α ≃ β) :
+  e • φ.ext α ≈ φ.ext β • F.functor e :=
 φ.nat e
 
+def rightMul {G : StructureFunctor T T} (ψ : IsId G) (F : StructureFunctor S T) :
+  G ⊙ F ≃ F :=
+FunctorEquiv.trans (compFun.congrArgLeft (F := F) ψ) (idFun.leftId F)
+
+theorem rightMulDef {G : StructureFunctor T T} (ψ : IsId G) (F : StructureFunctor S T) (α : S) :
+  (rightMul ψ F).ext α ≈ ψ.ext (F α) :=
+leftId (ψ.ext (F α))
+
+def leftMul {F : StructureFunctor S S} (φ : IsId F) (G : StructureFunctor S T) :
+  G ⊙ F ≃ G :=
+FunctorEquiv.trans (compFun.congrArgRight (G := G) φ) (idFun.rightId G)
+
+theorem leftMulDef {F : StructureFunctor S S} (φ : IsId F) (G : StructureFunctor S T) (α : S) :
+  (leftMul φ G).ext α ≈ G.functor (φ.ext α) :=
+leftId (G.functor (φ.ext α))
+
+def refl (S : Structure) : IsId (@idFun S) := FunctorEquiv.refl idFun
+
+def trans {F G : StructureFunctor S S} (φ : IsId F) (ψ : IsId G) : IsId (G ⊙ F) :=
+FunctorEquiv.trans (rightMul ψ F) φ
+
+theorem transDef {F G : StructureFunctor S S} (φ : IsId F) (ψ : IsId G) (α : S) :
+  (trans φ ψ).ext α ≈ φ.ext α • ψ.ext (F α) :=
+congrArgCompRight (rightMulDef ψ F α)
+
+end IsId
 
 
-section Properties
 
-variable (F : StructureFunctor S T)
+@[reducible] def LeftInv (F : StructureFunctor S T) (G : StructureFunctor T S) := IsId (G ⊙ F)
 
--- If we interpret `≃` as equality, we can pretend that functors are just functions and define their
--- properties accordingly. Again, note that these definitions contain data.
--- However, the definitions are only well-behaved if we add some additional functoriality conditions.
+namespace LeftInv
 
-def Injective  := GeneralizedFunctor F.map id  -- `∀ α β, F α ≃ F β → α ≃ β` plus functoriality
-def Surjective := Σ' h : (∀ β, Σ' α, F α ≃ β),
-                     Σ' φ : GeneralizedFunctor id (λ β => (h β).fst),
-                        GeneralizedNaturalTransformation (comp.genFun F.functor (generalizeFunctor F.map φ)) id.genFun
-def Bijective  := PProd (Injective F) (Surjective F)
+def refl (S : Structure) : LeftInv (@idFun S) (@idFun S) := IsId.refl S
 
--- We can even build an inverse functor for any functor that is bijective according to this definition,
--- even though we do not assume classical logic. This works because the equivalences in `Structure` can
--- hold the data we are defining here. Note that if we were dealing with propositions and using `∃` instead
--- of `Σ`, obtaining the inverse functor would require classical logic.
---
--- What we are doing here can be described as working in an internal logic of the `universeStructure` we
--- are going to define. Our functors model the functions of this internal logic. So in this internal logic,
--- * function extensionality holds, and
--- * every bijective function has an inverse,
--- even when using constructive logic externally.
---
--- Given how closely this formalization seems to be related to HoTT, maybe some variant of univalence also
--- holds in the internal logic. If this turned out to be the case, would it provide a "constructive
--- interpretation of univalence"?
---
--- The inverse functor is unique (modulo functor equivalence).
+def trans {F : StructureFunctor S T} {G : StructureFunctor T S} {H : StructureFunctor T U} {I : StructureFunctor U T}
+          (φ : LeftInv F G) (ψ : LeftInv H I) :
+  LeftInv (H ⊙ F) (G ⊙ I) :=
+let χ : (G ⊙ I) ⊙ (H ⊙ F) ≃ G ⊙ F := compFun.congrArgLeft (F := F) (IsId.leftMul ψ G);
+FunctorEquiv.trans χ φ
 
-section Inverse
+theorem transDef {F : StructureFunctor S T} {G : StructureFunctor T S} {H : StructureFunctor T U} {I : StructureFunctor U T}
+                 (φ : LeftInv F G) (ψ : LeftInv H I) (α : S) :
+  (trans φ ψ).ext α ≈ φ.ext α • G.functor (ψ.ext (F α)) :=
+congrArgCompRight (IsId.leftMulDef ψ G (F α))
 
-variable (h : Bijective F)
+def Compat {F : StructureFunctor S T} {G : StructureFunctor T S} (φl : LeftInv F G) (φr : LeftInv G F) :=
+∀ α, F.functor (φl.ext α) ≈ φr.ext (F α)
 
-def inverseElement (β : T) := (h.snd.fst β).fst
+namespace Compat
 
-namespace inverseElement
+theorem refl (S : Structure) : Compat (LeftInv.refl S) (LeftInv.refl S) :=
+λ α => Setoid.refl (IsEquivalence.refl α)
 
-def isInverse  (β : T) : F (inverseElement F h β) ≃ β := (h.snd.fst β).snd
-def isInverse' (α : S) : inverseElement F h (F α) ≃ α := h.fst.FF (isInverse F h (F α))
+theorem trans {F : StructureFunctor S T} {G : StructureFunctor T S} {H : StructureFunctor T U} {I : StructureFunctor U T}
+              {φl : LeftInv F G} {φr : LeftInv G F} {ψl : LeftInv H I} {ψr : LeftInv I H}
+              (c : Compat φl φr) (d : Compat ψl ψr) :
+  Compat (LeftInv.trans φl ψl) (LeftInv.trans ψr φr) :=
+λ α => let h₁ : φr.ext (F α) • F.functor (G.functor (ψl.ext (F α))) ≈ ψl.ext (F α) • φr.ext (I (H (F α)))                                 := Setoid.symm (φr.nat (ψl.ext (F α)));
+       let h₂ : F.functor (φl.ext α) • F.functor (G.functor (ψl.ext (F α))) ≈ ψl.ext (F α) • φr.ext (I (H (F α)))                         := substCompLeft (c α) h₁;
+       let h₃ : F.functor (φl.ext α • G.functor (ψl.ext (F α))) ≈ ψl.ext (F α) • φr.ext (I (H (F α)))                                     := Setoid.trans (respectsComp F (G.functor (ψl.ext (F α))) (φl.ext α)) h₂;
+       let h₄ : H.functor (F.functor (φl.ext α • G.functor (ψl.ext (F α)))) ≈ H.functor (ψl.ext (F α)) • H.functor (φr.ext (I (H (F α)))) := Setoid.trans (respectsSetoid H h₃) (respectsComp H (φr.ext (I (H (F α)))) (ψl.ext (F α)));
+       let h₅ : H.functor (F.functor (φl.ext α • G.functor (ψl.ext (F α)))) ≈ ψr.ext (H (F α)) • H.functor (φr.ext (I (H (F α))))         := substCompLeft' (d (F α)) h₄;
+       let h₆ := Setoid.trans (respectsSetoid H (respectsSetoid F (transDef φl ψl α))) h₅;
+       let h₇ := Setoid.trans h₆ (Setoid.symm (transDef ψr φr (H (F α))));
+       h₇
 
-end inverseElement
+end Compat
 
--- This is just a very terse way of writing the classical proof that the inverse element is unique.
--- Writing it in this way has the advantage that `DependentEquiv.transport` already contains the proof
--- that the result is a functor.
+def Equiv {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T S}
+          (φ : F₁ ≃ F₂) (ψ : G₁ ≃ G₂)
+          (χ₁ : LeftInv F₁ G₁) (χ₂ : LeftInv F₂ G₂) :=
+χ₁ ≈ χ₂ • compFun.congrArg φ ψ
 
-def uniqueValueFunctor := DependentEquiv.transport.invFunctor (inverseElement.isInverse F h)
-def inverseFunctor := comp.genFun (uniqueValueFunctor F h) (generalizeFunctor (inverseElement F h) h.fst)
+namespace Equiv
 
-def inverse : StructureFunctor T S :=
-{ map     := inverseElement F h,
-  functor := inverseFunctor F h }
+theorem refl  {F : StructureFunctor S T} {G : StructureFunctor T S} (χ : LeftInv F G) :
+  Equiv (FunctorEquiv.refl F) (FunctorEquiv.refl G) χ χ :=
+Setoid.symm (rightCancelId (S := functorStructure S S) (compFun.congrArg.respectsId F G))
 
-namespace inverse
+theorem symm  {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T S}
+              {φ : F₁ ≃ F₂} {ψ : G₁ ≃ G₂}
+              {χ₁ : LeftInv F₁ G₁} {χ₂ : LeftInv F₂ G₂}
+              (e : Equiv φ ψ χ₁ χ₂) :
+  Equiv (FunctorEquiv.symm φ) (FunctorEquiv.symm ψ) χ₂ χ₁ :=
+let h₁ := (rightMulInv (S := functorStructure S S) χ₂ χ₁ (compFun.congrArg φ ψ)).mp (Setoid.symm e);
+substCompRight' (S := functorStructure S S) (Setoid.symm (compFun.congrArg.respectsInv φ ψ)) h₁
 
--- TODO: For the naturality condition, we should probably build some infrastructure around the
--- interaction between `DependentEquiv` and `GeneralizedNaturalTransformation`.
+theorem trans {F₁ F₂ F₃ : StructureFunctor S T} {G₁ G₂ G₃ : StructureFunctor T S}
+              {φ₁ : F₁ ≃ F₂} {φ₂ : F₂ ≃ F₃} {ψ₁ : G₁ ≃ G₂} {ψ₂ : G₂ ≃ G₃}
+              {χ₁ : LeftInv F₁ G₁} {χ₂ : LeftInv F₂ G₂} {χ₃ : LeftInv F₃ G₃}
+              (e : Equiv φ₁ ψ₁ χ₁ χ₂) (f : Equiv φ₂ ψ₂ χ₂ χ₃) :
+  Equiv (FunctorEquiv.trans φ₁ φ₂) (FunctorEquiv.trans ψ₁ ψ₂) χ₁ χ₃ :=
+let h₁ := applyAssocRight' (S := functorStructure S S) (substCompLeft' f e);
+substCompRight' (S := functorStructure S S) (Setoid.symm (compFun.congrArg.respectsComp φ₁ φ₂ ψ₁ ψ₂)) h₁
 
-def leftInv  : inverse F h ⊙ F ≃ idFun := ⟨inverseElement.isInverse' F h, sorry⟩
-def rightInv : F ⊙ inverse F h ≃ idFun := ⟨inverseElement.isInverse  F h, sorry⟩
+end Equiv
 
-end inverse
+end LeftInv
 
-end Inverse
 
-end Properties
+
+-- A type class asserting that two functors are inverse to each other. In addition to the condition that
+-- the inverse functor is left-inverse and right-inverse, we also have a compatibility condition on these
+-- two functor equivalences.
+
+class IsInverse (F : StructureFunctor S T) (G : StructureFunctor T S) :=
+(leftInv  : LeftInv F G)
+(rightInv : LeftInv G F)
+(lrCompat : LeftInv.Compat leftInv rightInv)
+(rlCompat : LeftInv.Compat rightInv leftInv)
+
+namespace IsInverse
+
+def refl  (S : Structure) :
+  IsInverse (@idFun S) (@idFun S) :=
+{ leftInv  := LeftInv.refl        S,
+  rightInv := LeftInv.refl        S,
+  lrCompat := LeftInv.Compat.refl S,
+  rlCompat := LeftInv.Compat.refl S }
+
+def symm  {F : StructureFunctor S T} {G : StructureFunctor T S}
+          (e : IsInverse F G) :
+  IsInverse G F :=
+{ leftInv  := e.rightInv,
+  rightInv := e.leftInv,
+  lrCompat := e.rlCompat,
+  rlCompat := e.lrCompat }
+
+def trans {F : StructureFunctor S T} {G : StructureFunctor T S} {H : StructureFunctor T U} {I : StructureFunctor U T}
+          (e : IsInverse F G) (f : IsInverse H I) :
+  IsInverse (H ⊙ F) (G ⊙ I) :=
+{ leftInv  := LeftInv.trans        e.leftInv  f.leftInv,
+  rightInv := LeftInv.trans        f.rightInv e.rightInv,
+  lrCompat := LeftInv.Compat.trans e.lrCompat f.lrCompat,
+  rlCompat := LeftInv.Compat.trans f.rlCompat e.rlCompat }
+
+end IsInverse
 
 
 
@@ -1046,26 +1398,6 @@ def proxyFunctor {S T : Structure} (F : S → T) (G : StructureFunctor S T) (φ 
 { map     := F,
   functor := comp.genFun G.functor (DependentEquiv.transport.invFunctor φ) }
 
-
-
-section FunctorSetoid
-
-instance functorIsSetoid : Setoid (StructureFunctor S T) := structureToSetoid (functorStructure S T)
-instance : Setoid (functorStructure S T).U := functorIsSetoid
-
-theorem compFun.congrArg' {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} :
-  F₁ ≈ F₂ → G₁ ≈ G₂ → G₁ ⊙ F₁ ≈ G₂ ⊙ F₂ :=
-λ ⟨hF⟩ ⟨hG⟩ => ⟨compFun.congrArg hF hG⟩
-
-theorem compFun.assoc' (F : StructureFunctor S T) (G : StructureFunctor T U) (H : StructureFunctor U V) :
-  H ⊙ (G ⊙ F) ≈ (H ⊙ G) ⊙ F :=
-⟨compFun.assoc F G H⟩
-
-theorem idFun.leftId'  (F : StructureFunctor S T) : idFun ⊙ F ≈ F := ⟨idFun.leftId  F⟩
-theorem idFun.rightId' (F : StructureFunctor S T) : F ⊙ idFun ≈ F := ⟨idFun.rightId F⟩
-
-end FunctorSetoid
-
 end StructureFunctor
 
 open StructureFunctor
@@ -1073,380 +1405,290 @@ open StructureFunctor
 
 
 -- Based on the definition of a functor between two structures, we can define equivalence of two
--- structures in the same way that equivalence of types is defined in mathlib, except that we need to
--- replace equality of functors with an instance of `FunctorEquiv`.
+-- structures similarly to equivalence of types in mathlib.
 
 structure StructureEquiv (S T : Structure) where
-(toFun    : StructureFunctor S T)
-(invFun   : StructureFunctor T S)
-(leftInv  : invFun ⊙ toFun ≃ idFun)
-(rightInv : toFun ⊙ invFun ≃ idFun)
+(toFun  : StructureFunctor S T)
+(invFun : StructureFunctor T S)
+[isInv  : IsInverse toFun invFun]
 
 namespace StructureEquiv
 
 def refl  (S     : Structure)                                                   : StructureEquiv S S :=
-{ toFun    := idFun,
-  invFun   := idFun,
-  leftInv  := FunctorEquiv.refl idFun,
-  rightInv := FunctorEquiv.refl idFun }
+{ toFun  := idFun,
+  invFun := idFun,
+  isInv  := IsInverse.refl  S }
 
 def symm  {S T   : Structure} (e : StructureEquiv S T)                          : StructureEquiv T S :=
-{ toFun    := e.invFun,
-  invFun   := e.toFun,
-  leftInv  := e.rightInv,
-  rightInv := e.leftInv }
-
-def transLeftInv {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) :
-  (e.invFun ⊙ f.invFun) ⊙ (f.toFun ⊙ e.toFun) ≃ idFun :=
-let e₁ := compFun.assoc e.toFun f.toFun (e.invFun ⊙ f.invFun);
-let e₂ := IsEquivalence.trans e₁ (compFun.congrArg (IsEquivalence.refl e.toFun) (IsEquivalence.symm (compFun.assoc f.toFun f.invFun e.invFun)));
-let e₃ := IsEquivalence.trans e₂ (compFun.congrArg (IsEquivalence.refl e.toFun) (compFun.congrArg f.leftInv (IsEquivalence.refl e.invFun)));
-let e₄ := IsEquivalence.trans e₃ (compFun.congrArg (IsEquivalence.refl e.toFun) (idFun.rightId e.invFun));
-IsEquivalence.trans e₄ e.leftInv
+{ toFun  := e.invFun,
+  invFun := e.toFun,
+  isInv  := IsInverse.symm  e.isInv }
 
 def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) : StructureEquiv S U :=
-{ toFun    := f.toFun  ⊙ e.toFun,
-  invFun   := e.invFun ⊙ f.invFun,
-  leftInv  := transLeftInv e f,
-  rightInv := transLeftInv (symm f) (symm e) }
+{ toFun  := f.toFun  ⊙ e.toFun,
+  invFun := e.invFun ⊙ f.invFun,
+  isInv  := IsInverse.trans e.isInv f.isInv }
+
+def funProdStructure (S T : Structure) :=
+  StructureProduct.productStructure (functorStructure S T) (functorStructure T S)
+
+def funProd {S T : Structure} (e : StructureEquiv S T) : funProdStructure S T :=
+⟨e.toFun, e.invFun⟩
+
+
+
+-- We can compare two instances of `StructureEquiv` by comparing `toFun` and `invFun` and then dependently
+-- comparing `leftInv` and `rightInv`. That turns `StructureEquiv` into a structure.
+
+structure EquivEquiv {S T : Structure} (e f : StructureEquiv S T) where
+(toFunEquiv    : e.toFun  ≃ f.toFun)
+(invFunEquiv   : e.invFun ≃ f.invFun)
+(leftInvEquiv  : LeftInv.Equiv toFunEquiv  invFunEquiv e.isInv.leftInv  f.isInv.leftInv)
+(rightInvEquiv : LeftInv.Equiv invFunEquiv toFunEquiv  e.isInv.rightInv f.isInv.rightInv)
+
+namespace EquivEquiv
+
+variable {S T : Structure}
+
+def refl  (e     : StructureEquiv S T)                                           : EquivEquiv e e :=
+{ toFunEquiv    := IsEquivalence.refl  e.toFun,
+  invFunEquiv   := IsEquivalence.refl  e.invFun,
+  leftInvEquiv  := LeftInv.Equiv.refl  e.isInv.leftInv,
+  rightInvEquiv := LeftInv.Equiv.refl  e.isInv.rightInv }
+
+def symm  {e f   : StructureEquiv S T} (φ : EquivEquiv e f)                      : EquivEquiv f e :=
+{ toFunEquiv    := IsEquivalence.symm  φ.toFunEquiv,
+  invFunEquiv   := IsEquivalence.symm  φ.invFunEquiv,
+  leftInvEquiv  := LeftInv.Equiv.symm  φ.leftInvEquiv,
+  rightInvEquiv := LeftInv.Equiv.symm  φ.rightInvEquiv }
+
+def trans {e f g : StructureEquiv S T} (φ : EquivEquiv e f) (ψ : EquivEquiv f g) : EquivEquiv e g :=
+{ toFunEquiv    := IsEquivalence.trans φ.toFunEquiv    ψ.toFunEquiv,
+  invFunEquiv   := IsEquivalence.trans φ.invFunEquiv   ψ.invFunEquiv,
+  leftInvEquiv  := LeftInv.Equiv.trans φ.leftInvEquiv  ψ.leftInvEquiv,
+  rightInvEquiv := LeftInv.Equiv.trans φ.rightInvEquiv ψ.rightInvEquiv }
+
+def funEquivProd {e f : StructureEquiv S T} (φ : EquivEquiv e f) :
+  StructureProduct.ProductEquiv (funProd e) (funProd f) :=
+⟨φ.toFunEquiv, φ.invFunEquiv⟩
+
+
+
+def EquivEquivEquiv {e f : StructureEquiv S T} (φ ψ : EquivEquiv e f) :=
+StructureProduct.ProductEquiv.EquivEquiv (funEquivProd φ) (funEquivProd ψ)
+
+namespace EquivEquivEquiv
+
+variable {e f : StructureEquiv S T}
+
+theorem refl  (φ     : EquivEquiv e f)                                                     : EquivEquivEquiv φ φ :=
+StructureProduct.ProductEquiv.EquivEquiv.refl  (funEquivProd φ)
+
+theorem symm  {φ ψ   : EquivEquiv e f} (h : EquivEquivEquiv φ ψ)                           : EquivEquivEquiv ψ φ :=
+StructureProduct.ProductEquiv.EquivEquiv.symm  h
+
+theorem trans {φ ψ χ : EquivEquiv e f} (h : EquivEquivEquiv φ ψ) (i : EquivEquivEquiv ψ χ) : EquivEquivEquiv φ χ :=
+StructureProduct.ProductEquiv.EquivEquiv.trans h i
+
+instance equivEquivSetoid : Setoid (EquivEquiv e f) := ⟨EquivEquivEquiv, ⟨refl, symm, trans⟩⟩
+
+end EquivEquivEquiv
+
+def equivEquiv (e f : StructureEquiv S T) : BundledSetoid := ⟨EquivEquiv e f⟩
+
+instance equivHasIso : HasIsomorphisms (@equivEquiv S T) :=
+{ comp         := trans,
+  congrArgComp := λ hφ hψ => Structure.congrArgComp (S := funProdStructure S T) hφ hψ,
+  assoc        := λ φ ψ χ => Structure.assoc        (S := funProdStructure S T) (funEquivProd φ) (funEquivProd ψ) (funEquivProd χ),
+  id           := refl,
+  leftId       := λ φ     => Structure.leftId       (S := funProdStructure S T) (funEquivProd φ),
+  rightId      := λ φ     => Structure.rightId      (S := funProdStructure S T) (funEquivProd φ),
+  inv          := symm,
+  congrArgInv  := λ hφ    => Structure.congrArgInv  (S := funProdStructure S T) hφ,
+  leftInv      := λ φ     => Structure.leftInv      (S := funProdStructure S T) (funEquivProd φ),
+  rightInv     := λ φ     => Structure.rightInv     (S := funProdStructure S T) (funEquivProd φ),
+  invInv       := λ φ     => Structure.invInv       (S := funProdStructure S T) (funEquivProd φ),
+  compInv      := λ φ ψ   => Structure.compInv      (S := funProdStructure S T) (funEquivProd φ) (funEquivProd ψ),
+  idInv        := λ e     => Structure.idInv        (S := funProdStructure S T) (funProd e) }
+
+end EquivEquiv
+
+instance equivHasStructure (S T : Structure) : HasStructure (StructureEquiv S T) := ⟨EquivEquiv.equivEquiv⟩
+def equivStructure (S T : Structure) : Structure := ⟨StructureEquiv S T⟩
+
+
+
+def congrArgComp {S T U : Structure} {e₁ e₂ : StructureEquiv S T} {f₁ f₂ : StructureEquiv T U} (he : e₁ ≃ e₂) (hf : f₁ ≃ f₂) :
+  trans e₁ f₁ ≃ trans e₂ f₂ :=
+{ toFunEquiv    := compFun.congrArg he.toFunEquiv  hf.toFunEquiv,
+  invFunEquiv   := compFun.congrArg hf.invFunEquiv he.invFunEquiv,
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
+
+def assoc {S T U V : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) (g : StructureEquiv U V) :
+  trans (trans e f) g ≃ trans e (trans f g) :=
+{ toFunEquiv    := compFun.assoc e.toFun  f.toFun  g.toFun,
+  invFunEquiv   := compFun.assoc g.invFun f.invFun e.invFun,
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
+
+def leftId  {S T : Structure} (e : StructureEquiv S T) : trans e (refl T) ≃ e :=
+{ toFunEquiv    := idFun.leftId e.toFun,
+  invFunEquiv   := idFun.leftId e.invFun,
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
+
+def rightId {S T : Structure} (e : StructureEquiv S T) : trans (refl S) e ≃ e :=
+{ toFunEquiv    := idFun.rightId e.toFun,
+  invFunEquiv   := idFun.rightId e.invFun,
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
+
+def congrArgInv {S T : Structure} {e₁ e₂ : StructureEquiv S T} (he : e₁ ≃ e₂) :
+  symm e₁ ≃ symm e₂ :=
+{ toFunEquiv    := he.invFunEquiv,
+  invFunEquiv   := he.toFunEquiv,
+  leftInvEquiv  := he.rightInvEquiv,
+  rightInvEquiv := he.leftInvEquiv }
+
+theorem leftInvEquiv {S T : Structure} (e : StructureEquiv S T) :
+  LeftInv.Equiv e.isInv.leftInv e.isInv.leftInv (IsInverse.trans e.isInv (IsInverse.symm e.isInv)).leftInv (IsInverse.refl S).leftInv :=
+let h₁ : LeftInv.trans e.isInv.leftInv e.isInv.rightInv ≈ compFun.congrArg' e.isInv.leftInv e.isInv.leftInv :=
+λ α => Setoid.trans (LeftInv.transDef e.isInv.leftInv e.isInv.rightInv α) (congrArgCompRight (respectsSetoid e.invFun (Setoid.symm (e.isInv.lrCompat α))));
+let h₂ := Setoid.trans h₁ (Setoid.symm (compFun.congrArg.wd e.isInv.leftInv e.isInv.leftInv));
+Setoid.trans h₂ (Setoid.symm (Structure.leftId (S := functorStructure S S) (compFun.congrArg e.isInv.leftInv e.isInv.leftInv)))
+
+def leftInv'  {S T : Structure} (e : StructureEquiv S T) : trans e (symm e) ≃ refl S :=
+{ toFunEquiv    := e.isInv.leftInv,
+  invFunEquiv   := e.isInv.leftInv,
+  leftInvEquiv  := leftInvEquiv e,
+  rightInvEquiv := leftInvEquiv e }
+
+theorem rightInvEquiv {S T : Structure} (e : StructureEquiv S T) :
+  LeftInv.Equiv e.isInv.rightInv e.isInv.rightInv (IsInverse.trans (IsInverse.symm e.isInv) e.isInv).rightInv (IsInverse.refl T).rightInv :=
+let h₁ : LeftInv.trans e.isInv.rightInv e.isInv.leftInv ≈ compFun.congrArg' e.isInv.rightInv e.isInv.rightInv :=
+λ α => Setoid.trans (LeftInv.transDef e.isInv.rightInv e.isInv.leftInv α) (congrArgCompRight (respectsSetoid e.toFun (Setoid.symm (e.isInv.rlCompat α))));
+let h₂ := Setoid.trans h₁ (Setoid.symm (compFun.congrArg.wd e.isInv.rightInv e.isInv.rightInv));
+Setoid.trans h₂ (Setoid.symm (Structure.leftId (S := functorStructure T T) (compFun.congrArg e.isInv.rightInv e.isInv.rightInv)))
+
+def rightInv' {S T : Structure} (e : StructureEquiv S T) : trans (symm e) e ≃ refl T :=
+{ toFunEquiv    := e.isInv.rightInv,
+  invFunEquiv   := e.isInv.rightInv,
+  leftInvEquiv  := rightInvEquiv e,
+  rightInvEquiv := rightInvEquiv e }
+
+def invInv {S T : Structure} (e : StructureEquiv S T) : symm (symm e) ≃ e :=
+{ toFunEquiv    := FunctorEquiv.refl e.toFun,
+  invFunEquiv   := FunctorEquiv.refl e.invFun,
+  leftInvEquiv  := LeftInv.Equiv.refl e.isInv.leftInv,
+  rightInvEquiv := LeftInv.Equiv.refl e.isInv.rightInv }
+
+def compInv {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) :
+  symm (trans e f) ≃ trans (symm f) (symm e) :=
+EquivEquiv.refl (symm (trans e f))
+
+def idInv (S : Structure) : symm (refl S) ≃ refl S :=
+EquivEquiv.refl (refl S)
+
+
+
+-- When using `StructureEquiv` as an equivalence within the `universeStructure` we wish to define, we
+-- need to truncate `EquivEquiv` to its setoid structure.
+--
+-- There are a lot of alternative places we could choose for this truncation. E.g. we could first define a
+-- notion of a 2-structure, then define a 2-structure of (1-)structures, and then truncate that
+-- 2-structure. If we additionally defined functors of those 2-structures, we could eliminate the setoid
+-- truncations in `AbstractPiSigma.lean`. In particular, this would make Π and Σ structures fully
+-- equivalent to functor and pair (1-)structures if they are independent. However, this would come at a
+-- cost of essentially duplicating the basic definitions -- potentially endlessly, even.
+
+instance equivIsSetoid (S T : Structure) : Setoid (StructureEquiv S T) := structureToSetoid (equivStructure S T)
+
+def structureEquiv (S T : Structure) : BundledSetoid := ⟨StructureEquiv S T⟩
+
+def congrArgCompS {S T U : Structure} {e₁ e₂ : StructureEquiv S T} {f₁ f₂ : StructureEquiv T U} :
+  e₁ ≈ e₂ → f₁ ≈ f₂ → trans e₁ f₁ ≈ trans e₂ f₂ :=
+λ ⟨he⟩ ⟨hf⟩ => ⟨congrArgComp he hf⟩
+
+def assocS {S T U V : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) (g : StructureEquiv U V) :
+  trans (trans e f) g ≈ trans e (trans f g) :=
+⟨assoc e f g⟩
+
+def leftIdS  {S T : Structure} (e : StructureEquiv S T) : trans e (refl T) ≈ e := ⟨leftId  e⟩
+def rightIdS {S T : Structure} (e : StructureEquiv S T) : trans (refl S) e ≈ e := ⟨rightId e⟩
+
+def congrArgInvS {S T : Structure} {e₁ e₂ : StructureEquiv S T} : e₁ ≈ e₂ → symm e₁ ≈ symm e₂ :=
+λ ⟨he⟩ => ⟨congrArgInv he⟩
+
+def leftInvS  {S T : Structure} (e : StructureEquiv S T) : trans e (symm e) ≈ refl S := ⟨leftInv'  e⟩
+def rightInvS {S T : Structure} (e : StructureEquiv S T) : trans (symm e) e ≈ refl T := ⟨rightInv' e⟩
+
+def invInvS {S T : Structure} (e : StructureEquiv S T) : symm (symm e) ≈ e := ⟨invInv e⟩
+
+def compInvS {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) :
+  symm (trans e f) ≈ trans (symm f) (symm e) :=
+⟨compInv e f⟩
+
+def idInvS (S : Structure) : symm (refl S) ≈ refl S := ⟨idInv S⟩
+
+instance equivHasIso : HasIsomorphisms structureEquiv :=
+{ comp         := trans,
+  congrArgComp := congrArgCompS,
+  assoc        := assocS,
+  id           := refl,
+  leftId       := leftIdS,
+  rightId      := rightIdS,
+  inv          := symm,
+  congrArgInv  := congrArgInvS,
+  leftInv      := leftInvS,
+  rightInv     := rightInvS,
+  invInv       := invInvS,
+  compInv      := compInvS,
+  idInv        := idInvS }
 
 end StructureEquiv
 
-
-
--- We can build a `StructureEquiv` from a bijective functor.
-
-def functorToEquiv {S T : Structure} (F : StructureFunctor S T) (h : Bijective F) : StructureEquiv S T :=
-{ toFun    := F,
-  invFun   := inverse F h,
-  leftInv  := inverse.leftInv  F h,
-  rightInv := inverse.rightInv F h }
+instance structureHasStructure : HasStructure Structure := ⟨StructureEquiv.structureEquiv⟩
+instance (S T : Structure) : HasStructure (S ≃ T) := StructureEquiv.equivHasStructure S T
 
 
 
--- If we have a `StructureEquiv S T`, we can ask whether it maps `a : S` to `b : T`, and this is
--- actually a generalized form of an equivalence.
+-- If we have a `StructureEquiv S T`, we can ask whether it maps `a : S` to `b : T`. This is similar to
+-- an equivalence. It corresponds to a "dependent equivalence" or "pathover" in HoTT.
 
-def InstanceEquiv {S T : Structure} (e : StructureEquiv S T) (a : S) (b : T) := e.toFun a ≃ b
+def InstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) := e.toFun a ≃ b
 
 namespace InstanceEquiv
 
-def refl  (S     : Structure)                                                   (a : S)                 :
-  InstanceEquiv (StructureEquiv.refl S) a a :=
-IsEquivalence.refl a
+notation:25 a:26 " ≃[" e:0 "] " b:26 => InstanceEquiv e a b
 
-def refl' (S     : Structure)                                                   {a b : S} (h : a ≃ b)   :
-  InstanceEquiv (StructureEquiv.refl S) a b :=
+def refl' (S     : Structure)                         {a b : S} (h : a ≃ b)   :
+  a ≃[StructureEquiv.refl S] b :=
 h
 
-def symm  {S T   : Structure} (e : StructureEquiv S T)                          (a : S) (b : T)         :
-  InstanceEquiv e a b → InstanceEquiv (StructureEquiv.symm e) b a :=
-λ h₁ => IsEquivalence.trans (IsEquivalence.symm (e.invFun.congrArgMap h₁)) (e.leftInv.ext a)
+def refl  (S     : Structure)                         (a : S)                 :
+  a ≃[StructureEquiv.refl S] a :=
+refl' S (IsEquivalence.refl a)
 
-def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) (a : S) (b : T) (c : U) :
-  InstanceEquiv e a b → InstanceEquiv f b c → InstanceEquiv (StructureEquiv.trans e f) a c :=
-λ h₁ h₂ => IsEquivalence.trans (f.toFun.congrArgMap h₁) h₂
+def symm  {S T   : Structure} (e : S ≃ T)             (a : S) (b : T)         :
+  a ≃[e] b → b ≃[StructureEquiv.symm e] a :=
+λ φ => IsEquivalence.trans (IsEquivalence.symm (congrArgMap e.invFun φ)) (e.isInv.leftInv.ext a)
+
+def trans {S T U : Structure} (e : S ≃ T) (f : T ≃ U) (a : S) (b : T) (c : U) :
+  a ≃[e] b → b ≃[f] c → a ≃[StructureEquiv.trans e f] c :=
+λ φ ψ => IsEquivalence.trans (congrArgMap f.toFun φ) ψ
+
+def congrArgEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (φ : e₁ ≃ e₂) (a : S) (b : T) :
+  a ≃[e₁] b → a ≃[e₂] b :=
+IsEquivalence.trans (IsEquivalence.symm (φ.toFunEquiv.ext a))
 
 end InstanceEquiv
 
 
 
-theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b := h ▸ Setoid.refl a
+-- Using `StructureEquiv`, we can build a "universe" structure where the objects are structures. This is
+-- the same as the groupoid of lower-level groupoids.
 
-
-
--- A functor between two structures induces functors between their setoid and skeleton structures. More
--- specifically, we have the following commutative diagram (modulo equivalence defined on functors).
---
---    `S` ----> `S_≈` ---> `S/≃`
---     |          |          |
--- `F` |          |          |
---     v          v          v
---    `T` ----> `T_≈` ---> `T/≃`
---
--- The horizontal functors can be "philosophically" regarded as equivalences: Although they cannot be
--- proved to be equivalences, we can see that all structural properties have an analogue in the setoid
--- and skeleton structures. (Also, we can prove certain idempotence properties.)
---
--- This can be understood as the reason why isomorphism can generally be identified with equality: In all
--- operations that preserve structure, in theory we can take the quotient with respect to equivalence/
--- isomorphism and work on the quotient structures.
-
-namespace Forgetfulness
-
-section Setoid
-
-def makeToSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {α β : S}, α ≃ β → map α ≈ map β) :
-  StructureFunctor S (setoidStructure T) :=
-{ map     := map,
-  functor := { FF        := FF,
-               isFunctor := propFunctor } }
-
-def makeToSetoidStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ α, F α ≃ G α) :
-  FunctorEquiv F G :=
-⟨ext, λ _ => proofIrrel _ _⟩
-
-def makeToSetoidStructureFunctorEquiv {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ α, F α ≈ G α) :
-  FunctorEquiv F G :=
-makeToSetoidStructureFunctorEquiv' (λ α => let ⟨e⟩ := ext α; e)
-
-@[reducible] def SetoidStructureFunctor (S T : Structure) := StructureFunctor (setoidStructure S) (setoidStructure T)
-
-def makeSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {α β : S}, α ≈ β → map α ≈ map β) :
-  SetoidStructureFunctor S T :=
-makeToSetoidStructureFunctor map FF
-
-def toSetoidFunctor (S : Structure) : StructureFunctor S (setoidStructure S) :=
-makeToSetoidStructureFunctor id (toSetoidEquiv S)
-
-def setoidIdempotenceFunctor (S : Structure) : SetoidStructureFunctor (setoidStructure S) S :=
-makeSetoidStructureFunctor id (λ ⟨e⟩ => e)
-
-def setoidIdempotence (S : Structure) : StructureEquiv (setoidStructure (setoidStructure S)) (setoidStructure S) :=
-{ toFun    := setoidIdempotenceFunctor S,
-  invFun   := toSetoidFunctor (setoidStructure S),
-  leftInv  := makeToSetoidStructureFunctorEquiv Setoid.refl,
-  rightInv := makeToSetoidStructureFunctorEquiv Setoid.refl }
-
-def setoidFunctor {S T : Structure} (F : StructureFunctor S T) : SetoidStructureFunctor S T :=
-makeSetoidStructureFunctor F.map (λ ⟨e⟩ => ⟨F.congrArgMap e⟩)
-
-def setoidSquare {S T : Structure} (F : StructureFunctor S T) :
-  toSetoidFunctor T ⊙ F ≃ setoidFunctor F ⊙ toSetoidFunctor S :=
-makeToSetoidStructureFunctorEquiv (λ α => Setoid.refl ((setoidFunctor F) α))
-
-def setoidIdempotenceSquare {S T : Structure} (F : SetoidStructureFunctor S T) :
-  F ⊙ setoidIdempotenceFunctor S ≃ setoidIdempotenceFunctor T ⊙ setoidFunctor F :=
-makeToSetoidStructureFunctorEquiv (λ α => Setoid.refl (F α))
-
-def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructure S) (setoidStructure T)
-
-theorem SetoidStructureFunctor.congrMap' {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {α β : S} : F₁ ≃ F₂ → α ≃ β → F₁ α ≃ F₂ β :=
-λ φ e => StructureFunctor.congrMap φ ⟨e⟩
-
-theorem SetoidStructureFunctor.congrMap {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {α β : S} : F₁ ≈ F₂ → α ≈ β → F₁ α ≈ F₂ β :=
-λ ⟨φ⟩ ⟨e⟩ => ⟨SetoidStructureFunctor.congrMap' φ e⟩
-
-end Setoid
-
-section Skeleton
-
-def makeToSkeletonStructureFunctor {S T : Structure} (map : S → StructureQuotient T) (FF : ∀ {α β : S}, α ≃ β → map α = map β) :
-  StructureFunctor S (skeletonStructure T) :=
-{ map     := map,
-  functor := { FF        := FF,
-               isFunctor := propFunctor } }
-
-def makeToSkeletonStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (skeletonStructure T)} (ext : ∀ α, F α ≃ G α) :
-  FunctorEquiv F G :=
-⟨ext, λ _ => proofIrrel _ _⟩
-
-def makeToSkeletonStructureFunctorEquiv {S T : Structure} {F G : StructureFunctor S (skeletonStructure T)} (ext : ∀ α, F α = G α) :
-  FunctorEquiv F G :=
-makeToSkeletonStructureFunctorEquiv' ext
-
-@[reducible] def SkeletonStructureFunctor (S T : Structure) := StructureFunctor (skeletonStructure S) (skeletonStructure T)
-
-def makeSkeletonStructureFunctor {S T : Structure} (map : StructureQuotient S → StructureQuotient T) :
-  SkeletonStructureFunctor S T :=
-makeToSkeletonStructureFunctor map (congrArg map)
-
-def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
-makeToSkeletonStructureFunctor (λ α => Quotient.mk α) (λ e => Quotient.sound e)
-
-def toSkeletonFunctor (S : Structure) : StructureFunctor S (skeletonStructure S) :=
-setoidToSkeletonFunctor S ⊙ toSetoidFunctor S
-
-def skeletonSetoidIdempotenceFunctor (S : Structure) : StructureFunctor (setoidStructure (skeletonStructure S)) (skeletonStructure S) :=
-makeToSkeletonStructureFunctor id (λ ⟨e⟩ => e)
-
-def skeletonSetoidIdempotence (S : Structure) : StructureEquiv (setoidStructure (skeletonStructure S)) (skeletonStructure S) :=
-{ toFun    := skeletonSetoidIdempotenceFunctor S,
-  invFun   := toSetoidFunctor (skeletonStructure S),
-  leftInv  := makeToSetoidStructureFunctorEquiv Setoid.refl,
-  rightInv := makeToSkeletonStructureFunctorEquiv Eq.refl }
-
-def skeletonIdempotenceFunctor (S : Structure) : SkeletonStructureFunctor (skeletonStructure S) S :=
-makeSkeletonStructureFunctor (Quotient.lift id (λ a b ⟨e⟩ => e))
-
-def skeletonIdempotence (S : Structure) : StructureEquiv (skeletonStructure (skeletonStructure S)) (skeletonStructure S) :=
-{ toFun    := skeletonIdempotenceFunctor S,
-  invFun   := toSkeletonFunctor (skeletonStructure S),
-  leftInv  := makeToSkeletonStructureFunctorEquiv (λ a => let aa := Quotient.existsRep a;
-                                                          let h₁ : (skeletonIdempotenceFunctor S) (Quotient.mk aa.1) = aa.1 := rfl;
-                                                          let h₂ := congrArg Quotient.mk h₁;
-                                                          Eq.subst (motive := λ b => Quotient.mk ((skeletonIdempotenceFunctor S) b) = b) aa.2 h₂),
-  rightInv := makeToSkeletonStructureFunctorEquiv Eq.refl }
-
-variable {S T : Structure}
-
-def skeletonMap (F : SetoidStructureFunctor S T) : skeletonStructure S → skeletonStructure T :=
-Quotient.lift (Quotient.mk ∘ F.map) (λ _ _ => Quotient.sound ∘ F.congrArgMap)
-
-def skeletonFromSetoidFunctor (F : SetoidStructureFunctor S T) : SkeletonStructureFunctor S T :=
-makeSkeletonStructureFunctor (skeletonMap F)
-
-def skeletonSetoidIdempotenceSquare {S T : Structure} (F : SkeletonStructureFunctor S T) :
-  F ⊙ skeletonSetoidIdempotenceFunctor S ≃ skeletonSetoidIdempotenceFunctor T ⊙ setoidFunctor F :=
-sorry
-
-def skeletonFunctor (F : StructureFunctor S T) : SkeletonStructureFunctor S T :=
-skeletonFromSetoidFunctor (setoidFunctor F)
-
-def setoidToSkeletonSquare {S T : Structure} (F : StructureFunctor S T) :
-  setoidToSkeletonFunctor T ⊙ setoidFunctor F ≃ skeletonFunctor F ⊙ setoidToSkeletonFunctor S :=
-makeToSkeletonStructureFunctorEquiv (λ _ => rfl)
-
-def skeletonSquare {S T : Structure} (F : StructureFunctor S T) :
-  toSkeletonFunctor T ⊙ F ≃ skeletonFunctor F ⊙ toSkeletonFunctor S :=
-makeToSkeletonStructureFunctorEquiv (λ _ => rfl)
-
-def skeletonIdempotenceSquare {S T : Structure} (F : SkeletonStructureFunctor S T) :
-  F ⊙ skeletonIdempotenceFunctor S ≃ skeletonIdempotenceFunctor T ⊙ skeletonFunctor F :=
-sorry
-
-end Skeleton
-
-end Forgetfulness
-
-open Forgetfulness
-
-
-
--- We would like to use `StructureEquiv` as an equivalence in a `Structure` that can hold structures.
--- With an inductive definition of `Structure`, we could use it directly. However, with the definition
--- of `Structure` we are using, we need to make sure that all instances of `FunctorEquiv` inside our
--- equivalence are just propositions (bringing the equivalence down to the same level as `Equiv` in
--- mathlib).
---
--- This is where the `setoidFunctor` we just defined comes into play: If we replace the two functors
--- with the induced functors between the setoid structures, we get an equivalence that fulfills the
--- same role but where equivalence of two equivalences is just a proposition.
-
-def SetoidStructureEquiv (S T : Structure) := StructureEquiv (setoidStructure S) (setoidStructure T)
-
-namespace SetoidStructureEquiv
-
-def refl  (S     : Structure)                                                               : SetoidStructureEquiv S S :=
-  StructureEquiv.refl  (setoidStructure S)
-def symm  {S T   : Structure} (e : SetoidStructureEquiv S T)                                : SetoidStructureEquiv T S :=
-  StructureEquiv.symm  e
-def trans {S T U : Structure} (e : SetoidStructureEquiv S T) (f : SetoidStructureEquiv T U) : SetoidStructureEquiv S U :=
-  StructureEquiv.trans e f
-
--- When working with `SetoidStructureEquiv`, we can ignore `leftInv` and `rightInv` because they are
--- proofs.
-def equivEquiv {S T : Structure} (e f : SetoidStructureEquiv S T) :=
-e.toFun ≈ f.toFun ∧ e.invFun ≈ f.invFun
-
-namespace equivEquiv
-
-variable {S T : Structure}
-
-theorem refl  (e     : SetoidStructureEquiv S T)                                           : equivEquiv e e :=
-⟨Setoid.refl  e.toFun,       Setoid.refl  e.invFun⟩
-
-theorem symm  {e f   : SetoidStructureEquiv S T} (φ : equivEquiv e f)                      : equivEquiv f e :=
-⟨Setoid.symm  φ.left,        Setoid.symm  φ.right⟩
-
-theorem trans {e f g : SetoidStructureEquiv S T} (φ : equivEquiv e f) (ψ : equivEquiv f g) : equivEquiv e g :=
-⟨Setoid.trans φ.left ψ.left, Setoid.trans φ.right ψ.right⟩
-
-instance equivSetoid : Setoid (SetoidStructureEquiv S T) := ⟨equivEquiv, ⟨refl, symm, trans⟩⟩
-
-end equivEquiv
-
-def structureEquiv (S T : Structure) : BundledSetoid := ⟨SetoidStructureEquiv S T⟩
-
-theorem congrArgComp {S T U : Structure} {e₁ e₂ : SetoidStructureEquiv S T} {f₁ f₂ : SetoidStructureEquiv T U} (he : e₁ ≈ e₂) (hf : f₁ ≈ f₂) :
-  trans e₁ f₁ ≈ trans e₂ f₂ :=
-⟨compFun.congrArg' he.left hf.left, compFun.congrArg' hf.right he.right⟩
-
-theorem assoc {S T U V : Structure} (e : SetoidStructureEquiv S T) (f : SetoidStructureEquiv T U) (g : SetoidStructureEquiv U V) :
-  trans (trans e f) g ≈ trans e (trans f g) :=
-⟨compFun.assoc' e.toFun f.toFun g.toFun, compFun.assoc' g.invFun f.invFun e.invFun⟩
-
-theorem leftId  {S T : Structure} (e : SetoidStructureEquiv S T) : trans e (refl T) ≈ e :=
-⟨idFun.leftId' e.toFun, idFun.leftId' e.invFun⟩
-
-theorem rightId {S T : Structure} (e : SetoidStructureEquiv S T) : trans (refl S) e ≈ e :=
-⟨idFun.rightId' e.toFun, idFun.rightId' e.invFun⟩
-
-theorem congrArgInv {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T} (he : e₁ ≈ e₂) :
-  symm e₁ ≈ symm e₂ :=
-⟨he.right, he.left⟩
-
-theorem leftInv'  {S T : Structure} (e : SetoidStructureEquiv S T) : e.invFun ⊙ e.toFun ≈ idFun :=
-⟨e.leftInv⟩
-theorem rightInv' {S T : Structure} (e : SetoidStructureEquiv S T) : e.toFun ⊙ e.invFun ≈ idFun :=
-⟨e.rightInv⟩
-
-theorem leftInv''  {S T : Structure} (e : SetoidStructureEquiv S T) : trans e (symm e) ≈ refl S :=
-⟨leftInv'  e, leftInv'  e⟩
-theorem rightInv'' {S T : Structure} (e : SetoidStructureEquiv S T) : trans (symm e) e ≈ refl T :=
-⟨rightInv' e, rightInv' e⟩
-
-theorem invInv {S T : Structure} (e : SetoidStructureEquiv S T) : symm (symm e) ≈ e := Setoid.refl e
-
-theorem compInv {S T U : Structure} (e : SetoidStructureEquiv S T) (f : SetoidStructureEquiv T U) :
-  symm (trans e f) ≈ trans (symm f) (symm e) :=
-Setoid.refl (trans (symm f) (symm e))
-
-theorem idInv (S : Structure) : symm (refl S) ≈ refl S := Setoid.refl (refl S)
-
-instance equivHasIso : HasIsomorphisms structureEquiv :=
-{ comp         := trans,
-  congrArgComp := congrArgComp,
-  assoc        := assoc,
-  id           := refl,
-  leftId       := leftId,
-  rightId      := rightId,
-  inv          := symm,
-  congrArgInv  := congrArgInv,
-  leftInv      := leftInv'',
-  rightInv     := rightInv'',
-  invInv       := invInv,
-  compInv      := compInv,
-  idInv        := idInv }
-
-end SetoidStructureEquiv
-
-
-
--- We can convert any equivalence to one between setoid structures.
-
-def toSetoidStructureEquiv {S T : Structure} (e : StructureEquiv S T) : SetoidStructureEquiv S T :=
-{ toFun    := setoidFunctor e.toFun,
-  invFun   := setoidFunctor e.invFun,
-  leftInv  := makeToSetoidStructureFunctorEquiv (λ α => ⟨⟨e.leftInv.ext  α⟩⟩),
-  rightInv := makeToSetoidStructureFunctorEquiv (λ α => ⟨⟨e.rightInv.ext α⟩⟩) }
-
--- An `InstanceEquiv` of a `SetoidStructureEquiv` is what we expect it to be.
-
-theorem setoidInstanceEquiv {S T : Structure} (e : SetoidStructureEquiv S T) (a : S) (b : T) :
-  InstanceEquiv e a b ↔ e.toFun a ≈ b :=
-equivInSetoidStructure T (e.toFun a) b
-
-
-
--- Just a minor lemma about `InstanceEquiv` that we can only state with respect to
--- `SetoidStructureEquiv` because we have not defined any equivalence for the more general
--- `StructureEquiv`.
-
-theorem InstanceEquiv.congrArg {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T} (h : e₁ ≈ e₂) (a : S) (b : T) :
-  InstanceEquiv e₁ a b → InstanceEquiv e₂ a b :=
-let ⟨φ⟩ := h.left;
-let f := IsEquivalence.trans (IsEquivalence.symm (φ.ext a));
-f
-
-
-
--- Using `SetoidStructureEquiv`, now we can actually build a "universe" structure, or equivalently the
--- groupoid of lower-level groupoids. Note that the objects are actual structures (of a lower Lean
--- universe), and the equivalences between structures are essentially `Equiv`s between those structures.
--- However, equivalence of two such equivalences is no longer an object but just a proposition.
-
-instance structureHasStructure : HasStructure Structure := ⟨SetoidStructureEquiv.structureEquiv⟩
 def universeStructure : Structure := ⟨Structure⟩
 
 instance : IsType (IsType.type universeStructure) := structureIsType

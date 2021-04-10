@@ -4,9 +4,13 @@
 
 
 import Structure.Basic
+import Structure.Forgetfulness
 import Structure.UniverseFunctor
-import Structure.SortStructure  -- TODO: We should probably move everything that depends on this to `ConcreteBuildingBlocks.lean`.
 import Structure.AbstractPiSigma
+
+-- A quick&dirty port of the parts of `data.equiv.basic` we need; should be replaced once it becomes
+-- available in Lean 4 mathlib.
+import Structure.Data.Equiv
 
 open Morphisms
 open Structure
@@ -17,6 +21,8 @@ open PiSigma
 open PiSigmaEquivalences
 
 
+
+set_option autoBoundImplicitLocal false
 
 universes u v
 
@@ -39,7 +45,7 @@ namespace BuildingBlocks
 -- that the two types are equivalent.
 
 def HasIso {F : StructureDependency} (a b : SigmaExpr F) (I : ∀ e : a.fst ≃ b.fst, Prop) :=
-∀ e : a.fst ≃ b.fst, InstanceEquiv (congrArgMap F.F e) a.snd b.snd ↔ I e
+∀ e : a.fst ≃ b.fst, a.snd ≈[congrArgMap F.F e] b.snd ↔ I e
 
 structure InstanceIsoCriterion {F : StructureDependency} (a b : SigmaExpr F) where
 {I : ∀ e : a.fst ≃ b.fst, Prop}
@@ -77,14 +83,14 @@ def equivProd : IndependentPair S T ≃≃ PProd S.U T.U :=
 
 -- The instance equivalence does not depend on the type equivalence.
 
-theorem iso (a b : IndependentPair S T) : HasIso a b (λ e => a.snd ≈ b.snd) :=
-λ e => Iff.refl (a.snd ≈ b.snd)
+theorem iso (a b : IndependentPair S T) : HasIso a b (λ e => SetoidEquiv T a.snd b.snd) :=
+λ e => Iff.refl (SetoidEquiv T a.snd b.snd)
 
 def isoCriterion : IsoCriterion (independentPairDependency S T) := λ a b => ⟨iso S T a b⟩
 
 -- For this particular case, we can also specialize `isoEquiv` a bit.
 
-def equiv (a b : IndependentPair S T) : SigmaEquiv a b ≃≃ PProd (a.fst ≃ b.fst) (a.snd ≈ b.snd) :=
+def equiv (a b : IndependentPair S T) : SigmaEquiv a b ≃≃ PProd (a.fst ≃ b.fst) (SetoidEquiv T a.snd b.snd) :=
 { toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
@@ -116,7 +122,7 @@ def equivSigma : InstanceInstance ≃≃ Σ' S : Structure, S.U :=
   rightInv := λ ⟨S, x⟩ => rfl }
 
 theorem iso (a b : InstanceInstance) : HasIso a b (λ e => e.toFun a.snd ≈ b.snd) :=
-λ e => setoidInstanceEquiv e a.snd b.snd
+λ e => SetoidInstanceEquiv.setoidInstanceEquiv e a.snd b.snd
 
 def isoCriterion : IsoCriterion instanceDependency := λ a b => ⟨iso a b⟩
 
@@ -168,20 +174,20 @@ section FunctorInstanceDef
 
 variable {S : Structure} (F G : UniverseFunctor S)
 
-def functorMap (α : S) := setoidFunctorStructure (F α) (G α)
+def functorMap (α : S) := functorStructure (F α) (G α)
 
 def functorToFun {α β : S} (e : α ≃ β) : SetoidStructureFunctor (functorMap F G α) (functorMap F G β) :=
 { map     := λ f => ((congrArgMap G e).toFun ⊙ f) ⊙ (congrArgMap F e).invFun,
   functor := sorry }  -- TODO: Since we are dealing with setoid functors here, we just need to combine `compFun.congrArg'` etc.
 
-def functorFunDesc : UniverseFunctorDesc S :=
+def functorFunDesc : SetoidUniverseFunctorDesc S :=
 { map            := functorMap   F G,
   toFun          := functorToFun F G,
   respectsSetoid := sorry,
   respectsComp   := sorry,
   respectsId     := sorry }
 
-def functorFun : UniverseFunctor S := UniverseFunctorDesc.functor (functorFunDesc F G)
+def functorFun : UniverseFunctor S := SetoidUniverseFunctorDesc.universeFunctor (functorFunDesc F G)
 
 def functorDependency : StructureDependency := ⟨S, functorFun F G⟩
 
@@ -192,15 +198,16 @@ namespace FunctorInstance
 -- The isomorphism criterion for the functors `a.snd` and `b.snd`, as described above.
 
 theorem iso (a b : FunctorInstance F G) :
-  HasIso a b (λ e => ∀ x y, InstanceEquiv (congrArgMap F e) x y → InstanceEquiv (congrArgMap G e) (a.snd.map x) (b.snd.map y)) :=
-λ e => let f := congrArgMap F e;
-       let g := congrArgMap G e;
-       ⟨λ h₁ x y h₂ => let ⟨h₃⟩ : (g.toFun ⊙ a.snd) ⊙ f.invFun ≈ b.snd := h₁;
-                       let h₄ : g.toFun ⊙ a.snd ≃ b.snd ⊙ f.toFun := sorry;
-                       let h₅ : g.toFun (a.snd.map x) ≃ b.snd.map (f.toFun x) := h₄.ext x;
-                       let h₆ : g.toFun (a.snd.map x) ≃ b.snd.map y := sorry;
-                       (setoidInstanceEquiv g (a.snd.map x) (b.snd.map y)).mpr ⟨h₆⟩,
-        sorry⟩
+  HasIso a b (λ e => ∀ x y, x ≈[congrArgMap F e] y → a.snd.map x ≈[congrArgMap G e] b.snd.map y) :=
+--λ e => let f := congrArgMap F e;
+--       let g := congrArgMap G e;
+--       ⟨λ h₁ x y h₂ => let ⟨h₃⟩ := h₁;
+--                       let h₄ : g.toFun ⊙ a.snd ≃ b.snd ⊙ f.toFun := sorry;
+--                       let h₅ : g.toFun (a.snd.map x) ≃ b.snd.map (f.toFun x) := h₄.ext x;
+--                       let h₆ : g.toFun (a.snd.map x) ≃ b.snd.map y := sorry;
+--                       h₆,
+--        sorry⟩
+sorry
 
 -- If we have isomorphism criteria for `F` and `G`, we can combine them with `iso`. This way, we can not
 -- only compose the building blocks but also their isomorphism criteria.

@@ -11,6 +11,8 @@ open PiSigma
 
 
 
+set_option autoBoundImplicitLocal false
+
 universes u v
 
 

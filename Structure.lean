@@ -130,7 +130,7 @@
 -- functors are just generalized functions. If we then define "injective", "surjective", and "bijective"
 -- in a straightforward way, each "bijective" functor actually has an inverse functor -- even though the
 -- formalization is entirely constructive.
--- (More details in `Basic.lean` at `section Properties`.)
+-- (More details in `FunctorProperties.lean`.)
 
 
 -- TODO:
