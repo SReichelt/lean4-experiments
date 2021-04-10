@@ -1,5 +1,6 @@
 import Structure.Basic
 
+open Morphisms
 open Structure
 open StructureFunctor
 
@@ -90,7 +91,7 @@ theorem respectsComp {S T U : Structure} (F : StructureFunctor S T) (G : Structu
 makeToSetoidStructureFunctorEquiv (λ α : S => ⟨⟨IsEquivalence.refl (G (F α))⟩⟩)
 
 theorem respectsId (S : Structure) :
-  setoidFunctor (@idFun S) ≃ idFun :=
+  setoidFunctor (@idFun S) ≃ @idFun (setoidStructure S) :=
 makeToSetoidStructureFunctorEquiv (λ α : S => ⟨⟨IsEquivalence.refl α⟩⟩)
 
 end setoidFunctor
@@ -179,7 +180,7 @@ open SetoidStructureEquiv
 
 -- An `InstanceEquiv` of a `SetoidStructureEquiv` is what we expect it to be.
 
-@[reducible] def SetoidInstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) :=
+@[reducible] def SetoidInstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) : Prop :=
 InstanceEquiv (toSetoidStructureEquiv e) a b
 
 namespace SetoidInstanceEquiv
@@ -187,19 +188,19 @@ namespace SetoidInstanceEquiv
 notation:25 a:26 " ≈[" e:0 "] " b:26 => SetoidInstanceEquiv e a b
 
 theorem refl' (S     : Structure)                         {a b : S} (h : a ≈ b)   :
-  a ≈[StructureEquiv.refl S] b :=
+  a ≈[id_ S] b :=
 h
 
 theorem refl  (S     : Structure)                         (a : S)                 :
-  a ≈[StructureEquiv.refl S] a :=
+  a ≈[id_ S] a :=
 refl' S (Setoid.refl a)
 
 theorem symm  {S T   : Structure} (e : S ≃ T)             (a : S) (b : T)         :
-  a ≈[e] b → b ≈[StructureEquiv.symm e] a :=
+  a ≈[e] b → b ≈[e⁻¹] a :=
 InstanceEquiv.symm (toSetoidStructureEquiv e) a b
 
 theorem trans {S T U : Structure} (e : S ≃ T) (f : T ≃ U) (a : S) (b : T) (c : U) :
-  a ≈[e] b → b ≈[f] c → a ≈[StructureEquiv.trans e f] c :=
+  a ≈[e] b → b ≈[f] c → a ≈[f • e] c :=
 λ φ ψ => let χ : f.toFun (e.toFun a) ≈ c := InstanceEquiv.trans (toSetoidStructureEquiv e) (toSetoidStructureEquiv f) a b c φ ψ;
          χ
 

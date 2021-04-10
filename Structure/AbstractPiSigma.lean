@@ -40,7 +40,7 @@ def constDep (S T : Structure) : StructureDependency := ⟨S, constFun T⟩
 
 structure StructureDependencyEquiv (F G : StructureDependency) where
 (φ : F.S ≃ G.S)
-(ψ : F.F ≃ G.F ⊙ φ.toFun)
+(ψ : FunctorEquiv F.F (G.F ⊙ φ.toFun))
 
 namespace StructureDependencyEquiv
 
@@ -147,7 +147,7 @@ def funToConstPi {S T : Structure} (F : StructureFunctor S (setoidStructure T)) 
 { map      := F.map,
   mapEquiv := congrArgMap F }
 
-def transportPi {S : Structure} {F₁ F₂ : UniverseFunctor S} (φ : F₁ ≃ F₂) :
+def transportPi {S : Structure} {F₁ F₂ : UniverseFunctor S} (φ : FunctorEquiv F₁ F₂) :
   PiExpr ⟨S, F₁⟩ → PiExpr ⟨S, F₂⟩ :=
 λ f => { map      := λ α => (φ.ext α).toFun (f α),
          mapEquiv := λ {α β} e => let ⟨n⟩ := φ.nat e;
@@ -203,7 +203,7 @@ def constDepToFun :
   functor := { FF        := λ e => makeToSetoidStructureFunctorEquiv' (λ α => e α),
                isFunctor := { respectsSetoid := id,
                               respectsComp   := λ φ ψ => Setoid.refl (ψ • φ),
-                              respectsId     := λ f   => Setoid.refl (id_ f),
+                              respectsId     := λ f   => Setoid.refl (id__ f),
                               respectsInv    := λ φ   => Setoid.refl φ⁻¹ } } }
 
 def constDepInvFun :
@@ -212,7 +212,7 @@ def constDepInvFun :
   functor := { FF        := λ e => e.ext,
                isFunctor := { respectsSetoid := id,
                               respectsComp   := λ φ ψ => Setoid.refl (ψ • φ),
-                              respectsId     := λ F   => Setoid.refl (id_ F),
+                              respectsId     := λ F   => Setoid.refl (id__ F),
                               respectsInv    := λ φ   => Setoid.refl φ⁻¹ } } }
 
 def constDepEquiv :
@@ -354,7 +354,7 @@ def projFstFunctor : StructureFunctor (sigmaStructure F) F.S :=
   functor := { FF        := PSigma.fst,
                isFunctor := { respectsSetoid := id,
                               respectsComp   := λ e f => Setoid.refl (f • e),
-                              respectsId     := λ α   => Setoid.refl (id_ α),
+                              respectsId     := λ α   => Setoid.refl (id__ α),
                               respectsInv    := λ e   => Setoid.refl e⁻¹ } } }
 
 def projSndDependencyFunctor : UniverseFunctor (sigmaStructure F) :=

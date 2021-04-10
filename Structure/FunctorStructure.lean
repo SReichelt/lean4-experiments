@@ -2,6 +2,7 @@ import Structure.Basic
 import Structure.Forgetfulness
 import Structure.UniverseFunctor
 
+open Morphisms
 open Structure
 open StructureFunctor
 open Forgetfulness
@@ -40,7 +41,7 @@ def respectsEquiv {T₁ T₂ : Structure} :
   isFunctor := sorry }
 
 def respectsId (T : Structure) :
-  outgoingToFun S (StructureEquiv.refl T) ≃ idFun :=
+  outgoingToFun S (StructureEquiv.refl T) ≃ @idFun (functorStructure S T) :=
 { ext := λ F => idFun.leftId F,
   nat := sorry }
 
@@ -81,7 +82,7 @@ def respectsEquiv {T₁ T₂ : Structure} :
   isFunctor := sorry }
 
 def respectsId (T : Structure) :
-  incomingToFun S (StructureEquiv.refl T) ≃ idFun :=
+  incomingToFun S (StructureEquiv.refl T) ≃ @idFun (functorStructure T S) :=
 { ext := λ F => idFun.rightId F,
   nat := sorry }
 

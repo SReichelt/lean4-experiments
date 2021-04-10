@@ -20,6 +20,10 @@
 
 
 
+import Structure.Data.Notation
+
+
+
 set_option autoBoundImplicitLocal false
 
 universes u v w
@@ -74,7 +78,7 @@ structure BundledSetoid where
 [s : Setoid α]
 
 instance bundledSetoidIsType : IsType BundledSetoid := ⟨BundledSetoid.α⟩
-instance (s : BundledSetoid) : Setoid (IsType.type s) := s.s
+instance bundledSetoid (s : BundledSetoid) : Setoid (IsType.type s) := s.s
 
 def eqSetoid (α : Sort u) : BundledSetoid :=
 { α := α,
@@ -175,7 +179,7 @@ class HasComposition (R : GeneralizedRelation α) extends HasComp R where
 class HasId (R : GeneralizedRelation α) extends HasComposition R where
 (id (a : α) : R a a)
 
-def id__ {R : GeneralizedRelation α} [h : HasId R] (a : α) := @HasId.id α R h a
+def id_ {R : GeneralizedRelation α} [h : HasId R] (a : α) := @HasId.id α R h a
 
 class HasMorphisms (R : GeneralizedRelation α) extends HasId R where
 (leftId  {a b : α} (f : R a b) : id b • f ≈ f)
@@ -244,15 +248,18 @@ namespace HasStructure
 
 variable {U : Sort u} [h : HasStructure U]
 
-instance hasCmp  : HasComposition  h.M := h.h.toHasComposition
-instance hasMor  : HasMorphisms    h.M := h.h.toHasMorphisms
-instance hasIso  : HasIsomorphisms h.M := h.h
-instance isEquiv : IsEquivalence   h.M := isoEquiv h.M
+instance hasEquivalence : HasEquivalence U U := ⟨h.M⟩
 
-def Equv (α β : U) := IsType.type (h.M α β)
-infix:25 " ≃ " => Equv
+instance equivalenceIsType : IsType (HasEquivalence.γ U U) := bundledSetoidIsType
+instance (α β : U) : Setoid (IsType.type (α ≃ β)) := (h.M α β).s
 
-instance (α β : U) : Setoid (α ≃ β) := (h.M α β).s
+instance hasComp : HasComp         (@HasEquivalence.Equiv U U hasEquivalence) := h.h.toHasComp
+instance hasCmp  : HasComposition  (@HasEquivalence.Equiv U U hasEquivalence) := h.h.toHasComposition
+instance hasId   : HasId           (@HasEquivalence.Equiv U U hasEquivalence) := h.h.toHasId
+instance hasMor  : HasMorphisms    (@HasEquivalence.Equiv U U hasEquivalence) := h.h.toHasMorphisms
+instance hasInv  : HasInv          (@HasEquivalence.Equiv U U hasEquivalence) := h.h.toHasInv
+instance hasIso  : HasIsomorphisms (@HasEquivalence.Equiv U U hasEquivalence) := h.h
+instance isEquiv : IsEquivalence   (@HasEquivalence.Equiv U U hasEquivalence) := isoEquiv (@HasEquivalence.Equiv U U hasEquivalence)
 
 end HasStructure
 
@@ -282,19 +289,22 @@ namespace Structure
 
 instance structureIsType : IsType Structure := ⟨Structure.U⟩
 
-def iso (S : Structure) := S.h.M
+def iso (S : Structure) : GeneralizedRelation (IsType.type S) := S.h.M
 
 variable {S : Structure}
 
 instance hasStructure : HasStructure (IsType.type S) := S.h
 
+instance hasComp : HasComp         (iso S) := hasStructure.hasComp
 instance hasCmp  : HasComposition  (iso S) := hasStructure.hasCmp
+instance hasId   : HasId           (iso S) := hasStructure.hasId
 instance hasMor  : HasMorphisms    (iso S) := hasStructure.hasMor
+instance hasInv  : HasInv          (iso S) := hasStructure.hasInv
 instance hasIso  : HasIsomorphisms (iso S) := hasStructure.hasIso
 instance isEquiv : IsEquivalence   (iso S) := hasStructure.isEquiv
 
-def id_ (α : S) : α ≃ α := id__ α
-def id' {α : S} := id_ α
+def id__ (α : S) : α ≃ α := id_ α
+def id' {α : S} := id__ α
 
         theorem congrArgComp {α β γ   : S} {f₁ f₂ : α ≃ β} {g₁ g₂ : β ≃ γ}     : f₁ ≈ f₂ → g₁ ≈ g₂ → g₁ • f₁ ≈ g₂ • f₂ := hasIso.congrArgComp
         theorem assoc        {α β γ δ : S} (f : α ≃ β) (g : β ≃ γ) (h : γ ≃ δ) : h • (g • f) ≈ (h • g) • f             := hasIso.assoc    f g h
@@ -437,7 +447,7 @@ namespace Forgetfulness
 
 variable (S : Structure)
 
-def SetoidEquiv (α β : S) := Nonempty (α ≃ β)
+def SetoidEquiv (α β : S) := Nonempty (IsType.type (α ≃ β))
 def toSetoidEquiv {α β : S} (e : α ≃ β) : SetoidEquiv S α β := ⟨e⟩
 def setoidEquiv : Equivalence (SetoidEquiv S) :=
 ⟨λ α => ⟨refl α⟩, λ ⟨e⟩ => ⟨symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨trans e f⟩⟩
@@ -446,7 +456,7 @@ instance structureToSetoid : Setoid (IsType.type S) := ⟨SetoidEquiv S, setoidE
 def setoidStructure : Structure := setoidInstanceStructure (IsType.type S)
 
 -- Make type class resolution happy.
-instance : IsEquivalence (λ a b : (setoidStructure S).U => (structureToSetoid S).r a b) :=
+instance : IsEquivalence (λ a b : IsType.type (setoidStructure S) => (structureToSetoid S).r a b) :=
 setoidIsEquiv (IsType.type S)
 
 theorem equivInSetoidStructure (a b : setoidStructure S) : a ≃ b ↔ a ≈ b := ⟨λ e => ⟨e⟩, λ ⟨e⟩ => e⟩
@@ -471,7 +481,7 @@ namespace StructureProduct
 
 variable {S T : Structure}
 
-def ProductEquiv (P Q : StructureProduct S T) := PProd (P.fst ≃ Q.fst) (P.snd ≃ Q.snd)
+def ProductEquiv (P Q : StructureProduct S T) := PProd (IsType.type (P.fst ≃ Q.fst)) (IsType.type (P.snd ≃ Q.snd))
 
 namespace ProductEquiv
 
@@ -584,7 +594,7 @@ class IsCompositionFunctor [HasComposition  R.R] [HasComposition  S.R]
 
 class IsMorphismFunctor    [HasMorphisms    R.R] [HasMorphisms    S.R]
   extends IsCompositionFunctor R S FF where
-(respectsId     (α     : A)                         : FF (id__ (R.f α)) ≈ id__ (S.f α))
+(respectsId     (α     : A)                         : FF (id_ (R.f α)) ≈ id_ (S.f α))
 
 class IsIsomorphismFunctor [HasIsomorphisms R.R] [HasIsomorphisms S.R]
   extends IsMorphismFunctor    R S FF where
@@ -1124,7 +1134,7 @@ theorem respectsComp {F : StructureFunctor S T} {G₁ G₂ G₃ : StructureFunct
 λ α => Setoid.refl (φ₂.ext (F α) • φ₁.ext (F α))
 
 theorem respectsId {F : StructureFunctor S T} (G : StructureFunctor T U) :
-  congrArgLeft (id_ (S := functorStructure T U) G) ≈ id_ (S := functorStructure S U) (G ⊙ F) :=
+  congrArgLeft (id_ G) ≈ id_ (G ⊙ F) :=
 λ α => Setoid.refl (id_ (G (F α)))
 
 theorem respectsInv {F : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (φ : G₁ ≃ G₂) :
@@ -1149,7 +1159,7 @@ theorem respectsComp {F₁ F₂ F₃ : StructureFunctor S T} {G : StructureFunct
 λ α => StructureFunctor.respectsComp G (φ₁.ext α) (φ₂.ext α)
 
 theorem respectsId (F : StructureFunctor S T) {G : StructureFunctor T U} :
-  congrArgRight (id_ (S := functorStructure S T) F) ≈ id_ (S := functorStructure S U) (G ⊙ F) :=
+  congrArgRight (id_ F) ≈ id_ (G ⊙ F) :=
 λ α => StructureFunctor.respectsId G (F α)
 
 theorem respectsInv {F₁ F₂ : StructureFunctor S T} {G : StructureFunctor T U} (φ : F₁ ≃ F₂) :
@@ -1183,9 +1193,9 @@ let h₅ := applyAssoc (S := functorStructure S U) h₄;
 Setoid.trans h₁ h₅
 
 theorem respectsId (F : StructureFunctor S T) (G : StructureFunctor T U) :
-  congrArg (id_ (S := functorStructure S T) F) (id_ (S := functorStructure T U) G) ≈ id_ (S := functorStructure S U) (G ⊙ F) :=
+  congrArg (id_ F) (id_ G) ≈ id_ (G ⊙ F) :=
 let h₁ := FunctorEquiv.functorEquivHasIso.congrArgComp (congrArgLeft.respectsId G) (congrArgRight.respectsId F);
-Setoid.trans h₁ (leftId (S := functorStructure S U) (id_ (S := functorStructure S U) (G ⊙ F)))
+Setoid.trans h₁ (leftId (S := functorStructure S U) id')
 
 theorem respectsInv {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (φ : F₁ ≃ F₂) (ψ : G₁ ≃ G₂) :
   congrArg φ⁻¹ ψ⁻¹ ≈ (congrArg φ ψ)⁻¹ :=
@@ -1224,7 +1234,7 @@ def constFun (c : T) : StructureFunctor S T :=
 
 
 
-@[reducible] def IsId (F : StructureFunctor S S) := F ≃ idFun
+@[reducible] def IsId (F : StructureFunctor S S) := F ≃ @idFun S
 
 namespace IsId
 
@@ -1649,7 +1659,18 @@ instance equivHasIso : HasIsomorphisms structureEquiv :=
 end StructureEquiv
 
 instance structureHasStructure : HasStructure Structure := ⟨StructureEquiv.structureEquiv⟩
-instance (S T : Structure) : HasStructure (S ≃ T) := StructureEquiv.equivHasStructure S T
+instance structureHasEquivalence : HasEquivalence Structure Structure := ⟨StructureEquiv.structureEquiv⟩
+instance structureEquivIsType : IsType (HasEquivalence.γ Structure Structure) := bundledSetoidIsType
+instance (S T : Structure) : Setoid (IsType.type (S ≃ T)) := bundledSetoid (StructureEquiv.structureEquiv S T)
+instance (S T : Structure) : HasStructure (IsType.type (S ≃ T)) := StructureEquiv.equivHasStructure S T
+
+instance hasComp : HasComp         (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasComp
+instance hasCmp  : HasComposition  (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasCmp
+instance hasId   : HasId           (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasId
+instance hasMor  : HasMorphisms    (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasMor
+instance hasInv  : HasInv          (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasInv
+instance hasIso  : HasIsomorphisms (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasIso
+instance isEquiv : IsEquivalence   (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.isEquiv
 
 
 
@@ -1663,19 +1684,19 @@ namespace InstanceEquiv
 notation:25 a:26 " ≃[" e:0 "] " b:26 => InstanceEquiv e a b
 
 def refl' (S     : Structure)                         {a b : S} (h : a ≃ b)   :
-  a ≃[StructureEquiv.refl S] b :=
+  a ≃[id_ S] b :=
 h
 
 def refl  (S     : Structure)                         (a : S)                 :
-  a ≃[StructureEquiv.refl S] a :=
+  a ≃[id_ S] a :=
 refl' S (IsEquivalence.refl a)
 
 def symm  {S T   : Structure} (e : S ≃ T)             (a : S) (b : T)         :
-  a ≃[e] b → b ≃[StructureEquiv.symm e] a :=
+  a ≃[e] b → b ≃[e⁻¹] a :=
 λ φ => IsEquivalence.trans (IsEquivalence.symm (congrArgMap e.invFun φ)) (e.isInv.leftInv.ext a)
 
 def trans {S T U : Structure} (e : S ≃ T) (f : T ≃ U) (a : S) (b : T) (c : U) :
-  a ≃[e] b → b ≃[f] c → a ≃[StructureEquiv.trans e f] c :=
+  a ≃[e] b → b ≃[f] c → a ≃[f • e] c :=
 λ φ ψ => IsEquivalence.trans (congrArgMap f.toFun φ) ψ
 
 def congrArgEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (φ : e₁ ≃ e₂) (a : S) (b : T) :

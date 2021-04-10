@@ -18,7 +18,7 @@ variable {S T : Structure} (F : StructureFunctor S T)
 -- However, the definitions are only well-behaved if we add some additional functoriality conditions.
 
 def Injective  := GeneralizedFunctor F.map id  -- `∀ α β, F α ≃ F β → α ≃ β` plus functoriality
-def Surjective := Σ' h : (∀ β, Σ' α, F α ≃ β),
+def Surjective := Σ' h : (∀ β, Σ' α, IsType.type (F α ≃ β)),
                      Σ' φ : Functor (λ β => (h β).fst),
                         GeneralizedNaturalTransformation (comp.genFun' F.map F.functor φ) id.genFun
 def Bijective  := PProd (Injective F) (Surjective F)
@@ -69,11 +69,11 @@ namespace inverse
 -- TODO: For the naturality condition, we should probably build some infrastructure around the
 -- interaction between `DependentEquiv` and `GeneralizedNaturalTransformation`.
 
-def leftInv : inverse F h ⊙ F ≃ idFun :=
+def leftInv : inverse F h ⊙ F ≃ @idFun S :=
 { ext := inverseElement.isInverse' F h,
   nat := sorry }
 
-def rightInv : F ⊙ inverse F h ≃ idFun :=
+def rightInv : F ⊙ inverse F h ≃ @idFun T :=
 { ext := inverseElement.isInverse F h,
   nat := sorry }
 

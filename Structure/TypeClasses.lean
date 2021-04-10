@@ -25,7 +25,7 @@ namespace TypeClasses
 
 def TypeClass := Sort u → Sort v
 
-def TypeClassEquiv (C D : TypeClass) := ∀ α, C α ≃≃ D α
+def TypeClassEquiv (C D : TypeClass) := ∀ α, C α ≃ D α
 
 @[reducible] def TypeClassFunctor := StructureFunctor sortStructure sortStructure
 
@@ -62,7 +62,7 @@ bundled C α x ≃ bundled C β y
 -- From an isomorphism, we can recover the `Equiv` of the types and the condition on the instances.
 
 def isoTypeEquiv {C : TypeClass} [h : StructuralTypeClass C] {α : Sort u} {x : C α} {β : Sort u} {y : C β} (e : Isomorphism α x β y) :
-  α ≃≃ β :=
+  α ≃ β :=
 e.fst
 
 def isoInstanceEquiv {C : TypeClass} [h : StructuralTypeClass C] {α : Sort u} {x : C α} {β : Sort u} {y : C β} (e : Isomorphism α x β y) :

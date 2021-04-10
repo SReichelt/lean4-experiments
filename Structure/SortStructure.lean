@@ -9,7 +9,7 @@ import Structure.Forgetfulness
 
 -- A quick&dirty port of the parts of `data.equiv.basic` we need; should be replaced once it becomes
 -- available in Lean 4 mathlib.
-import Structure.Data.Equiv
+import Structure.Data.Equiv.Basic
 
 open Morphisms
 open StructureFunctor
@@ -43,8 +43,8 @@ instance hasCmp   : HasComposition  equivRel := ⟨congrArgComp, Equiv.trans_ass
 
 instance hasId    : HasId           equivRel := ⟨Equiv.refl⟩
 
-theorem leftId  {α β : Sort u} (f : equivRel α β) : id__ β • f ≈ f := Equiv.trans_refl f
-theorem rightId {α β : Sort u} (f : equivRel α β) : f • id__ α ≈ f := Equiv.refl_trans f
+theorem leftId  {α β : Sort u} (f : equivRel α β) : id_ β • f ≈ f := Equiv.trans_refl f
+theorem rightId {α β : Sort u} (f : equivRel α β) : f • id_ α ≈ f := Equiv.refl_trans f
 
 instance hasMor   : HasMorphisms    equivRel := ⟨leftId, rightId⟩
 
@@ -63,7 +63,7 @@ end Equiv
 
 -- Now, `Equiv` gives us a structure for `Sort u`.
 
-instance sortHasStructure  : HasStructure (Sort u) := ⟨Equiv.equivRel⟩
+instance sortHasStructure : HasStructure (Sort u) := ⟨Equiv.equivRel⟩
 def sortStructure : Structure := ⟨Sort u⟩
 
 
@@ -88,7 +88,7 @@ def sortStructure : Structure := ⟨Sort u⟩
 
 @[reducible] def InstanceStructureEquiv (α β : Sort u) := StructureEquiv (instanceStructure α) (instanceStructure β)
 
-def instanceStructureEquiv {α β : Sort u} (e : α ≃≃ β) : InstanceStructureEquiv α β :=
+def instanceStructureEquiv {α β : Sort u} (e : α ≃ β) : InstanceStructureEquiv α β :=
 { toFun    := instanceStructureFunctor e.toFun,
   invFun   := instanceStructureFunctor e.invFun,
   isInv  := { leftInv  := { ext := e.leftInv,
@@ -100,19 +100,19 @@ def instanceStructureEquiv {α β : Sort u} (e : α ≃≃ β) : InstanceStructu
 
 namespace instanceStructureEquiv
 
-instance {α β : Sort u} : Coe (α ≃≃ β) (InstanceStructureEquiv α β) := ⟨instanceStructureEquiv⟩
+instance {α β : Sort u} : Coe (α ≃ β) (InstanceStructureEquiv α β) := ⟨instanceStructureEquiv⟩
 
-@[simp] theorem instanceEquiv {α β : Sort u} (e : α ≃≃ β) (a : α) (b : β) :
+@[simp] theorem instanceEquiv {α β : Sort u} (e : α ≃ β) (a : α) (b : β) :
   (a ≃[instanceStructureEquiv e] b) = (e.toFun a = b) :=
 rfl
 
 theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b := h ▸ Setoid.refl a
 
-theorem respectsSetoid {α β   : Sort u} {e₁ e₂ : α ≃≃ β} (h : e₁ = e₂) :
+theorem respectsSetoid {α β   : Sort u} {e₁ e₂ : α ≃ β} (h : e₁ = e₂) :
   instanceStructureEquiv e₁ ≈ instanceStructureEquiv e₂ :=
 Setoid.fromEq (congrArg instanceStructureEquiv h)
 
-theorem respectsComp   {α β γ : Sort u} (e : α ≃≃ β) (f : β ≃≃ γ) :
+theorem respectsComp   {α β γ : Sort u} (e : α ≃ β) (f : β ≃ γ) :
   instanceStructureEquiv (Equiv.trans e f) ≈ StructureEquiv.trans (instanceStructureEquiv e) (instanceStructureEquiv f) :=
 --⟨⟨makeToSetoidStructureFunctorEquiv (λ a => let c : setoidStructure (instanceStructure γ) := f.toFun  (e.toFun  a);
 --                                            Setoid.refl c)⟩,
@@ -126,7 +126,7 @@ theorem respectsId     (α     : Sort u) :
 -- ⟨makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl a)⟩⟩
 sorry
 
-theorem respectsInv    {α β   : Sort u} (e : α ≃≃ β) :
+theorem respectsInv    {α β   : Sort u} (e : α ≃ β) :
   instanceStructureEquiv (Equiv.symm e) ≈ StructureEquiv.symm (instanceStructureEquiv e) :=
 --⟨⟨makeToSetoidStructureFunctorEquiv (λ b => let a : setoidStructure (instanceStructure α) := e.invFun b;
 --                                            Setoid.refl a)⟩,
@@ -151,7 +151,7 @@ def sortToStructureFunctor : StructureFunctor sortStructure universeStructure :=
 
 namespace EquivalentStructure
 
-variable {α : Sort u} {β : Sort v} [h : HasStructure β] (e : α ≃≃ β)
+variable {α : Sort u} {β : Sort v} [h : HasStructure β] (e : α ≃ β)
 
 def hasEquivalentStructure : HasStructure α :=
 { M := λ x y => h.M (e.toFun x) (e.toFun y),

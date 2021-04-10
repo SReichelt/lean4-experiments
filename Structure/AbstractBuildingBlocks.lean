@@ -54,7 +54,7 @@ structure InstanceIsoCriterion {F : StructureDependency} (a b : SigmaExpr F) whe
 def IsoCriterion (F : StructureDependency) := ∀ a b : SigmaExpr F, InstanceIsoCriterion a b
 
 def isoEquiv {F : StructureDependency} {a b : SigmaExpr F} (c : InstanceIsoCriterion a b) :
-  (a ≃ b) ≃≃ Σ' e : a.fst ≃ b.fst, c.I e :=
+  IsType.type (a ≃ b) ≃ Σ' e : a.fst ≃ b.fst, c.I e :=
 { toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, (c.h h₁).mp  h₂⟩,
   invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, (c.h h₁).mpr h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
@@ -75,7 +75,7 @@ variable (S T : Structure)
 
 -- This degenerate case is actually equivalent to `PProd S T`.
 
-def equivProd : IndependentPair S T ≃≃ PProd S.U T.U :=
+def equivProd : IndependentPair S T ≃ PProd S.U T.U :=
 { toFun    := λ ⟨x, y⟩ => ⟨x, y⟩,
   invFun   := λ ⟨x, y⟩ => ⟨x, y⟩,
   leftInv  := λ ⟨x, y⟩ => rfl,
@@ -90,7 +90,7 @@ def isoCriterion : IsoCriterion (independentPairDependency S T) := λ a b => ⟨
 
 -- For this particular case, we can also specialize `isoEquiv` a bit.
 
-def equiv (a b : IndependentPair S T) : SigmaEquiv a b ≃≃ PProd (a.fst ≃ b.fst) (SetoidEquiv T a.snd b.snd) :=
+def equiv (a b : IndependentPair S T) : SigmaEquiv a b ≃ PProd (IsType.type (a.fst ≃ b.fst)) (SetoidEquiv T a.snd b.snd) :=
 { toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
@@ -115,7 +115,7 @@ def InstanceInstance := SigmaExpr instanceDependency
 
 namespace InstanceInstance
 
-def equivSigma : InstanceInstance ≃≃ Σ' S : Structure, S.U :=
+def equivSigma : InstanceInstance ≃ Σ' S : Structure, S.U :=
 { toFun    := λ ⟨S, x⟩ => ⟨S, x⟩,
   invFun   := λ ⟨S, x⟩ => ⟨S, x⟩,
   leftInv  := λ ⟨S, x⟩ => rfl,
@@ -268,13 +268,13 @@ def outerPair (a : SigmaInstance F) : UncurriedSigmaInstance F :=
 -- TODO: Make use of `PiSigmaEquivalences` here (and finish those first).
 
 def applyInnerEquiv (a b : SigmaInstance F) (e : a.fst ≃ b.fst)
-                    (h : InstanceEquiv (congrArgMap F.fst.F e) a.snd.fst b.snd.fst) :
+                    (h : a.snd.fst ≈[congrArgMap F.fst.F e] b.snd.fst) :
   innerPair F a ≃ innerPair F b :=
 sorry
 
 theorem iso (a b : SigmaInstance F) :
-  HasIso a b (λ e => ∃ h : InstanceEquiv (congrArgMap F.fst.F e) a.snd.fst b.snd.fst,
-                     InstanceEquiv (congrArgMap F.snd (applyInnerEquiv F a b e h)) a.snd.snd b.snd.snd) :=
+  HasIso a b (λ e => ∃ h : a.snd.fst ≈[congrArgMap F.fst.F e] b.snd.fst,
+                     a.snd.snd ≈[congrArgMap F.snd (applyInnerEquiv F a b e h)] b.snd.snd) :=
 sorry
 
 def applyInnerEquiv' (a b : SigmaInstance F) (cF : IsoCriterion F.fst) (e : a.fst ≃ b.fst)

@@ -1,6 +1,7 @@
 import Structure.Basic
 import Structure.Forgetfulness
 
+open Morphisms
 open Structure
 open GeneralizedFunctor
 open StructureFunctor
@@ -97,14 +98,14 @@ namespace SetoidUniverseFunctorDesc
 
 variable {S : Structure} (D : SetoidUniverseFunctorDesc S)
 
-def targetLeftInv {α β : S} (e : α ≃ β) : D.toFun e⁻¹ ⊙ D.toFun e ≃ idFun :=
+def targetLeftInv {α β : S} (e : α ≃ β) : D.toFun e⁻¹ ⊙ D.toFun e ≃ @idFun (setoidStructure (D.map α)) :=
 makeToSetoidStructureFunctorEquiv (λ T => let h₁ := D.respectsComp e e⁻¹ T;
                                           let h₂ := D.respectsSetoid (leftInv e) T;
                                           let h₃ := Setoid.trans (Setoid.symm h₁) h₂;
                                           let h₄ := D.respectsId α T;
                                           Setoid.trans h₃ h₄)
 
-def targetRightInv {α β : S} (e : α ≃ β) : D.toFun e ⊙ D.toFun e⁻¹ ≃ idFun :=
+def targetRightInv {α β : S} (e : α ≃ β) : D.toFun e ⊙ D.toFun e⁻¹ ≃ @idFun (setoidStructure (D.map β)) :=
 makeToSetoidStructureFunctorEquiv (λ T => let h₁ := D.respectsComp e⁻¹ e T;
                                           let h₂ := D.respectsSetoid (rightInv e) T;
                                           let h₃ := Setoid.trans (Setoid.symm h₁) h₂
@@ -165,19 +166,19 @@ structure UniverseStructureFunctorDesc where
 (map                                                       : Structure → Structure)
 (toFun         {S T   : Structure}                         : S ≃ T → StructureFunctor (map S) (map T))
 (respectsEquiv {S T   : Structure}                         : GeneralizedFunctor.Functor (S := StructureEquiv.equivStructure S T) (T := functorStructure (map S) (map T)) toFun)
-(respectsComp  {S T U : Structure} (e : S ≃ T) (f : T ≃ U) : toFun (f • e)                          ≃ toFun f ⊙ toFun e)
-(respectsId    (S     : Structure)                         : toFun (id_ (S := universeStructure) S) ≃ idFun)
+(respectsComp  {S T U : Structure} (e : S ≃ T) (f : T ≃ U) : toFun (f • e) ≃ toFun f ⊙ toFun e)
+(respectsId    (S     : Structure)                         : toFun (id_ S) ≃ @idFun (map S))
 
 namespace UniverseStructureFunctorDesc
 
 variable (D : UniverseStructureFunctorDesc)
 
-def targetLeftInv {S T : Structure} (e : S ≃ T) : D.toFun e⁻¹ ⊙ D.toFun e ≃ idFun :=
+def targetLeftInv {S T : Structure} (e : S ≃ T) : D.toFun e⁻¹ ⊙ D.toFun e ≃ @idFun (D.map S) :=
 let φ₁ := FunctorEquiv.symm (D.respectsComp e e⁻¹);
 let φ₂ := D.respectsEquiv (StructureEquiv.leftInv' e);
 FunctorEquiv.trans (FunctorEquiv.trans φ₁ φ₂) (D.respectsId S)
 
-def targetRightInv {S T : Structure} (e : S ≃ T) : D.toFun e ⊙ D.toFun e⁻¹ ≃ idFun :=
+def targetRightInv {S T : Structure} (e : S ≃ T) : D.toFun e ⊙ D.toFun e⁻¹ ≃ @idFun (D.map T) :=
 let φ₁ := FunctorEquiv.symm (D.respectsComp e⁻¹ e);
 let φ₂ := D.respectsEquiv (StructureEquiv.rightInv' e);
 FunctorEquiv.trans (FunctorEquiv.trans φ₁ φ₂) (D.respectsId T)
