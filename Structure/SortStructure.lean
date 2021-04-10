@@ -7,9 +7,8 @@
 import Structure.Basic
 import Structure.Forgetfulness
 
--- A quick&dirty port of the parts of `data.equiv.basic` we need; should be replaced once it becomes
--- available in Lean 4 mathlib.
-import Structure.Data.Equiv.Basic
+import mathlib4_experiments.CoreExt
+import mathlib4_experiments.Data.Equiv.Basic
 
 open Morphisms
 open StructureFunctor
@@ -106,11 +105,9 @@ instance {α β : Sort u} : Coe (α ≃ β) (InstanceStructureEquiv α β) := �
   (a ≃[instanceStructureEquiv e] b) = (e.toFun a = b) :=
 rfl
 
-theorem Setoid.fromEq {α : Sort u} [Setoid α] {a b : α} (h : a = b) : a ≈ b := h ▸ Setoid.refl a
-
 theorem respectsSetoid {α β   : Sort u} {e₁ e₂ : α ≃ β} (h : e₁ = e₂) :
   instanceStructureEquiv e₁ ≈ instanceStructureEquiv e₂ :=
-Setoid.fromEq (congrArg instanceStructureEquiv h)
+Setoid.of_Eq (congrArg instanceStructureEquiv h)
 
 theorem respectsComp   {α β γ : Sort u} (e : α ≃ β) (f : β ≃ γ) :
   instanceStructureEquiv (Equiv.trans e f) ≈ StructureEquiv.trans (instanceStructureEquiv e) (instanceStructureEquiv f) :=

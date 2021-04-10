@@ -20,7 +20,8 @@
 
 
 
-import Structure.Data.Notation
+import mathlib4_experiments.CoreExt
+import mathlib4_experiments.Data.Notation
 
 
 
@@ -52,13 +53,9 @@ namespace IsEquivalence
 instance relEquiv {α : Sort u} {r : α → α → Prop} (e : Equivalence r) : IsEquivalence r :=
 ⟨e.refl, e.symm, e.trans⟩
 
--- `Iff` and `Eq` are equivalence relations. (Should this be in Core?)
-def iffEquiv              : Equivalence Iff     := ⟨Iff.refl, Iff.symm, Iff.trans⟩
-def eqEquiv  {α : Sort u} : Equivalence (@Eq α) := ⟨Eq.refl,  Eq.symm,  Eq.trans⟩
-
 -- So these are the instances that we obtain directly from Lean.
-instance iffIsEquiv                                : IsEquivalence Iff     := relEquiv iffEquiv
-instance eqIsEquiv     (α : Sort u)                : IsEquivalence (@Eq α) := relEquiv eqEquiv
+instance iffIsEquiv                                : IsEquivalence Iff     := relEquiv Iff.isEquivalence
+instance eqIsEquiv     (α : Sort u)                : IsEquivalence (@Eq α) := relEquiv Eq.isEquivalence
 instance setoidIsEquiv (α : Sort u) [s : Setoid α] : IsEquivalence s.r     := relEquiv s.iseqv
 
 end IsEquivalence
@@ -82,7 +79,7 @@ instance bundledSetoid (s : BundledSetoid) : Setoid (IsType.type s) := s.s
 
 def eqSetoid (α : Sort u) : BundledSetoid :=
 { α := α,
-  s := ⟨Eq, eqEquiv⟩ }
+  s := ⟨Eq, Eq.isEquivalence⟩ }
 
 def GeneralizedRelation (α : Sort u) := α → α → BundledSetoid
 

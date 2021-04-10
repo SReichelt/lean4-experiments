@@ -8,9 +8,7 @@ import Structure.Forgetfulness
 import Structure.UniverseFunctor
 import Structure.AbstractPiSigma
 
--- A quick&dirty port of the parts of `data.equiv.basic` we need; should be replaced once it becomes
--- available in Lean 4 mathlib.
-import Structure.Data.Equiv
+import mathlib4_experiments.Data.Equiv
 
 open Morphisms
 open Structure
