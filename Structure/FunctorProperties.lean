@@ -17,9 +17,9 @@ variable {S T : Structure} (F : StructureFunctor S T)
 -- properties accordingly. Again, note that these definitions contain data.
 -- However, the definitions are only well-behaved if we add some additional functoriality conditions.
 
-def Injective  := GeneralizedFunctor F.map id  -- `∀ α β, F α ≃ F β → α ≃ β` plus functoriality
-def Surjective := Σ' h : (∀ β, Σ' α, IsType.type (F α ≃ β)),
-                     Σ' φ : Functor (λ β => (h β).fst),
+def Injective  := GeneralizedFunctor F.map id  -- `∀ a b, F a ≃ F b → a ≃ b` plus functoriality
+def Surjective := Σ' h : (∀ b, Σ' a, IsType.type (F a ≃ b)),
+                     Σ' φ : Functor (λ b => (h b).fst),
                         GeneralizedNaturalTransformation (comp.genFun' F.map F.functor φ) id.genFun
 def Bijective  := PProd (Injective F) (Surjective F)
 
@@ -44,12 +44,12 @@ section Inverse
 
 variable (h : Bijective F)
 
-def inverseElement (β : T) := (h.snd.fst β).fst
+def inverseElement (b : T) := (h.snd.fst b).fst
 
 namespace inverseElement
 
-def isInverse  (β : T) : F (inverseElement F h β) ≃ β := (h.snd.fst β).snd
-def isInverse' (α : S) : inverseElement F h (F α) ≃ α := h.fst.FF (isInverse F h (F α))
+def isInverse  (b : T) : F (inverseElement F h b) ≃ b := (h.snd.fst b).snd
+def isInverse' (a : S) : inverseElement F h (F a) ≃ a := h.fst.FF (isInverse F h (F a))
 
 end inverseElement
 

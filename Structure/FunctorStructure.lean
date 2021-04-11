@@ -25,10 +25,10 @@ def outgoingToFun {T₁ T₂ : Structure} (e : T₁ ≃ T₂) :
   StructureFunctor (functorStructure S T₁) (functorStructure S T₂) :=
 { map     := λ F => e.toFun ⊙ F,
   functor := { FF        := compFun.congrArgRight,
-               isFunctor := { respectsSetoid := λ h   α => respectsSetoid e.toFun (h α),
-                              respectsComp   := λ φ ψ α => respectsComp   e.toFun (φ.ext α) (ψ.ext α),
-                              respectsId     := λ F   α => respectsId     e.toFun (F α),
-                              respectsInv    := λ φ   α => respectsInv    e.toFun (φ.ext α) } } }
+               isFunctor := { respectsSetoid := λ h   a => respectsSetoid e.toFun (h a),
+                              respectsComp   := λ φ ψ a => respectsComp   e.toFun (φ.ext a) (ψ.ext a),
+                              respectsId     := λ F   a => respectsId     e.toFun (F a),
+                              respectsInv    := λ φ   a => respectsInv    e.toFun (φ.ext a) } } }
 
 namespace outgoingToFun
 
@@ -66,10 +66,10 @@ def incomingToFun {T₁ T₂ : Structure} (e : T₁ ≃ T₂) :
   StructureFunctor (functorStructure T₁ S) (functorStructure T₂ S) :=
 { map     := λ f => f ⊙ e.invFun,
   functor := { FF        := compFun.congrArgLeft,
-               isFunctor := { respectsSetoid := λ h   α => h (e.invFun α),
-                              respectsComp   := λ φ ψ α => Setoid.refl (ψ.ext (e.invFun α) • φ.ext (e.invFun α)),
-                              respectsId     := λ f   α => Setoid.refl (id_ (f (e.invFun α))),
-                              respectsInv    := λ φ   α => Setoid.refl (φ.ext (e.invFun α))⁻¹ } } }
+               isFunctor := { respectsSetoid := λ h   a => h (e.invFun a),
+                              respectsComp   := λ φ ψ a => Setoid.refl (ψ.ext (e.invFun a) • φ.ext (e.invFun a)),
+                              respectsId     := λ f   a => Setoid.refl (id_ (f (e.invFun a))),
+                              respectsInv    := λ φ   a => Setoid.refl (φ.ext (e.invFun a))⁻¹ } } }
 
 namespace incomingToFun
 

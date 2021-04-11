@@ -32,20 +32,20 @@ namespace Forgetfulness
 
 section Setoid
 
-def makeToSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {α β : S}, α ≃ β → map α ≈ map β) :
+def makeToSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {a b : S}, a ≃ b → map a ≈ map b) :
   StructureFunctor S (setoidStructure T) :=
 { map     := map,
   functor := { FF        := FF,
                isFunctor := propFunctor } }
 
-def makeToSetoidStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ α, F α ≃ G α) :
+def makeToSetoidStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ a, F a ≃ G a) :
   F ≃ G :=
 { ext := ext,
   nat := λ _ => proofIrrel _ _ }
 
-def makeToSetoidStructureFunctorEquiv {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ α, F α ≈ G α) :
+def makeToSetoidStructureFunctorEquiv {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ a, F a ≈ G a) :
   F ≃ G :=
-makeToSetoidStructureFunctorEquiv' (λ α => let ⟨e⟩ := ext α; e)
+makeToSetoidStructureFunctorEquiv' (λ a => let ⟨e⟩ := ext a; e)
 
 
 
@@ -56,7 +56,7 @@ makeToSetoidStructureFunctor id (toSetoidEquiv S)
 
 namespace SetoidStructureFunctor
 
-def makeSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {α β : S}, α ≈ β → map α ≈ map β) :
+def makeSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {a b : S}, a ≈ b → map a ≈ map b) :
   SetoidStructureFunctor S T :=
 makeToSetoidStructureFunctor map FF
 
@@ -84,34 +84,34 @@ namespace setoidFunctor
 
 theorem respectsEquivalence {S T : Structure} {F₁ F₂ : StructureFunctor S T} :
   F₁ ≃ F₂ → setoidFunctor F₁ ≃ setoidFunctor F₂ :=
-λ e => makeToSetoidStructureFunctorEquiv (λ α : S => ⟨⟨e.ext α⟩⟩)
+λ e => makeToSetoidStructureFunctorEquiv (λ a : S => ⟨⟨e.ext a⟩⟩)
 
 theorem respectsComp {S T U : Structure} (F : StructureFunctor S T) (G : StructureFunctor T U) :
   setoidFunctor (G ⊙ F) ≃ setoidFunctor G ⊙ setoidFunctor F :=
-makeToSetoidStructureFunctorEquiv (λ α : S => ⟨⟨IsEquivalence.refl (G (F α))⟩⟩)
+makeToSetoidStructureFunctorEquiv (λ a : S => ⟨⟨IsEquivalence.refl (G (F a))⟩⟩)
 
 theorem respectsId (S : Structure) :
   setoidFunctor (@idFun S) ≃ @idFun (setoidStructure S) :=
-makeToSetoidStructureFunctorEquiv (λ α : S => ⟨⟨IsEquivalence.refl α⟩⟩)
+makeToSetoidStructureFunctorEquiv (λ a : S => ⟨⟨IsEquivalence.refl a⟩⟩)
 
 end setoidFunctor
 
 def setoidSquare {S T : Structure} (F : StructureFunctor S T) :
   toSetoidFunctor T ⊙ F ≃ setoidFunctor F ⊙ toSetoidFunctor S :=
-makeToSetoidStructureFunctorEquiv (λ α => Setoid.refl ((setoidFunctor F) α))
+makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl ((setoidFunctor F) a))
 
 def setoidIdempotenceSquare {S T : Structure} (F : SetoidStructureFunctor S T) :
   F ⊙ setoidIdempotenceFunctor S ≃ setoidIdempotenceFunctor T ⊙ setoidFunctor F :=
-makeToSetoidStructureFunctorEquiv (λ α => Setoid.refl (F α))
+makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl (F a))
 
 def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructure S) (setoidStructure T)
 
-theorem congrMap' {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {α β : S} :
-  F₁ ≃ F₂ → α ≃ β → F₁ α ≃ F₂ β :=
+theorem congrMap' {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
+  F₁ ≃ F₂ → a ≃ b → F₁ a ≃ F₂ b :=
 λ φ e => StructureFunctor.congrMap φ ⟨e⟩
 
-theorem congrMap {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {α β : S} :
-  F₁ ≃ F₂ → α ≈ β → F₁ α ≈ F₂ β :=
+theorem congrMap {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
+  F₁ ≃ F₂ → a ≈ b → F₁ a ≈ F₂ b :=
 λ φ ⟨e⟩ => ⟨congrMap' φ e⟩
 
 end SetoidStructureFunctor
@@ -133,7 +133,7 @@ def makeSetoidStructureEquivEquiv' {S T : Structure} {e₁ e₂ : SetoidStructur
   rightInvEquiv := λ _ => proofIrrel _ _ }
 
 def makeSetoidStructureEquivEquiv {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T}
-                                  (toFunEquiv : ∀ α, e₁.toFun α ≈ e₂.toFun α) (invFunEquiv : ∀ α, e₁.invFun α ≈ e₂.invFun α) :
+                                  (toFunEquiv : ∀ a, e₁.toFun a ≈ e₂.toFun a) (invFunEquiv : ∀ a, e₁.invFun a ≈ e₂.invFun a) :
   e₁ ≃ e₂ :=
 makeSetoidStructureEquivEquiv' (makeToSetoidStructureFunctorEquiv toFunEquiv) (makeToSetoidStructureFunctorEquiv invFunEquiv)
 
@@ -142,8 +142,8 @@ makeSetoidStructureEquivEquiv' (makeToSetoidStructureFunctorEquiv toFunEquiv) (m
 def toSetoidStructureEquiv {S T : Structure} (e : StructureEquiv S T) : SetoidStructureEquiv S T :=
 { toFun  := setoidFunctor e.toFun,
   invFun := setoidFunctor e.invFun,
-  isInv  := makeSetoidStructureFunctorInverse (makeToSetoidStructureFunctorEquiv (λ α => ⟨⟨e.isInv.leftInv.ext  α⟩⟩))
-                                              (makeToSetoidStructureFunctorEquiv (λ α => ⟨⟨e.isInv.rightInv.ext α⟩⟩)) }
+  isInv  := makeSetoidStructureFunctorInverse (makeToSetoidStructureFunctorEquiv (λ a => ⟨⟨e.isInv.leftInv.ext  a⟩⟩))
+                                              (makeToSetoidStructureFunctorEquiv (λ a => ⟨⟨e.isInv.rightInv.ext a⟩⟩)) }
 
 namespace toSetoidStructureEquiv
 
@@ -231,23 +231,23 @@ open SetoidStructureFunctor
 
 section Skeleton
 
-def makeToSkeletonStructureFunctor {S T : Structure} (map : S → StructureQuotient T) (FF : ∀ {α β : S}, α ≃ β → map α = map β) :
+def makeToSkeletonStructureFunctor {S T : Structure} (map : S → StructureQuotient T) (FF : ∀ {a b : S}, a ≃ b → map a = map b) :
   StructureFunctor S (skeletonStructure T) :=
 { map     := map,
   functor := { FF        := FF,
                isFunctor := propFunctor } }
 
-def makeToSkeletonStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (skeletonStructure T)} (ext : ∀ α, F α ≃ G α) :
+def makeToSkeletonStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (skeletonStructure T)} (ext : ∀ a, F a ≃ G a) :
   F ≃ G :=
 { ext := ext,
   nat := λ _ => proofIrrel _ _ }
 
-def makeToSkeletonStructureFunctorEquiv {S T : Structure} {F G : StructureFunctor S (skeletonStructure T)} (ext : ∀ α, F α = G α) :
+def makeToSkeletonStructureFunctorEquiv {S T : Structure} {F G : StructureFunctor S (skeletonStructure T)} (ext : ∀ a, F a = G a) :
   F ≃ G :=
 makeToSkeletonStructureFunctorEquiv' ext
 
 def setoidToSkeletonFunctor (S : Structure) : StructureFunctor (setoidStructure S) (skeletonStructure S) :=
-makeToSkeletonStructureFunctor (λ α => Quotient.mk α) (λ e => Quotient.sound e)
+makeToSkeletonStructureFunctor (λ a => Quotient.mk a) (λ e => Quotient.sound e)
 
 def toSkeletonFunctor (S : Structure) : StructureFunctor S (skeletonStructure S) :=
 setoidToSkeletonFunctor S ⊙ toSetoidFunctor S

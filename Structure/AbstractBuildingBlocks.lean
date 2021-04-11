@@ -73,7 +73,7 @@ variable (S T : Structure)
 
 -- This degenerate case is actually equivalent to `PProd S T`.
 
-def equivProd : IndependentPair S T ≃ PProd S.U T.U :=
+def equivProd : IndependentPair S T ≃ PProd (IsType.type S) (IsType.type T) :=
 { toFun    := λ ⟨x, y⟩ => ⟨x, y⟩,
   invFun   := λ ⟨x, y⟩ => ⟨x, y⟩,
   leftInv  := λ ⟨x, y⟩ => rfl,
@@ -113,7 +113,7 @@ def InstanceInstance := SigmaExpr instanceDependency
 
 namespace InstanceInstance
 
-def equivSigma : InstanceInstance ≃ Σ' S : Structure, S.U :=
+def equivSigma : InstanceInstance ≃ Σ' S : Structure, IsType.type S :=
 { toFun    := λ ⟨S, x⟩ => ⟨S, x⟩,
   invFun   := λ ⟨S, x⟩ => ⟨S, x⟩,
   leftInv  := λ ⟨S, x⟩ => rfl,
@@ -172,9 +172,9 @@ section FunctorInstanceDef
 
 variable {S : Structure} (F G : UniverseFunctor S)
 
-def functorMap (α : S) := functorStructure (F α) (G α)
+def functorMap (a : S) := functorStructure (F a) (G a)
 
-def functorToFun {α β : S} (e : α ≃ β) : SetoidStructureFunctor (functorMap F G α) (functorMap F G β) :=
+def functorToFun {a b : S} (e : a ≃ b) : SetoidStructureFunctor (functorMap F G a) (functorMap F G b) :=
 { map     := λ f => ((congrArgMap G e).toFun ⊙ f) ⊙ (congrArgMap F e).invFun,
   functor := sorry }  -- TODO: Since we are dealing with setoid functors here, we just need to combine `compFun.congrArg'` etc.
 

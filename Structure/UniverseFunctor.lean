@@ -89,54 +89,54 @@ SetoidUniverseFunctor.universeFunctor structureToSetoidStructureFunctor'
 
 structure SetoidUniverseFunctorDesc (S : Structure) where
 (map                                                : S → Structure)
-(toFun          {α β   : S}                         : α ≃ β → SetoidStructureFunctor (map α) (map β))
-(respectsSetoid {α β   : S} {e₁ e₂ : α ≃ β}         : e₁ ≈ e₂ → ∀ T, toFun e₁ T ≈ toFun e₂ T)
-(respectsComp   {α β γ : S} (e : α ≃ β) (f : β ≃ γ) : ∀ T, toFun (f • e) T ≈ toFun f (toFun e T))
-(respectsId     (α     : S)                         : ∀ T, toFun (id_ α) T ≈ T)
+(toFun          {a b   : S}                         : a ≃ b → SetoidStructureFunctor (map a) (map b))
+(respectsSetoid {a b   : S} {e₁ e₂ : a ≃ b}         : e₁ ≈ e₂ → ∀ T, toFun e₁ T ≈ toFun e₂ T)
+(respectsComp   {a b c : S} (e : a ≃ b) (f : b ≃ c) : ∀ T, toFun (f • e) T ≈ toFun f (toFun e T))
+(respectsId     (a     : S)                         : ∀ T, toFun (id_ a) T ≈ T)
 
 namespace SetoidUniverseFunctorDesc
 
 variable {S : Structure} (D : SetoidUniverseFunctorDesc S)
 
-def targetLeftInv {α β : S} (e : α ≃ β) : D.toFun e⁻¹ ⊙ D.toFun e ≃ @idFun (setoidStructure (D.map α)) :=
+def targetLeftInv {a b : S} (e : a ≃ b) : D.toFun e⁻¹ ⊙ D.toFun e ≃ @idFun (setoidStructure (D.map a)) :=
 makeToSetoidStructureFunctorEquiv (λ T => let h₁ := D.respectsComp e e⁻¹ T;
                                           let h₂ := D.respectsSetoid (leftInv e) T;
                                           let h₃ := Setoid.trans (Setoid.symm h₁) h₂;
-                                          let h₄ := D.respectsId α T;
+                                          let h₄ := D.respectsId a T;
                                           Setoid.trans h₃ h₄)
 
-def targetRightInv {α β : S} (e : α ≃ β) : D.toFun e ⊙ D.toFun e⁻¹ ≃ @idFun (setoidStructure (D.map β)) :=
+def targetRightInv {a b : S} (e : a ≃ b) : D.toFun e ⊙ D.toFun e⁻¹ ≃ @idFun (setoidStructure (D.map b)) :=
 makeToSetoidStructureFunctorEquiv (λ T => let h₁ := D.respectsComp e⁻¹ e T;
                                           let h₂ := D.respectsSetoid (rightInv e) T;
                                           let h₃ := Setoid.trans (Setoid.symm h₁) h₂
-                                          let h₄ := D.respectsId β T;
+                                          let h₄ := D.respectsId b T;
                                           Setoid.trans h₃ h₄)
 
-def targetEquiv {α β : S} (e : α ≃ β) : SetoidStructureEquiv (D.map α) (D.map β) :=
+def targetEquiv {a b : S} (e : a ≃ b) : SetoidStructureEquiv (D.map a) (D.map b) :=
 { toFun  := D.toFun e,
   invFun := D.toFun e⁻¹,
   isInv  := makeSetoidStructureFunctorInverse (targetLeftInv D e) (targetRightInv D e) }
 
-theorem targetRespectsSetoid {α β : S} {e₁ e₂ : α ≃ β} :
+theorem targetRespectsSetoid {a b : S} {e₁ e₂ : a ≃ b} :
   e₁ ≈ e₂ → targetEquiv D e₁ ≈ targetEquiv D e₂ :=
 λ h => ⟨makeSetoidStructureEquivEquiv (D.respectsSetoid h)
                                       (D.respectsSetoid (congrArgInv h))⟩
 
-theorem targetRespectsComp {α β γ : S} (e : α ≃ β) (f : β ≃ γ) :
+theorem targetRespectsComp {a b c : S} (e : a ≃ b) (f : b ≃ c) :
   targetEquiv D (f • e) ≈ StructureEquiv.trans (targetEquiv D e) (targetEquiv D f) :=
 ⟨makeSetoidStructureEquivEquiv (D.respectsComp e f)
                                (λ T => let h₁ := D.respectsComp f⁻¹ e⁻¹ T;
                                        let h₂ := D.respectsSetoid (compInv e f) T;
                                        Setoid.trans h₂ h₁)⟩
 
-theorem targetRespectsId (α : S) :
-  targetEquiv D (id_ α) ≈ StructureEquiv.refl (setoidStructure (D.map α)) :=
-⟨makeSetoidStructureEquivEquiv (D.respectsId α)
-                               (λ T => let h₁ := D.respectsId α T;
-                                       let h₂ := D.respectsSetoid (idInv α) T;
+theorem targetRespectsId (a : S) :
+  targetEquiv D (id_ a) ≈ StructureEquiv.refl (setoidStructure (D.map a)) :=
+⟨makeSetoidStructureEquivEquiv (D.respectsId a)
+                               (λ T => let h₁ := D.respectsId a T;
+                                       let h₂ := D.respectsSetoid (idInv a) T;
                                        Setoid.trans h₂ h₁)⟩
 
-theorem targetRespectsInv {α β : S} (e : α ≃ β) :
+theorem targetRespectsInv {a b : S} (e : a ≃ b) :
   targetEquiv D e⁻¹ ≈ StructureEquiv.symm (targetEquiv D e) :=
 ⟨makeSetoidStructureEquivEquiv (λ T => Setoid.refl (D.toFun e⁻¹ T))
                                (D.respectsSetoid (invInv e))⟩
