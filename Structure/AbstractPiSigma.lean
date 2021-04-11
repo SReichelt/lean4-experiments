@@ -9,6 +9,7 @@ import Structure.UniverseFunctor
 import Structure.FunctorStructure
 
 open Morphisms
+open HasStructure
 open Structure
 open DependentStructure
 open StructureFunctor
@@ -40,6 +41,7 @@ def constDep (S T : Structure) : StructureDependency := ⟨S, constFun T⟩
 
 structure StructureDependencyEquiv (F G : StructureDependency) where
 (φ : F.S ≃ G.S)
+-- TODO: Why does `≃` not work here? There is some strange type class resolution issue with the `universeFunctor` argument at play.
 (ψ : FunctorEquiv F.F (G.F ⊙ φ.toFun))
 
 namespace StructureDependencyEquiv
@@ -64,22 +66,22 @@ variable {F G : StructureDependency}
 
 theorem refl  (e     : StructureDependencyEquiv F G)                                                                                 : StructureDependencyEquivEquiv e e :=
 ⟨StructureEquiv.EquivEquiv.refl  e.φ,
- leftCancelId (S := functorStructure F.S universeStructure) (compFun.congrArgRight.respectsId e.φ.toFun)⟩
+ leftCancelId (compFun.congrArgRight.respectsId e.φ.toFun)⟩
 
 theorem symm  {e f   : StructureDependencyEquiv F G} (φ : StructureDependencyEquivEquiv e f)                                         : StructureDependencyEquivEquiv f e :=
-let ⟨χ, h⟩ := φ;
-let h₁ := (leftMulInv (S := functorStructure F.S universeStructure) e.ψ f.ψ (compFun.congrArgRight χ.toFunEquiv)).mp h;
+let ⟨χ, hχ⟩ := φ;
+let h₁ := (leftMulInv (h := functorHasStructure) e.ψ f.ψ (compFun.congrArgRight χ.toFunEquiv)).mp hχ;
 let h₂ := compFun.congrArgRight.respectsInv χ.toFunEquiv;
 ⟨StructureEquiv.EquivEquiv.symm  χ,
- substCompLeft (S := functorStructure F.S universeStructure) h₂ (Setoid.symm h₁)⟩
+ substCompLeft h₂ (Setoid.symm h₁)⟩
 
 theorem trans {e f g : StructureDependencyEquiv F G} (φ : StructureDependencyEquivEquiv e f) (ψ : StructureDependencyEquivEquiv f g) : StructureDependencyEquivEquiv e g :=
-let ⟨χ, h⟩ := φ;
-let ⟨ξ, i⟩ := ψ;
-let h₁ := applyAssocLeft (substCompRight (S := functorStructure F.S universeStructure) h i);
+let ⟨χ, hχ⟩ := φ;
+let ⟨ξ, hξ⟩ := ψ;
+let h₁ := applyAssocLeft (substCompRight hχ hξ);
 let h₂ := compFun.congrArgRight.respectsComp χ.toFunEquiv ξ.toFunEquiv;
 ⟨StructureEquiv.EquivEquiv.trans χ ξ,
- substCompLeft (S := functorStructure F.S universeStructure) h₂ h₁⟩
+ substCompLeft h₂ h₁⟩
 
 instance structureDependencyEquivSetoid : Setoid (StructureDependencyEquiv F G) := ⟨StructureDependencyEquivEquiv, ⟨refl, symm, trans⟩⟩
 
@@ -334,7 +336,7 @@ def mkExprFunctor (a : F.S) : StructureFunctor (F.F a) (sigmaStructure F) :=
   functor := { FF        := λ {b c} e => ⟨id_ a, SetoidInstanceEquiv.congrArgEquiv (Setoid.symm (respectsId F.F a)) b c ⟨e⟩⟩,
                isFunctor := { respectsSetoid := λ _   => Setoid.refl _,
                               respectsComp   := λ _ _ => Setoid.symm (leftId _),
-                              respectsId     := λ _   => Setoid.refl id',
+                              respectsId     := λ _   => Setoid.refl (id'' (S := sigmaStructure F)),
                               respectsInv    := λ _   => Setoid.symm (idInv _) } } }
 
 theorem mkExprCongrArg {a₁ a₂ : F.S} (e : a₁ ≃ a₂) :
@@ -513,7 +515,7 @@ def sigmaSigmaUncurried := sigmaStructure (innerPairDependency   F)
 
 def sigmaSigmaEquivToFun  : StructureFunctor (sigmaSigmaCurried   F) (sigmaSigmaUncurried F) :=
 { map     := λ ⟨a, ⟨x, y⟩⟩ => ⟨⟨a, x⟩, y⟩,
-  functor := { FF        := λ ⟨e, h⟩ => sorry,
+  functor := { FF        := λ ⟨e, he⟩ => sorry,
                isFunctor := { respectsSetoid := sorry,
                               respectsComp   := sorry,
                               respectsId     := sorry,

@@ -2,6 +2,7 @@ import Structure.Basic
 import Structure.Forgetfulness
 
 open Morphisms
+open HasStructure
 open Structure
 open GeneralizedFunctor
 open StructureFunctor
