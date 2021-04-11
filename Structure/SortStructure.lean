@@ -11,6 +11,7 @@ import mathlib4_experiments.CoreExt
 import mathlib4_experiments.Data.Equiv.Basic
 
 open Morphisms
+open Structure
 open StructureFunctor
 open Forgetfulness
 open SetoidStructureEquiv
@@ -151,28 +152,28 @@ namespace EquivalentStructure
 variable {α : Sort u} {β : Sort v} [h : HasStructure β] (e : α ≃ β)
 
 def hasEquivalentStructure : HasStructure α :=
-{ M := λ x y => h.M (e.toFun x) (e.toFun y),
-  h := { comp         := h.h.comp,
-         congrArgComp := h.h.congrArgComp,
-         assoc        := λ f g => h.h.assoc    f g,
-         id           := λ x => h.h.id (e.toFun x),
-         leftId       := λ f   => h.h.leftId   f,
-         rightId      := λ f   => h.h.rightId  f,
-         inv          := h.h.inv,
-         congrArgInv  := h.h.congrArgInv,
-         leftInv      := λ f   => h.h.leftInv  f,
-         rightInv     := λ f   => h.h.rightInv f,
-         invInv       := λ f   => h.h.invInv   f,
-         compInv      := λ f g => h.h.compInv  f g,
-         idInv        := λ x   => h.h.idInv    (e.toFun x) } }
+{ M       := λ x y => h.M (e.toFun x) (e.toFun y),
+  hasIsos := { comp         := h.hasIsos.comp,
+               congrArgComp := h.hasIsos.congrArgComp,
+               assoc        := λ f g => h.hasIsos.assoc    f g,
+               id           := λ x => h.hasIsos.id (e.toFun x),
+               leftId       := λ f   => h.hasIsos.leftId   f,
+               rightId      := λ f   => h.hasIsos.rightId  f,
+               inv          := h.hasIsos.inv,
+               congrArgInv  := h.hasIsos.congrArgInv,
+               leftInv      := λ f   => h.hasIsos.leftInv  f,
+               rightInv     := λ f   => h.hasIsos.rightInv f,
+               invInv       := λ f   => h.hasIsos.invInv   f,
+               compInv      := λ f g => h.hasIsos.compInv  f g,
+               idInv        := λ x   => h.hasIsos.idInv    (e.toFun x) } }
 
 def equivalentStructure := @defaultStructure α (hasEquivalentStructure e)
 
 -- In particular, we can map equivalences in both directions.
 
-def equivalentEquiv {x y : α} (f : (equivalentStructure e).h.M x y) : e.toFun x ≃ e.toFun y := f
+def equivalentEquiv {x y : α} (f : iso (equivalentStructure e) x y) : e.toFun x ≃ e.toFun y := f
 
-def equivalentEquivInv {x y : β} (f : x ≃ y) : (equivalentStructure e).h.M (e.invFun x) (e.invFun y) :=
+def equivalentEquivInv {x y : β} (f : x ≃ y) : iso (equivalentStructure e) (e.invFun x) (e.invFun y) :=
 let h₁ := congr (congrArg h.M (e.rightInv x)) (e.rightInv y);
 cast (congrArg BundledSetoid.α (Eq.symm h₁)) f
 

@@ -236,19 +236,19 @@ end PropEquiv
 -- Bundle the generalized equivalence relation and its axioms into a single type class.
 
 class HasStructure (α : Sort u) where
-(M : GeneralizedRelation α)
-[h : HasIsomorphisms M]
+(M       : GeneralizedRelation α)
+[hasIsos : HasIsomorphisms M]
 
 namespace HasStructure
 
 variable {α : Sort u} [h : HasStructure α]
 
-instance hasComp : HasComp         h.M := h.h.toHasComp
-instance hasCmp  : HasComposition  h.M := h.h.toHasComposition
-instance hasId   : HasId           h.M := h.h.toHasId
-instance hasMor  : HasMorphisms    h.M := h.h.toHasMorphisms
-instance hasInv  : HasInv          h.M := h.h.toHasInv
-instance hasIso  : HasIsomorphisms h.M := h.h
+instance hasComp : HasComp         h.M := h.hasIsos.toHasComp
+instance hasCmp  : HasComposition  h.M := h.hasIsos.toHasComposition
+instance hasId   : HasId           h.M := h.hasIsos.toHasId
+instance hasMor  : HasMorphisms    h.M := h.hasIsos.toHasMorphisms
+instance hasInv  : HasInv          h.M := h.hasIsos.toHasInv
+instance hasIso  : HasIsomorphisms h.M := h.hasIsos
 instance isEquiv : IsEquivalence   h.M := isoEquiv h.M
 
 instance hasEquivalence : HasEquivalence α α := ⟨h.M⟩
@@ -392,18 +392,18 @@ def      setoidHasStructure (α : Sort u) [s : Setoid α] : HasStructure α    :
 --   abstract notion of equality throughout the rest of this file.
 
 structure Structure where
-(α : Sort u)
-[h : HasStructure α]
+(α         : Sort u)
+[hasStruct : HasStructure α]
 
 namespace Structure
 
 instance structureIsType : IsType Structure := ⟨Structure.α⟩
 
-def iso (S : Structure) : GeneralizedRelation (IsType.type S) := S.h.M
+def iso (S : Structure) : GeneralizedRelation (IsType.type S) := S.hasStruct.M
 
 variable {S : Structure}
 
-instance hasStructure : HasStructure (IsType.type S) := S.h
+instance hasStructure : HasStructure (IsType.type S) := S.hasStruct
 
 instance hasComp : HasComp         (iso S) := hasStructure.hasComp
 instance hasCmp  : HasComposition  (iso S) := hasStructure.hasCmp
@@ -1239,9 +1239,13 @@ def constFun (c : T) : StructureFunctor S T :=
 
 
 
+-- A simple alias for the assertion that a functor is equivalent to the identity functor.
+
 @[reducible] def IsId (F : StructureFunctor S S) := F ≃ @idFun S
 
 namespace IsId
+
+-- `ext` and `nat` have a slightly simpler form in this case.
 
 def extDef {F : StructureFunctor S S} (φ : IsId F) (a : S) : F a ≃ a :=
 φ.ext a
@@ -1249,6 +1253,8 @@ def extDef {F : StructureFunctor S S} (φ : IsId F) (a : S) : F a ≃ a :=
 theorem natDef {F : StructureFunctor S S} (φ : IsId F) {a b : S} (e : a ≃ b) :
   e • φ.ext a ≈ φ.ext b • F.functor e :=
 φ.nat e
+
+-- When composing both sides with another functor, we can cancel `idFun`.
 
 def rightMul {G : StructureFunctor T T} (ψ : IsId G) (F : StructureFunctor S T) :
   G ⊙ F ≃ F :=
@@ -1266,6 +1272,8 @@ theorem leftMulDef {F : StructureFunctor S S} (φ : IsId F) (G : StructureFuncto
   (leftMul φ G).ext a ≈ G.functor (φ.ext a) :=
 leftId (G.functor (φ.ext a))
 
+-- We have some definitions resembling reflexivity and transitivity.
+
 def refl (S : Structure) : IsId (@idFun S) := FunctorEquiv.refl idFun
 
 def trans {F G : StructureFunctor S S} (φ : IsId F) (ψ : IsId G) : IsId (G ⊙ F) :=
@@ -1278,6 +1286,10 @@ congrArgCompRight (rightMulDef ψ F a)
 end IsId
 
 
+
+-- A simple alias for the assertion that `G` is a left inverse of `F`.
+-- Note that instead of defining `RightInv` analogously, we just swap the arguments of `F` and `G` where
+-- necessary.
 
 @[reducible] def LeftInv (F : StructureFunctor S T) (G : StructureFunctor T S) := IsId (G ⊙ F)
 
@@ -1295,6 +1307,10 @@ theorem transDef {F : StructureFunctor S T} {G : StructureFunctor T S} {H : Stru
                  (φ : LeftInv F G) (ψ : LeftInv H I) (a : S) :
   (trans φ ψ).ext a ≈ φ.ext a • G.functor (ψ.ext (F a)) :=
 congrArgCompRight (IsId.leftMulDef ψ G (F a))
+
+-- This definition asserts that an instance of `LeftInv` is compatible with a corresponding reversed
+-- `LeftInv` instance. It corresponds to one of the two equations of an adjoint functor (the one about
+-- `F`).
 
 def Compat {F : StructureFunctor S T} {G : StructureFunctor T S} (φl : LeftInv F G) (φr : LeftInv G F) :=
 ∀ a, F.functor (φl.ext a) ≈ φr.ext (F a)
@@ -1318,6 +1334,8 @@ theorem trans {F : StructureFunctor S T} {G : StructureFunctor T S} {H : Structu
        h₇
 
 end Compat
+
+-- Given equivalences of functors, we can ask whether two instances of `LeftInv` are equivalent.
 
 def Equiv {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T S}
           (φ : F₁ ≃ F₂) (ψ : G₁ ≃ G₂)
@@ -1353,8 +1371,9 @@ end LeftInv
 
 
 -- A type class asserting that two functors are inverse to each other. In addition to the condition that
--- the inverse functor is left-inverse and right-inverse, we also have a compatibility condition on these
--- two functor equivalences.
+-- the inverse functor is left-inverse and right-inverse, we also add compatibility conditions on these
+-- two functor equivalences for both `F` and `G`. This is essentially the same as requiring the functors
+-- to be adjoint.
 
 class IsInverse (F : StructureFunctor S T) (G : StructureFunctor T S) :=
 (leftInv  : LeftInv F G)
@@ -1444,12 +1463,6 @@ def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) 
   invFun := e.invFun ⊙ f.invFun,
   isInv  := IsInverse.trans e.isInv f.isInv }
 
-@[reducible] def FunProd (S T : Structure) :=
-  StructureProduct (functorStructure S T) (functorStructure T S)
-
-def funProd {S T : Structure} (e : StructureEquiv S T) : FunProd S T :=
-⟨e.toFun, e.invFun⟩
-
 
 
 -- We can compare two instances of `StructureEquiv` by comparing `toFun` and `invFun` and then dependently
@@ -1483,11 +1496,20 @@ def trans {e f g : StructureEquiv S T} (φ : EquivEquiv e f) (ψ : EquivEquiv f 
   leftInvEquiv  := LeftInv.Equiv.trans φ.leftInvEquiv  ψ.leftInvEquiv,
   rightInvEquiv := LeftInv.Equiv.trans φ.rightInvEquiv ψ.rightInvEquiv }
 
+
+
+-- For equivalence of `EquivEquiv`, we can reuse the equivalence of `StructureProduct`, as `leftInvEquiv`
+-- and `rightInvEquiv` are just proofs.
+
+@[reducible] def FunProd (S T : Structure) :=
+  StructureProduct (functorStructure S T) (functorStructure T S)
+
+def funProd {S T : Structure} (e : StructureEquiv S T) : FunProd S T :=
+⟨e.toFun, e.invFun⟩
+
 def funEquivProd {e f : StructureEquiv S T} (φ : EquivEquiv e f) :
   funProd e ≃ funProd f :=
 ⟨φ.toFunEquiv, φ.invFunEquiv⟩
-
-
 
 def EquivEquivEquiv {e f : StructureEquiv S T} (φ ψ : EquivEquiv e f) :=
 funEquivProd φ ≈ funEquivProd ψ
@@ -1513,16 +1535,15 @@ def equivEquiv (e f : StructureEquiv S T) : BundledSetoid := ⟨EquivEquiv e f�
 
 instance equivHasIso : HasIsomorphisms (@equivEquiv S T) :=
 { comp         := trans,
-  congrArgComp := λ {e f g φ₁ φ₂ ψ₁ ψ₂} hφ hψ => let h₁ : EquivEquivEquiv φ₁ φ₂ := hφ;
-                                                 let h₂ : EquivEquivEquiv ψ₁ ψ₂ := hψ;
-                                                 HasStructure.congrArgComp h₁ h₂,
+  congrArgComp := λ {e f g φ₁ φ₂ ψ₁ ψ₂} (hφ : EquivEquivEquiv φ₁ φ₂) (hψ : EquivEquivEquiv ψ₁ ψ₂) =>
+                  HasStructure.congrArgComp hφ hψ,
   assoc        := λ φ ψ χ => HasStructure.assoc    (funEquivProd φ) (funEquivProd ψ) (funEquivProd χ),
   id           := refl,
   leftId       := λ φ     => HasStructure.leftId   (funEquivProd φ),
   rightId      := λ φ     => HasStructure.rightId  (funEquivProd φ),
   inv          := symm,
-  congrArgInv  := λ {e f φ₁ φ₂} hφ => let h : EquivEquivEquiv φ₁ φ₂ := hφ;
-                                      HasStructure.congrArgInv h,
+  congrArgInv  := λ {e f φ₁ φ₂} (hφ  : EquivEquivEquiv φ₁ φ₂) =>
+                  HasStructure.congrArgInv hφ,
   leftInv      := λ φ     => HasStructure.leftInv  (funEquivProd φ),
   rightInv     := λ φ     => HasStructure.rightInv (funEquivProd φ),
   invInv       := λ φ     => HasStructure.invInv   (funEquivProd φ),
