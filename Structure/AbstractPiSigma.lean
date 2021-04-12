@@ -202,7 +202,7 @@ variable (S T : Structure)
 def constDepToFun :
   StructureFunctor (piStructure (StructureDependency.constDep S T)) (functorStructure S (setoidStructure T)) :=
 { map     := constPiToFun,
-  functor := { FF        := λ e => makeToSetoidStructureFunctorEquiv' (λ a => e a),
+  functor := { mapEquiv  := λ e => makeToSetoidStructureFunctorEquiv' (λ a => e a),
                isFunctor := { respectsSetoid := id,
                               respectsComp   := λ φ ψ => Setoid.refl (ψ • φ),
                               respectsId     := λ f   => Setoid.refl (id__ f),
@@ -211,7 +211,7 @@ def constDepToFun :
 def constDepInvFun :
   StructureFunctor (functorStructure S (setoidStructure T)) (piStructure (StructureDependency.constDep S T)) :=
 { map     := funToConstPi,
-  functor := { FF        := λ e => e.ext,
+  functor := { mapEquiv  := λ e => e.ext,
                isFunctor := { respectsSetoid := id,
                               respectsComp   := λ φ ψ => Setoid.refl (ψ • φ),
                               respectsId     := λ F   => Setoid.refl (id__ F),
@@ -236,7 +236,7 @@ variable (F : StructureDependency)
 
 def projFunctor (a : F.S) : StructureFunctor (piStructure F) (setoidStructure (F.F a)) :=
 { map     := λ f => f a,
-  functor := { FF        := λ φ => φ a,
+  functor := { mapEquiv  := λ φ => φ a,
                isFunctor := { respectsSetoid := λ h   => h a,
                               respectsComp   := λ φ ψ => Setoid.refl (ψ a • φ a),
                               respectsId     := λ f   => Setoid.refl (id_ (f a)),
@@ -333,7 +333,7 @@ def mkDependency : StructureDependency := ⟨F.S, mkSndFunctor F⟩
 
 def mkExprFunctor (a : F.S) : StructureFunctor (F.F a) (sigmaStructure F) :=
 { map     := λ b => ⟨a, b⟩,
-  functor := { FF        := λ {b c} e => ⟨id_ a, SetoidInstanceEquiv.congrArgEquiv (Setoid.symm (respectsId F.F a)) b c ⟨e⟩⟩,
+  functor := { mapEquiv  := λ {b c} e => ⟨id_ a, SetoidInstanceEquiv.congrArgEquiv (Setoid.symm (respectsId F.F a)) b c ⟨e⟩⟩,
                isFunctor := { respectsSetoid := λ _   => Setoid.refl _,
                               respectsComp   := λ _ _ => Setoid.symm (leftId _),
                               respectsId     := λ _   => Setoid.refl (id'' (S := sigmaStructure F)),
@@ -353,7 +353,7 @@ dependentApplicationFunctor f mkSnd
 
 def projFstFunctor : StructureFunctor (sigmaStructure F) F.S :=
 { map     := PSigma.fst,
-  functor := { FF        := PSigma.fst,
+  functor := { mapEquiv  := PSigma.fst,
                isFunctor := { respectsSetoid := id,
                               respectsComp   := λ e f => Setoid.refl (f • e),
                               respectsId     := λ a   => Setoid.refl (id__ a),
@@ -515,7 +515,7 @@ def sigmaSigmaUncurried := sigmaStructure (innerPairDependency   F)
 
 def sigmaSigmaEquivToFun  : StructureFunctor (sigmaSigmaCurried   F) (sigmaSigmaUncurried F) :=
 { map     := λ ⟨a, ⟨x, y⟩⟩ => ⟨⟨a, x⟩, y⟩,
-  functor := { FF        := λ ⟨e, he⟩ => sorry,
+  functor := { mapEquiv  := λ ⟨e, he⟩ => sorry,
                isFunctor := { respectsSetoid := sorry,
                               respectsComp   := sorry,
                               respectsId     := sorry,
@@ -523,7 +523,7 @@ def sigmaSigmaEquivToFun  : StructureFunctor (sigmaSigmaCurried   F) (sigmaSigma
 
 def sigmaSigmaEquivInvFun : StructureFunctor (sigmaSigmaUncurried F) (sigmaSigmaCurried   F) :=
 { map     := λ ⟨⟨a, x⟩, y⟩ => ⟨a, ⟨x, y⟩⟩,
-  functor := { FF        := λ ⟨⟨e, f⟩, g⟩ => sorry,
+  functor := { mapEquiv  := λ ⟨⟨e, f⟩, g⟩ => sorry,
                isFunctor := { respectsSetoid := sorry,
                               respectsComp   := sorry,
                               respectsId     := sorry,

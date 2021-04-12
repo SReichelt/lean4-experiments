@@ -136,7 +136,7 @@ end instanceStructureEquiv
 
 def sortToStructureFunctor : StructureFunctor sortStructure universeStructure :=
 { map     := instanceStructure,
-  functor := { FF        := instanceStructureEquiv,
+  functor := { mapEquiv  := instanceStructureEquiv,
                isFunctor := { respectsSetoid := instanceStructureEquiv.respectsSetoid,
                               respectsComp   := instanceStructureEquiv.respectsComp,
                               respectsId     := instanceStructureEquiv.respectsId,
@@ -181,12 +181,12 @@ cast (congrArg BundledSetoid.α (Eq.symm h₁)) f
 
 def equivalentStructureDefEquivToFun : StructureFunctor (equivalentStructure e) (defaultStructure β) :=
 { map     := e.toFun,
-  functor := { FF        := equivalentEquiv e,
+  functor := { mapEquiv  := equivalentEquiv e,
                isFunctor := sorry } }
 
 def equivalentStructureDefEquivInvFun : StructureFunctor (defaultStructure β) (equivalentStructure e) :=
 { map     := e.invFun,
-  functor := { FF        := equivalentEquivInv e,
+  functor := { mapEquiv  := equivalentEquivInv e,
                isFunctor := sorry } }
 
 def equivalentStructureDefEquiv : StructureEquiv (equivalentStructure e) (defaultStructure β) :=

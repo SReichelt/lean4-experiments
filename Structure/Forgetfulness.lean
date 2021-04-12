@@ -32,10 +32,10 @@ namespace Forgetfulness
 
 section Setoid
 
-def makeToSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {a b : S}, a ≃ b → map a ≈ map b) :
+def makeToSetoidStructureFunctor {S T : Structure} (map : S → T) (mapEquiv : ∀ {a b : S}, a ≃ b → map a ≈ map b) :
   StructureFunctor S (setoidStructure T) :=
 { map     := map,
-  functor := { FF        := FF,
+  functor := { mapEquiv  := mapEquiv,
                isFunctor := propFunctor } }
 
 def makeToSetoidStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ a, F a ≃ G a) :
@@ -56,9 +56,9 @@ makeToSetoidStructureFunctor id (toSetoidEquiv S)
 
 namespace SetoidStructureFunctor
 
-def makeSetoidStructureFunctor {S T : Structure} (map : S → T) (FF : ∀ {a b : S}, a ≈ b → map a ≈ map b) :
+def makeSetoidStructureFunctor {S T : Structure} (map : S → T) (mapEquiv : ∀ {a b : S}, a ≈ b → map a ≈ map b) :
   SetoidStructureFunctor S T :=
-makeToSetoidStructureFunctor map FF
+makeToSetoidStructureFunctor map mapEquiv
 
 def makeSetoidStructureFunctorInverse {S T : Structure} {F : SetoidStructureFunctor S T} {G : SetoidStructureFunctor T S}
                                       (leftInv : LeftInv F G) (rightInv : LeftInv G F) :
@@ -164,7 +164,7 @@ theorem respectsInv {S T : Structure} (e : S ≃ T) :
 ⟨makeSetoidStructureEquivEquiv' (IsEquivalence.refl (setoidFunctor e.invFun)) (IsEquivalence.refl (setoidFunctor e.toFun))⟩
 
 def genFun : GeneralizedFunctor.Functor (S := universeStructure) (T := universeStructure) setoidStructure :=
-{ FF        := toSetoidStructureEquiv,
+{ mapEquiv  := toSetoidStructureEquiv,
   isFunctor := { respectsSetoid := respectsSetoid,
                  respectsComp   := respectsComp,
                  respectsId     := respectsId,
@@ -231,10 +231,10 @@ open SetoidStructureFunctor
 
 section Skeleton
 
-def makeToSkeletonStructureFunctor {S T : Structure} (map : S → StructureQuotient T) (FF : ∀ {a b : S}, a ≃ b → map a = map b) :
+def makeToSkeletonStructureFunctor {S T : Structure} (map : S → StructureQuotient T) (mapEquiv : ∀ {a b : S}, a ≃ b → map a = map b) :
   StructureFunctor S (skeletonStructure T) :=
 { map     := map,
-  functor := { FF        := FF,
+  functor := { mapEquiv  := mapEquiv,
                isFunctor := propFunctor } }
 
 def makeToSkeletonStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (skeletonStructure T)} (ext : ∀ a, F a ≃ G a) :
@@ -293,7 +293,7 @@ def skeletonIdempotence (S : Structure) : skeletonStructure (skeletonStructure S
 variable {S T : Structure}
 
 def skeletonMap (F : SetoidStructureFunctor S T) : skeletonStructure S → skeletonStructure T :=
-Quotient.lift (Quotient.mk ∘ F.map) (λ _ _ => Quotient.sound ∘ F.functor.FF)
+Quotient.lift (Quotient.mk ∘ F.map) (λ _ _ => Quotient.sound ∘ F.functor.mapEquiv)
 
 def skeletonFromSetoidFunctor (F : SetoidStructureFunctor S T) : SkeletonStructureFunctor S T :=
 makeSkeletonStructureFunctor (skeletonMap F)

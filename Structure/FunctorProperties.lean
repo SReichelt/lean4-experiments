@@ -49,7 +49,7 @@ def inverseElement (b : T) := (h.snd.fst b).fst
 namespace inverseElement
 
 def isInverse  (b : T) : F (inverseElement F h b) ≃ b := (h.snd.fst b).snd
-def isInverse' (a : S) : inverseElement F h (F a) ≃ a := h.fst.FF (isInverse F h (F a))
+def isInverse' (a : S) : inverseElement F h (F a) ≃ a := h.fst.mapEquiv (isInverse F h (F a))
 
 end inverseElement
 

@@ -144,7 +144,7 @@ theorem targetRespectsInv {a b : S} (e : a ≃ b) :
 
 def setoidUniverseFunctor : SetoidUniverseFunctor S :=
 { map     := D.map,
-  functor := { FF        := targetEquiv D,
+  functor := { mapEquiv  := targetEquiv D,
                isFunctor := { respectsSetoid := targetRespectsSetoid D,
                               respectsComp   := targetRespectsComp   D,
                               respectsId     := targetRespectsId     D,
@@ -228,7 +228,7 @@ theorem targetRespectsInv {S T : Structure} (e : S ≃ T) :
 
 def universeStructureFunctor : UniverseStructureFunctor :=
 { map     := D.map,
-  functor := { FF        := targetEquiv D,
+  functor := { mapEquiv  := targetEquiv D,
                isFunctor := { respectsSetoid := targetRespectsSetoid D,
                               respectsComp   := targetRespectsComp   D,
                               respectsId     := targetRespectsId     D,
