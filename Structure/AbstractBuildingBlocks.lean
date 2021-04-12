@@ -12,7 +12,6 @@ import mathlib4_experiments.Data.Equiv
 
 open Morphisms
 open Structure
-open DependentStructure
 open StructureFunctor
 open Forgetfulness
 open PiSigma
@@ -250,44 +249,44 @@ end FunctorInstanceDef
 
 section SigmaInstanceDef
 
-variable (F : NestedDependency)
+variable (D : NestedDependency)
 
-def UncurriedSigmaInstance := SigmaExpr (innerPairDependency   F)
-def SigmaInstance          := SigmaExpr (nestedSigmaDependency F)
+def UncurriedSigmaInstance := SigmaExpr (innerPairDependency   D)
+def SigmaInstance          := SigmaExpr (nestedSigmaDependency D)
 
 namespace SigmaInstance
 
-def innerPair (a : SigmaInstance F) : SigmaExpr F.fst :=
+def innerPair (a : SigmaInstance D) : SigmaExpr D.fst :=
 ⟨a.fst, a.snd.fst⟩
 
-def outerPair (a : SigmaInstance F) : UncurriedSigmaInstance F :=
-⟨innerPair F a, a.snd.snd⟩
+def outerPair (a : SigmaInstance D) : UncurriedSigmaInstance D :=
+⟨innerPair D a, a.snd.snd⟩
 
 -- TODO: Make use of `PiSigmaEquivalences` here (and finish those first).
 
-def applyInnerEquiv (a b : SigmaInstance F) (e : a.fst ≃ b.fst)
-                    (h : a.snd.fst ≈[congrArgMap F.fst.F e] b.snd.fst) :
-  innerPair F a ≃ innerPair F b :=
+def applyInnerEquiv (a b : SigmaInstance D) (e : a.fst ≃ b.fst)
+                    (h : a.snd.fst ≈[congrArgMap D.fst.F e] b.snd.fst) :
+  innerPair D a ≃ innerPair D b :=
 sorry
 
-theorem iso (a b : SigmaInstance F) :
-  HasIso a b (λ e => ∃ h : a.snd.fst ≈[congrArgMap F.fst.F e] b.snd.fst,
-                     a.snd.snd ≈[congrArgMap F.snd (applyInnerEquiv F a b e h)] b.snd.snd) :=
+theorem iso (a b : SigmaInstance D) :
+  HasIso a b (λ e => ∃ h : a.snd.fst ≈[congrArgMap D.fst.F e] b.snd.fst,
+                     a.snd.snd ≈[congrArgMap D.snd (applyInnerEquiv D a b e h)] b.snd.snd) :=
 sorry
 
-def applyInnerEquiv' (a b : SigmaInstance F) (cF : IsoCriterion F.fst) (e : a.fst ≃ b.fst)
-                     (h : (cF (innerPair F a) (innerPair F b)).I e) :
-  innerPair F a ≃ innerPair F b :=
+def applyInnerEquiv' (a b : SigmaInstance D) (cF : IsoCriterion D.fst) (e : a.fst ≃ b.fst)
+                     (h : (cF (innerPair D a) (innerPair D b)).I e) :
+  innerPair D a ≃ innerPair D b :=
 sorry
 
-theorem iso' (a b : SigmaInstance F) (cF : IsoCriterion F.fst) (cG : IsoCriterion (innerPairDependency F)) :
-  HasIso a b (λ e => ∃ h : (cF (innerPair F a) (innerPair F b)).I e,
-                     (cG (outerPair F a) (outerPair F b)).I (applyInnerEquiv' F a b cF e h)) :=
+theorem iso' (a b : SigmaInstance D) (cF : IsoCriterion D.fst) (cG : IsoCriterion (innerPairDependency D)) :
+  HasIso a b (λ e => ∃ h : (cF (innerPair D a) (innerPair D b)).I e,
+                     (cG (outerPair D a) (outerPair D b)).I (applyInnerEquiv' D a b cF e h)) :=
 sorry
 
-def isoCriterion (cF : IsoCriterion F.fst) (cG : IsoCriterion (innerPairDependency F)) :
-  IsoCriterion (nestedSigmaDependency F) :=
-λ a b => ⟨iso' F a b cF cG⟩
+def isoCriterion (cF : IsoCriterion D.fst) (cG : IsoCriterion (innerPairDependency D)) :
+  IsoCriterion (nestedSigmaDependency D) :=
+λ a b => ⟨iso' D a b cF cG⟩
 
 end SigmaInstance
 

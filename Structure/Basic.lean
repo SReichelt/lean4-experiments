@@ -12,7 +12,6 @@
 -- TODO: Improve naming:
 -- * Make variable names consistent:
 --   * Be more consistent with `e` vs. `φ` etc.
---   * Rename `F`, `G` etc. in generalized functors to e.g. `f`, `g` (warning: clashes with equivalences `e`, `f`, ...).
 -- * Use snake case for theorem names.
 
 
@@ -631,77 +630,77 @@ instance propFunctor {ω : Sort w} {R : MappedRelation ω} [HasIsomorphisms R.R]
 
 -- A bundled version of `IsIsomorphismFunctor` where the codomains are structures.
 
-structure GeneralizedFunctor {ω : Sort w} {S T : Structure} (F : ω → S) (G : ω → T) where
-(mapEquiv {a b : ω} : F a ≃ F b → G a ≃ G b)
-[isFunctor          : IsIsomorphismFunctor ⟨iso S, F⟩ ⟨iso T, G⟩ mapEquiv]
+structure GeneralizedFunctor {ω : Sort w} {S T : Structure} (s : ω → S) (t : ω → T) where
+(mapEquiv {a b : ω} : s a ≃ s b → t a ≃ t b)
+[isFunctor          : IsIsomorphismFunctor ⟨iso S, s⟩ ⟨iso T, t⟩ mapEquiv]
 
 namespace GeneralizedFunctor
 
-@[reducible] def Functor {S T : Structure} (F : S → T) := GeneralizedFunctor id F
+@[reducible] def Functor {S T : Structure} (s : S → T) := GeneralizedFunctor id s
 
 variable {ω : Sort w} {S T U : Structure}
 
-instance (F : ω → S) (G : ω → T) :
-  CoeFun (GeneralizedFunctor F G) (λ _ => ∀ {a b : ω}, F a ≃ F b → G a ≃ G b) :=
+instance (s : ω → S) (t : ω → T) :
+  CoeFun (GeneralizedFunctor s t) (λ _ => ∀ {a b : ω}, s a ≃ s b → t a ≃ t b) :=
 ⟨GeneralizedFunctor.mapEquiv⟩
 
-def generalizeFunctor {β : Sort v} {F : ω → S} {G : ω → T} (H : β → ω) (φ : GeneralizedFunctor F G) :
-  GeneralizedFunctor (F ∘ H) (G ∘ H) :=
+def generalizeFunctor {β : Sort v} {s : ω → S} {t : ω → T} (z : β → ω) (φ : GeneralizedFunctor s t) :
+  GeneralizedFunctor (s ∘ z) (t ∘ z) :=
 { mapEquiv  := φ.mapEquiv,
   isFunctor := { respectsSetoid := φ.isFunctor.respectsSetoid,
                  respectsComp   := φ.isFunctor.respectsComp,
-                 respectsId     := λ b => φ.isFunctor.respectsId (H b),
+                 respectsId     := λ b => φ.isFunctor.respectsId (z b),
                  respectsInv    := φ.isFunctor.respectsInv } }
 
-instance {β : Sort v} (F : ω → S) (G : ω → T) (H : β → ω) :
-  Coe (GeneralizedFunctor F G) (GeneralizedFunctor (F ∘ H) (G ∘ H)) :=
-⟨generalizeFunctor H⟩
+instance {β : Sort v} (s : ω → S) (t : ω → T) (z : β → ω) :
+  Coe (GeneralizedFunctor s t) (GeneralizedFunctor (s ∘ z) (t ∘ z)) :=
+⟨generalizeFunctor z⟩
 
 namespace id
 
-variable {F : ω → S}
+variable {s : ω → S}
 
-instance isFunctor : IsIsomorphismFunctor ⟨iso S, F⟩ ⟨iso S, F⟩ id :=
+instance isFunctor : IsIsomorphismFunctor ⟨iso S, s⟩ ⟨iso S, s⟩ id :=
 { respectsSetoid := id,
   respectsComp   := λ f g => Setoid.refl (g • f),
-  respectsId     := λ a   => Setoid.refl (id_ (F a)),
+  respectsId     := λ a   => Setoid.refl (id_ (s a)),
   respectsInv    := λ f   => Setoid.refl f⁻¹ }
 
-def genFun : GeneralizedFunctor F F := ⟨id⟩
+def genFun : GeneralizedFunctor s s := ⟨id⟩
 
 end id
 
 namespace comp
 
-variable {F : ω → S} {G : ω → T} {H : ω → U} (φ : GeneralizedFunctor F G) (ψ : GeneralizedFunctor G H)
+variable {s : ω → S} {t : ω → T} {u : ω → U} (φ : GeneralizedFunctor s t) (ψ : GeneralizedFunctor t u)
 
-def compFF {a b : ω} (e : F a ≃ F b) := ψ (φ e)
+def compFF {a b : ω} (e : s a ≃ s b) := ψ (φ e)
 
 namespace compFF
 
-theorem respectsSetoid {a b :   ω} {e f : F a ≃ F b} (h : e ≈ f) :
+theorem respectsSetoid {a b :   ω} {e f : s a ≃ s b} (h : e ≈ f) :
   compFF φ ψ e ≈ compFF φ ψ f :=
 ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsSetoid h)
 
-theorem respectsComp   {a b c : ω} (e : F a ≃ F b) (f : F b ≃ F c) :
+theorem respectsComp   {a b c : ω} (e : s a ≃ s b) (f : s b ≃ s c) :
   compFF φ ψ (f • e) ≈ compFF φ ψ f • compFF φ ψ e :=
 let h₁ : ψ (φ (f • e)) ≈ ψ (φ f • φ e)     := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsComp e f);
 let h₂ : ψ (φ f • φ e) ≈ ψ (φ f) • ψ (φ e) := ψ.isFunctor.respectsComp (φ e) (φ f);
 Setoid.trans h₁ h₂
 
 theorem respectsId     (a     : ω) :
-  compFF φ ψ (id_ (F a)) ≈ id' :=
-let h₁ : ψ (φ (id_ (F a))) ≈ ψ (id_ (G a)) := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsId a);
-let h₂ : ψ (id_ (G a))     ≈ id_ (H a)     := ψ.isFunctor.respectsId a;
+  compFF φ ψ (id_ (s a)) ≈ id' :=
+let h₁ : ψ (φ (id_ (s a))) ≈ ψ (id_ (t a)) := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsId a);
+let h₂ : ψ (id_ (t a))     ≈ id_ (u a)     := ψ.isFunctor.respectsId a;
 Setoid.trans h₁ h₂
 
-theorem respectsInv    {a b   : ω} (e : F a ≃ F b) :
+theorem respectsInv    {a b   : ω} (e : s a ≃ s b) :
   compFF φ ψ e⁻¹ ≈ (compFF φ ψ e)⁻¹ :=
 let h₁ : ψ (φ e⁻¹) ≈ ψ (φ e)⁻¹   := ψ.isFunctor.respectsSetoid (φ.isFunctor.respectsInv e);
 let h₂ : ψ (φ e)⁻¹ ≈ (ψ (φ e))⁻¹ := ψ.isFunctor.respectsInv (φ e);
 Setoid.trans h₁ h₂
 
-instance isFunctor : IsIsomorphismFunctor ⟨iso S, F⟩ ⟨iso U, H⟩ (compFF φ ψ) :=
+instance isFunctor : IsIsomorphismFunctor ⟨iso S, s⟩ ⟨iso U, u⟩ (compFF φ ψ) :=
 { respectsSetoid := compFF.respectsSetoid φ ψ,
   respectsComp   := compFF.respectsComp   φ ψ,
   respectsId     := compFF.respectsId     φ ψ,
@@ -709,20 +708,20 @@ instance isFunctor : IsIsomorphismFunctor ⟨iso S, F⟩ ⟨iso U, H⟩ (compFF 
 
 end compFF
 
-def genFun : GeneralizedFunctor F H := ⟨compFF φ ψ⟩
+def genFun : GeneralizedFunctor s u := ⟨compFF φ ψ⟩
 
 end comp
 
-def comp.genFun' {β : Sort v} {F : ω → S} {G : β → T} {H : β → U} (I : ω → β)
-                 (φ : GeneralizedFunctor F (G ∘ I)) (ψ : GeneralizedFunctor G H) :
-  GeneralizedFunctor F (H ∘ I) :=
-comp.genFun φ (generalizeFunctor I ψ)
+def comp.genFun' {β : Sort v} {s : ω → S} {t : β → T} {u : β → U} (z : ω → β)
+                 (φ : GeneralizedFunctor s (t ∘ z)) (ψ : GeneralizedFunctor t u) :
+  GeneralizedFunctor s (u ∘ z) :=
+comp.genFun φ (generalizeFunctor z ψ)
 
 namespace const
 
-variable {F : ω → S} (c : T)
+variable {s : ω → S} (c : T)
 
-def genFun : GeneralizedFunctor F (Function.const ω c) :=
+def genFun : GeneralizedFunctor s (Function.const ω c) :=
 { mapEquiv  := λ _ => IsEquivalence.refl c,
   isFunctor := { respectsSetoid := λ _   => Setoid.refl (id_ c),
                  respectsComp   := λ _ _ => Setoid.symm (leftId (id_ c)),
@@ -737,79 +736,70 @@ open GeneralizedFunctor
 
 
 
--- If we have two functions that map from an arbitrary `ω` into the same structure `S`, and for each
--- instance of `ω` we have an equivalence between the values of both functions, that gives us something
--- that can act as an equivalence between the two functions. In particular:
---
--- * If both are functors, this gives us a definition of equivalence of functors.
---
--- * If only one of them is a functor, we can use the equivalence to turn the other function into a
---   functor as well.
+def Pi {ω : Sort w} (C : ω → Structure) := ∀ a, C a
 
-def DependentStructure {ω : Sort w} (C : ω → Structure) := ∀ a, C a
-
-namespace DependentStructure
+namespace Pi
 
 variable {ω : Sort w} {C : ω → Structure}
 
-def generalizeDependentStructure {β : Sort v} (H : β → ω) (F : DependentStructure C) : DependentStructure (C ∘ H) :=
-λ b => F (H b)
+def generalizePi {β : Sort v} (z : β → ω) (p : Pi C) : Pi (C ∘ z) :=
+λ b => p (z b)
 
-def DependentEquiv (F G : DependentStructure C) := ∀ a, F a ≃ G a
+def PiEquiv (p q : Pi C) := ∀ a, p a ≃ q a
 
-namespace DependentEquiv
+namespace PiEquiv
 
-def refl  (F     : DependentStructure C)                                                   : DependentEquiv F F :=
-λ a => IsEquivalence.refl  (F a)
-def symm  {F G   : DependentStructure C} (φ : DependentEquiv F G)                          : DependentEquiv G F :=
+def refl  (p     : Pi C)                                     : PiEquiv p p :=
+λ a => IsEquivalence.refl  (p a)
+def symm  {p q   : Pi C} (φ : PiEquiv p q)                   : PiEquiv q p :=
 λ a => IsEquivalence.symm  (φ a)
-def trans {F G H : DependentStructure C} (φ : DependentEquiv F G) (ψ : DependentEquiv G H) : DependentEquiv F H :=
+def trans {p q H : Pi C} (φ : PiEquiv p q) (ψ : PiEquiv q H) : PiEquiv p H :=
 λ a => IsEquivalence.trans (φ a) (ψ a)
 
-def dependentIsoStructure (F G : DependentStructure C) (a : ω) := isoStructure (F a) (G a)
+def piIsoStructure (p q : Pi C) (a : ω) := isoStructure (p a) (q a)
 
-def generalizeDependentEquiv {β : Sort v} (H : β → ω) {F G : DependentStructure C} (φ : DependentEquiv F G) :
-  DependentEquiv (generalizeDependentStructure H F) (generalizeDependentStructure H G) :=
-λ b => φ (H b)
+def generalizePiEquiv {β : Sort v} (z : β → ω) {p q : Pi C} (φ : PiEquiv p q) :
+  PiEquiv (generalizePi z p) (generalizePi z q) :=
+λ b => φ (z b)
 
-def EquivEquiv {F G : DependentStructure C} (φ ψ : DependentEquiv F G) :=
-@DependentEquiv ω (dependentIsoStructure F G) φ ψ
+def EquivEquiv {p q : Pi C} (φ ψ : PiEquiv p q) :=
+@PiEquiv ω (piIsoStructure p q) φ ψ
 
 namespace EquivEquiv
 
-variable {F G : DependentStructure C}
+variable {p q : Pi C}
 
-theorem refl  (φ     : DependentEquiv F G)                                           : EquivEquiv φ φ :=
-@DependentEquiv.refl ω (dependentIsoStructure F G) φ
-theorem symm  {φ ψ   : DependentEquiv F G} (e : EquivEquiv φ ψ)                      : EquivEquiv ψ φ :=
-DependentEquiv.symm  e
-theorem trans {φ ψ χ : DependentEquiv F G} (e : EquivEquiv φ ψ) (f : EquivEquiv ψ χ) : EquivEquiv φ χ :=
-DependentEquiv.trans e f
+theorem refl  (φ     : PiEquiv p q)                                           : EquivEquiv φ φ :=
+@PiEquiv.refl ω (piIsoStructure p q) φ
+theorem symm  {φ ψ   : PiEquiv p q} (e : EquivEquiv φ ψ)                      : EquivEquiv ψ φ :=
+PiEquiv.symm  e
+theorem trans {φ ψ χ : PiEquiv p q} (e : EquivEquiv φ ψ) (f : EquivEquiv ψ χ) : EquivEquiv φ χ :=
+PiEquiv.trans e f
 
-instance dependentEquivSetoid : Setoid (DependentEquiv F G) := ⟨EquivEquiv, ⟨refl, symm, trans⟩⟩
+instance piEquivSetoid : Setoid (PiEquiv p q) := ⟨EquivEquiv, ⟨refl, symm, trans⟩⟩
 
 end EquivEquiv
 
-def dependentEquiv : GeneralizedRelation (DependentStructure C) := λ F G => ⟨DependentEquiv F G⟩
+def piEquiv : GeneralizedRelation (Pi C) := λ p q => ⟨PiEquiv p q⟩
 
-@[reducible] def DependentDependentEquiv {β : Sort v} (H : β → DependentStructure C) (b c : β) := DependentEquiv (H b) (H c)
+@[reducible] def DependentPiEquiv {β : Sort v} (z : β → Pi C) (b c : β) := PiEquiv (z b) (z c)
 
-namespace DependentDependentEquiv
+namespace DependentPiEquiv
 
-variable {β : Sort v} {H : β → DependentStructure C}
+variable {β : Sort v} {z : β → Pi C}
 
-def refl  (b     : β)                                                                         : DependentDependentEquiv H b b :=
-DependentEquiv.refl  (H b)
-def symm  {b c   : β} (e : DependentDependentEquiv H b c)                                     : DependentDependentEquiv H c b :=
-DependentEquiv.symm  e
-def trans {b c d : β} (e : DependentDependentEquiv H b c) (f : DependentDependentEquiv H c d) : DependentDependentEquiv H b d :=
-DependentEquiv.trans e f
+def refl  (b     : β)                                                           : DependentPiEquiv z b b :=
+PiEquiv.refl  (z b)
+def symm  {b c   : β} (e : DependentPiEquiv z b c)                              : DependentPiEquiv z c b :=
+PiEquiv.symm  e
+def trans {b c d : β} (e : DependentPiEquiv z b c) (f : DependentPiEquiv z c d) : DependentPiEquiv z b d :=
+PiEquiv.trans e f
 
-instance EquivEquiv.dependentDependentEquivSetoid {b c : β} : Setoid (DependentDependentEquiv H b c) := EquivEquiv.dependentEquivSetoid
+instance EquivEquiv.dependentPiEquivSetoid {b c : β} : Setoid (DependentPiEquiv z b c) := EquivEquiv.piEquivSetoid
 
-def dependentDependentEquiv : GeneralizedRelation β := λ b c => ⟨DependentDependentEquiv H b c⟩
+def dependentPiEquiv : GeneralizedRelation β := λ b c => ⟨DependentPiEquiv z b c⟩
 
-instance dependentDependentEquivHasIso : HasIsomorphisms (@dependentDependentEquiv ω C β H) :=
+instance dependentPiEquivHasIso : HasIsomorphisms (@dependentPiEquiv ω C β z) :=
 { comp         := trans,
   congrArgComp := λ hφ hψ a => congrArgComp (hφ a) (hψ a),
   assoc        := λ φ ψ χ a => assoc        (φ a) (ψ a) (χ a),
@@ -822,42 +812,43 @@ instance dependentDependentEquivHasIso : HasIsomorphisms (@dependentDependentEqu
   rightInv     := λ φ     a => rightInv     (φ a),
   invInv       := λ φ     a => invInv       (φ a),
   compInv      := λ φ ψ   a => compInv      (φ a) (ψ a),
-  idInv        := λ b     a => idInv        (H b a) }
+  idInv        := λ b     a => idInv        (z b a) }
 
-end DependentDependentEquiv
+end DependentPiEquiv
 
-instance dependentEquivHasIso : HasIsomorphisms (@dependentEquiv ω C) :=
-DependentDependentEquiv.dependentDependentEquivHasIso (H := id)
-
-end DependentEquiv
-
-end DependentStructure
-
-open DependentStructure
+instance piEquivHasIso : HasIsomorphisms (@piEquiv ω C) :=
+DependentPiEquiv.dependentPiEquivHasIso (z := id)
 
 
 
-namespace DependentEquiv
+-- If we have two functions that map from an arbitrary `ω` into the same structure `S`, and for each
+-- instance of `ω` we have an equivalence between the values of both functions, that gives us something
+-- that can act as an equivalence between the two functions. In particular:
+--
+-- * If both are functors, this gives us a definition of equivalence of functors.
+--
+-- * If only one of them is a functor, we can use the equivalence to turn the other function into a
+--   functor as well.
 
-variable {ω : Sort w} {S : Structure} {F G : ω → S} (φ : DependentEquiv F G)
+variable {ω : Sort w} {S : Structure} {p q : ω → S} (φ : PiEquiv p q)
 
--- We can "transport" an equivalence `e` between two values of `F` to an equivalence between the
--- corresponding two values of another equivalent function `G`.
+-- We can "transport" an equivalence `e` between two values of `p` to an equivalence between the
+-- corresponding two values of another equivalent function `q`.
 
-def transport    {a b : ω} (e : F a ≃ F b) : G a ≃ G b := φ b • e • (φ a)⁻¹
-def invTransport {a b : ω} (e : G a ≃ G b) : F a ≃ F b := (φ b)⁻¹ • e • φ a
+def transport    {a b : ω} (e : p a ≃ p b) : q a ≃ q b := φ b • e • (φ a)⁻¹
+def invTransport {a b : ω} (e : q a ≃ q b) : p a ≃ p b := (φ b)⁻¹ • e • φ a
 
 namespace transport
 
-theorem isInverse {a b : ω} (e : G a ≃ G b) :
-  transport (DependentEquiv.symm φ) e ≈ invTransport φ e :=
+theorem isInverse {a b : ω} (e : q a ≃ q b) :
+  transport (PiEquiv.symm φ) e ≈ invTransport φ e :=
 congrArgCompRight (congrArgCompRight (invInv (φ a)))
 
-theorem respectsSetoid {a b   : ω} {e₁ e₂ : F a ≃ F b} (h : e₁ ≈ e₂) :
+theorem respectsSetoid {a b   : ω} {e₁ e₂ : p a ≃ p b} (h : e₁ ≈ e₂) :
   transport φ e₁ ≈ transport φ e₂ :=
 congrArgCompRight (congrArgCompLeft h)
 
-theorem respectsComp   {a b c : ω} (e : F a ≃ F b) (f : F b ≃ F c) :
+theorem respectsComp   {a b c : ω} (e : p a ≃ p b) (f : p b ≃ p c) :
   transport φ (f • e) ≈ transport φ f • transport φ e :=
 let φa := φ a;
 let φb := φ b;
@@ -872,12 +863,12 @@ let h₇ : φc • (f • e) • φa⁻¹ ≈ (φc • f • φb⁻¹) • (φb 
 h₇
 
 theorem respectsId     (a     : ω) :
-  transport φ (id_ (F a)) ≈ id' :=
+  transport φ (id_ (p a)) ≈ id' :=
 let φa := φ a;
 let h₁ : φa • id' • φa⁻¹ ≈ id' := substCompRight (leftId φa⁻¹) (rightInv φa);
 h₁
 
-theorem respectsInv    {a b   : ω} (e : F a ≃ F b) :
+theorem respectsInv    {a b   : ω} (e : p a ≃ p b) :
   transport φ e⁻¹ ≈ (transport φ e)⁻¹ :=
 let φa := φ a;
 let φb := φ b;
@@ -886,34 +877,34 @@ let h₂ : φa • e⁻¹ • φb⁻¹ ≈ ((φb • e) • φa⁻¹)⁻¹   := 
 let h₃ : φa • e⁻¹ • φb⁻¹ ≈ (φb • e • φa⁻¹)⁻¹     := Setoid.trans h₂ (congrArgInv (Setoid.symm (assoc φa⁻¹ e φb)));
 h₃
 
-def functor : GeneralizedFunctor F G :=
+def functor : GeneralizedFunctor p q :=
 { mapEquiv  := transport φ,
   isFunctor := { respectsSetoid := respectsSetoid φ,
                  respectsComp   := respectsComp   φ,
                  respectsId     := respectsId     φ,
                  respectsInv    := respectsInv    φ } }
 
-theorem invRespectsSetoid {a b   : ω} {e₁ e₂ : G a ≃ G b} (h : e₁ ≈ e₂) :
+theorem invRespectsSetoid {a b   : ω} {e₁ e₂ : q a ≃ q b} (h : e₁ ≈ e₂) :
   invTransport φ e₁ ≈ invTransport φ e₂ :=
-let h₁ := respectsSetoid (DependentEquiv.symm φ) h;
+let h₁ := respectsSetoid (PiEquiv.symm φ) h;
 Setoid.trans (Setoid.symm (isInverse φ e₁)) (Setoid.trans h₁ (isInverse φ e₂))
 
-theorem invRespectsComp   {a b c : ω} (e : G a ≃ G b) (f : G b ≃ G c) :
+theorem invRespectsComp   {a b c : ω} (e : q a ≃ q b) (f : q b ≃ q c) :
   invTransport φ (f • e) ≈ invTransport φ f • invTransport φ e :=
-let h₁ := respectsComp (DependentEquiv.symm φ) e f;
+let h₁ := respectsComp (PiEquiv.symm φ) e f;
 Setoid.trans (Setoid.symm (isInverse φ (f • e))) (Setoid.trans h₁ (congrArgComp (isInverse φ e) (isInverse φ f)))
 
 theorem invRespectsId     (a     : ω) :
-  invTransport φ (id_ (G a)) ≈ id' :=
-let h₁ := respectsId (DependentEquiv.symm φ) a;
-Setoid.trans (Setoid.symm (isInverse φ (id_ (G a)))) h₁
+  invTransport φ (id_ (q a)) ≈ id' :=
+let h₁ := respectsId (PiEquiv.symm φ) a;
+Setoid.trans (Setoid.symm (isInverse φ (id_ (q a)))) h₁
 
-theorem invRespectsInv    {a b   : ω} (e : G a ≃ G b) :
+theorem invRespectsInv    {a b   : ω} (e : q a ≃ q b) :
   invTransport φ e⁻¹ ≈ (invTransport φ e)⁻¹ :=
-let h₁ := respectsInv (DependentEquiv.symm φ) e;
+let h₁ := respectsInv (PiEquiv.symm φ) e;
 Setoid.trans (Setoid.symm (isInverse φ e⁻¹)) (Setoid.trans h₁ (congrArgInv (isInverse φ e)))
 
-def invFunctor : GeneralizedFunctor G F :=
+def invFunctor : GeneralizedFunctor q p :=
 { mapEquiv  := invTransport φ,
   isFunctor := { respectsSetoid := invRespectsSetoid φ,
                  respectsComp   := invRespectsComp   φ,
@@ -922,36 +913,40 @@ def invFunctor : GeneralizedFunctor G F :=
 
 end transport
 
-end DependentEquiv
+end PiEquiv
+
+end Pi
+
+open Pi
 
 
 
-def GeneralizedNaturalityCondition {ω : Sort w} {S T : Structure} {F : ω → S} {G₁ G₂ : ω → T}
-                                   (φ : GeneralizedFunctor F G₁) (ψ : GeneralizedFunctor F G₂)
-                                   (ext : DependentEquiv G₁ G₂) :=
-∀ {a b : ω} (e : F a ≃ F b), ψ e • ext a ≈ ext b • φ e
+def GeneralizedNaturalityCondition {ω : Sort w} {S T : Structure} {s : ω → S} {t₁ t₂ : ω → T}
+                                   (φ : GeneralizedFunctor s t₁) (ψ : GeneralizedFunctor s t₂)
+                                   (ext : PiEquiv t₁ t₂) :=
+∀ {a b : ω} (e : s a ≃ s b), ψ e • ext a ≈ ext b • φ e
 
 namespace GeneralizedNaturalityCondition
 
 variable {ω : Sort w} {S T : Structure}
 
-theorem refl  {F : ω → S} {G₁       : ω → T}
-              (φ : GeneralizedFunctor F G₁) :
-  GeneralizedNaturalityCondition φ φ (DependentEquiv.refl G₁) :=
+theorem refl  {s : ω → S} {t₁       : ω → T}
+              (φ : GeneralizedFunctor s t₁) :
+  GeneralizedNaturalityCondition φ φ (PiEquiv.refl t₁) :=
 λ e => Setoid.trans (rightId (φ e)) (Setoid.symm (leftId (φ e)))
 
-theorem symm  {F : ω → S} {G₁ G₂    : ω → T}
-              {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂}
-              {ext : DependentEquiv G₁ G₂}
+theorem symm  {s : ω → S} {t₁ t₂    : ω → T}
+              {φ : GeneralizedFunctor s t₁} {ψ : GeneralizedFunctor s t₂}
+              {ext : PiEquiv t₁ t₂}
               (nat : GeneralizedNaturalityCondition φ ψ ext) :
-  GeneralizedNaturalityCondition ψ φ (DependentEquiv.symm ext) :=
+  GeneralizedNaturalityCondition ψ φ (PiEquiv.symm ext) :=
 λ {a b} e => Setoid.symm ((leftRightMul (ext a) (φ e) (ψ e) (ext b)).mpr (nat e))
 
-theorem trans {F : ω → S} {G₁ G₂ G₃ : ω → T}
-              {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂} {χ : GeneralizedFunctor F G₃}
-              {ext₁ : DependentEquiv G₁ G₂}                    {ext₂ : DependentEquiv G₂ G₃}
+theorem trans {s : ω → S} {t₁ t₂ t₃ : ω → T}
+              {φ : GeneralizedFunctor s t₁} {ψ : GeneralizedFunctor s t₂} {χ : GeneralizedFunctor s t₃}
+              {ext₁ : PiEquiv t₁ t₂}                           {ext₂ : PiEquiv t₂ t₃}
               (nat₁ : GeneralizedNaturalityCondition φ ψ ext₁) (nat₂ : GeneralizedNaturalityCondition ψ χ ext₂) :
-  GeneralizedNaturalityCondition φ χ (DependentEquiv.trans ext₁ ext₂) :=
+  GeneralizedNaturalityCondition φ χ (PiEquiv.trans ext₁ ext₂) :=
 λ {a b} e => let h₁ := (rightMulInv (ψ e) (ext₁ b • φ e) (ext₁ a)).mp  (nat₁ e);
              let h₂ := (leftMulInv' (χ e • ext₂ a) (ψ e) (ext₂ b)).mpr (nat₂ e);
              let h₃ := (leftRightMul (ext₁ a) (ext₁ b • φ e) (χ e • ext₂ a) (ext₂ b)).mp (Setoid.trans h₂ h₁);
@@ -961,39 +956,39 @@ end GeneralizedNaturalityCondition
 
 
 
-structure GeneralizedNaturalTransformation {ω : Sort w} {S T : Structure} {F : ω → S} {G₁ G₂ : ω → T}
-                                           (φ : GeneralizedFunctor F G₁) (ψ : GeneralizedFunctor F G₂) where
-(ext : DependentEquiv G₁ G₂)
+structure GeneralizedNaturalTransformation {ω : Sort w} {S T : Structure} {s : ω → S} {t₁ t₂ : ω → T}
+                                           (φ : GeneralizedFunctor s t₁) (ψ : GeneralizedFunctor s t₂) where
+(ext : PiEquiv t₁ t₂)
 (nat : GeneralizedNaturalityCondition φ ψ ext)
 
 namespace GeneralizedNaturalTransformation
 
 variable {ω : Sort w} {S T : Structure}
 
-def refl  {F : ω → S} {G₁       : ω → T} (φ : GeneralizedFunctor F G₁) :
+def refl  {s : ω → S} {t₁       : ω → T} (φ : GeneralizedFunctor s t₁) :
   GeneralizedNaturalTransformation φ φ :=
-⟨DependentEquiv.refl  G₁,          GeneralizedNaturalityCondition.refl  φ⟩
+⟨PiEquiv.refl  t₁,          GeneralizedNaturalityCondition.refl  φ⟩
 
-def symm  {F : ω → S} {G₁ G₂    : ω → T} {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂}
+def symm  {s : ω → S} {t₁ t₂    : ω → T} {φ : GeneralizedFunctor s t₁} {ψ : GeneralizedFunctor s t₂}
           (m : GeneralizedNaturalTransformation φ ψ) :
   GeneralizedNaturalTransformation ψ φ :=
-⟨DependentEquiv.symm  m.ext,       GeneralizedNaturalityCondition.symm  m.nat⟩
+⟨PiEquiv.symm  m.ext,       GeneralizedNaturalityCondition.symm  m.nat⟩
 
-def trans {F : ω → S} {G₁ G₂ G₃ : ω → T} {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂} {χ : GeneralizedFunctor F G₃}
+def trans {s : ω → S} {t₁ t₂ t₃ : ω → T} {φ : GeneralizedFunctor s t₁} {ψ : GeneralizedFunctor s t₂} {χ : GeneralizedFunctor s t₃}
           (m : GeneralizedNaturalTransformation φ ψ) (n : GeneralizedNaturalTransformation ψ χ) :
   GeneralizedNaturalTransformation φ χ :=
-⟨DependentEquiv.trans m.ext n.ext, GeneralizedNaturalityCondition.trans m.nat n.nat⟩
+⟨PiEquiv.trans m.ext n.ext, GeneralizedNaturalityCondition.trans m.nat n.nat⟩
 
-instance naturalTransformationSetoid {F : ω → S} {G₁ G₂ : ω → T} (φ : GeneralizedFunctor F G₁) (ψ : GeneralizedFunctor F G₂) :
+instance naturalTransformationSetoid {s : ω → S} {t₁ t₂ : ω → T} (φ : GeneralizedFunctor s t₁) (ψ : GeneralizedFunctor s t₂) :
   Setoid (GeneralizedNaturalTransformation φ ψ) :=
-⟨λ e f => DependentEquiv.EquivEquiv e.ext f.ext,
- ⟨λ e => DependentEquiv.EquivEquiv.refl e.ext, DependentEquiv.EquivEquiv.symm, DependentEquiv.EquivEquiv.trans⟩⟩
+⟨λ e f => PiEquiv.EquivEquiv e.ext f.ext,
+ ⟨λ e => PiEquiv.EquivEquiv.refl e.ext, PiEquiv.EquivEquiv.symm, PiEquiv.EquivEquiv.trans⟩⟩
 
-def generalizeNaturalTransformation {β : Sort v} {F : ω → S} {G₁ G₂ : ω → T} (H : β → ω)
-                                    {φ : GeneralizedFunctor F G₁} {ψ : GeneralizedFunctor F G₂}
+def generalizeNaturalTransformation {β : Sort v} {s : ω → S} {t₁ t₂ : ω → T} (z : β → ω)
+                                    {φ : GeneralizedFunctor s t₁} {ψ : GeneralizedFunctor s t₂}
                                     (n : GeneralizedNaturalTransformation φ ψ) :
-  GeneralizedNaturalTransformation (generalizeFunctor H φ) (generalizeFunctor H ψ) :=
-⟨DependentEquiv.generalizeDependentEquiv H n.ext, n.nat⟩
+  GeneralizedNaturalTransformation (generalizeFunctor z φ) (generalizeFunctor z ψ) :=
+⟨PiEquiv.generalizePiEquiv z n.ext, n.nat⟩
 
 end GeneralizedNaturalTransformation
 
@@ -1040,16 +1035,16 @@ def congrArgMap (F : StructureFunctor S T) {a b : S} : a ≃ b → F a ≃ F b :
 -- For equivalence of functors to be well-behaved, we additionally need to require equivalences to be
 -- natural transformations.
 
-def FunExt (F G : StructureFunctor S T) := DependentEquiv.DependentDependentEquiv StructureFunctor.map F G
+def FunExt (F G : StructureFunctor S T) := PiEquiv.DependentPiEquiv StructureFunctor.map F G
 
 namespace FunExt
 
 instance {F G : StructureFunctor S T} : Setoid (FunExt F G) :=
-DependentEquiv.DependentDependentEquiv.EquivEquiv.dependentDependentEquivSetoid
+PiEquiv.DependentPiEquiv.EquivEquiv.dependentPiEquivSetoid
 
 def funExt : GeneralizedRelation (StructureFunctor S T) := λ F G => ⟨FunExt F G⟩
 
-instance funExtHasIso : HasIsomorphisms (@funExt S T) := DependentEquiv.DependentDependentEquiv.dependentDependentEquivHasIso
+instance funExtHasIso : HasIsomorphisms (@funExt S T) := PiEquiv.DependentPiEquiv.dependentPiEquivHasIso
 
 end FunExt
 
@@ -1567,10 +1562,10 @@ def instanceStructureFunctor {α β : Sort u} (f : α → β) : InstanceStructur
 
 -- If we have a function `F` and an equivalent functor `G`, we can turn `F` into a functor as well.
 
-def proxyFunctor {S T : Structure} (F : S → T) (G : StructureFunctor S T) (φ : DependentEquiv F G.map) :
+def proxyFunctor {S T : Structure} (F : S → T) (G : StructureFunctor S T) (φ : PiEquiv F G.map) :
   StructureFunctor S T :=
 { map     := F,
-  functor := comp.genFun G.functor (DependentEquiv.transport.invFunctor φ) }
+  functor := comp.genFun G.functor (PiEquiv.transport.invFunctor φ) }
 
 end StructureFunctor
 
