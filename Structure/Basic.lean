@@ -1159,6 +1159,14 @@ theorem respectsInv {F : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U
   congrArgLeft (F := F) φ⁻¹ ≈ (congrArgLeft φ)⁻¹ :=
 λ a => Setoid.refl (φ.ext (F a))⁻¹
 
+def functor (U : Structure) (F : StructureFunctor S T) : StructureFunctor (functorStructure T U) (functorStructure S U) :=
+{ map     := λ G => G ⊙ F,
+  functor := { FF        := congrArgLeft,
+               isFunctor := { respectsSetoid := respectsSetoid,
+                              respectsComp   := respectsComp,
+                              respectsId     := respectsId,
+                              respectsInv    := respectsInv } } }
+
 end congrArgLeft
 
 def congrArgRight {F₁ F₂ : StructureFunctor S T} {G : StructureFunctor T U} :
@@ -1188,6 +1196,14 @@ theorem respectsId (F : StructureFunctor S T) {G : StructureFunctor T U} :
 theorem respectsInv {F₁ F₂ : StructureFunctor S T} {G : StructureFunctor T U} (φ : F₁ ≃ F₂) :
   congrArgRight (G := G) φ⁻¹ ≈ (congrArgRight φ)⁻¹ :=
 λ a => StructureFunctor.respectsInv G (φ.ext a)
+
+def functor (S : Structure) (G : StructureFunctor T U) : StructureFunctor (functorStructure S T) (functorStructure S U) :=
+{ map     := λ F => G ⊙ F,
+  functor := { FF        := congrArgRight,
+               isFunctor := { respectsSetoid := respectsSetoid,
+                              respectsComp   := respectsComp,
+                              respectsId     := respectsId (G := G),
+                              respectsInv    := respectsInv } } }
 
 end congrArgRight
 
@@ -1240,9 +1256,11 @@ FunctorEquiv.refl (H ⊙ G ⊙ F)
 
 end compFun
 
+
+
 namespace idFun
 
-def leftId  (F : StructureFunctor S T) : idFun ⊙ F ≃ F :=
+def leftId (F : StructureFunctor S T) : idFun ⊙ F ≃ F :=
 { ext := λ a => refl (F a),
   nat := GeneralizedNaturalityCondition.refl F.functor }
 
@@ -1251,6 +1269,72 @@ def rightId (F : StructureFunctor S T) : F ⊙ idFun ≃ F :=
   nat := GeneralizedNaturalityCondition.refl F.functor }
 
 end idFun
+
+
+
+namespace compFun.congrArgLeft.functor
+
+def mapEquiv (U : Structure) {F₁ F₂ : StructureFunctor S T} (φ : F₁ ≃ F₂) : functor U F₁ ≃ functor U F₂ :=
+{ ext := λ G => congrArgRight (G := G) φ,
+  nat := λ ψ => Setoid.symm (congrArg.wd φ ψ) }
+
+def functorFunctor (U : Structure)
+  : StructureFunctor (functorStructure S T) (functorStructure (functorStructure T U) (functorStructure S U)) :=
+{ map     := functor U,
+  functor := { FF        := mapEquiv U,
+               isFunctor := { respectsSetoid := λ h   G => congrArgRight.respectsSetoid (G := G) h,
+                              respectsComp   := λ φ ψ G => congrArgRight.respectsComp   (G := G) φ ψ,
+                              respectsId     := λ F   G => congrArgRight.respectsId     (G := G) F,
+                              respectsInv    := λ φ   G => congrArgRight.respectsInv    (G := G) φ } } }
+
+def respectsIdFun (T S : Structure) : functor T (@idFun S) ≃ @idFun (functorStructure S T) :=
+{ ext := λ F   => idFun.rightId F,
+  nat := λ φ a => let e := φ.ext a;
+                  Setoid.trans (HasStructure.rightId e) (Setoid.symm (HasStructure.leftId e)) }
+
+def respectsCompFun (V : Structure) (F : StructureFunctor S T) (G : StructureFunctor T U) :
+  functor V (G ⊙ F) ≃ functor V F ⊙ functor V G :=
+{ ext := λ H   => FunctorEquiv.refl (H ⊙ (G ⊙ F)),
+  nat := λ φ a => let e := φ.ext (G (F a));
+                  Setoid.trans (rightId e) (Setoid.symm (leftId e)) }
+
+theorem respectsCompFun.nat (V : Structure) {F₁ F₂ : StructureFunctor S T} {G₁ G₂ : StructureFunctor T U} (φ : F₁ ≃ F₂) (ψ : G₁ ≃ G₂) :
+  compFun.congrArg (mapEquiv V ψ) (mapEquiv V φ) • respectsCompFun V F₁ G₁ ≈ respectsCompFun V F₂ G₂ • mapEquiv V (compFun.congrArg φ ψ) :=
+sorry
+
+end compFun.congrArgLeft.functor
+
+namespace compFun.congrArgRight.functor
+
+def mapEquiv (S : Structure) {G₁ G₂ : StructureFunctor T U} (ψ : G₁ ≃ G₂) : functor S G₁ ≃ functor S G₂ :=
+{ ext := λ F => congrArgLeft (F := F) ψ,
+  nat := λ φ => congrArg.wd φ ψ }
+
+def functorFunctor (S : Structure)
+  : StructureFunctor (functorStructure T U) (functorStructure (functorStructure S T) (functorStructure S U)) :=
+{ map     := functor S,
+  functor := { FF        := mapEquiv S,
+               isFunctor := { respectsSetoid := λ h   F => congrArgLeft.respectsSetoid (F := F) h,
+                              respectsComp   := λ φ ψ F => congrArgLeft.respectsComp   (F := F) φ ψ,
+                              respectsId     := λ G   F => congrArgLeft.respectsId     (F := F) G,
+                              respectsInv    := λ φ   F => congrArgLeft.respectsInv    (F := F) φ } } }
+
+def respectsIdFun (S T : Structure) : functor S (@idFun T) ≃ @idFun (functorStructure S T) :=
+{ ext := λ F   => idFun.leftId F,
+  nat := λ φ a => let e := φ.ext a;
+                  Setoid.trans (HasStructure.rightId e) (Setoid.symm (HasStructure.leftId e)) }
+
+def respectsCompFun (S : Structure) (G : StructureFunctor T U) (H : StructureFunctor U V) :
+  functor S (H ⊙ G) ≃ functor S H ⊙ functor S G :=
+{ ext := λ F   => FunctorEquiv.refl ((H ⊙ G) ⊙ F),
+  nat := λ φ a => let e := congrArgMap (H ⊙ G) (φ.ext a);
+                   Setoid.trans (rightId e) (Setoid.symm (leftId e)) }
+
+theorem respectsCompFun.nat (S : Structure) {G₁ G₂ : StructureFunctor T U} {H₁ H₂ : StructureFunctor U V} (φ : G₁ ≃ G₂) (ψ : H₁ ≃ H₂) :
+  compFun.congrArg (mapEquiv S φ) (mapEquiv S ψ) • respectsCompFun S G₁ H₁ ≈ respectsCompFun S G₂ H₂ • mapEquiv S (compFun.congrArg φ ψ) :=
+sorry
+
+end compFun.congrArgRight.functor
 
 
 
@@ -1459,6 +1543,10 @@ def trans {F : StructureFunctor S T} {G : StructureFunctor T S} {H : StructureFu
   lrCompat := LeftInv.Compat.trans e.lrCompat f.lrCompat,
   rlCompat := LeftInv.Compat.trans f.rlCompat e.rlCompat }
 
+theorem symm_symm {F : StructureFunctor S T} {G : StructureFunctor T S} (e : IsInverse F G) : symm (symm e) = e :=
+match e with
+| ⟨_, _, _, _⟩ => rfl 
+
 end IsInverse
 
 
@@ -1497,7 +1585,7 @@ open StructureFunctor
 structure StructureEquiv (S T : Structure) where
 (toFun  : StructureFunctor S T)
 (invFun : StructureFunctor T S)
-[isInv  : IsInverse toFun invFun]
+(isInv  : IsInverse toFun invFun)
 
 namespace StructureEquiv
 
@@ -1515,6 +1603,10 @@ def trans {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) 
 { toFun  := f.toFun  ⊙ e.toFun,
   invFun := e.invFun ⊙ f.invFun,
   isInv  := IsInverse.trans e.isInv f.isInv }
+
+theorem symm_symm {S T : Structure} (e : StructureEquiv S T) : symm (symm e) = e :=
+match e with
+| ⟨toFun, invFun, isInv⟩ => IsInverse.symm_symm isInv ▸ rfl 
 
 
 
@@ -1610,6 +1702,24 @@ def equivStructure (S T : Structure) : Structure := ⟨StructureEquiv S T⟩
 
 
 
+def toFunProj (S T : Structure) : StructureFunctor (equivStructure S T) (functorStructure S T) :=
+{ map     := StructureEquiv.toFun,
+  functor := { FF        := EquivEquiv.toFunEquiv,
+               isFunctor := { respectsSetoid := And.left,
+                              respectsComp   := λ φ ψ => Setoid.refl (ψ.toFunEquiv • φ.toFunEquiv),
+                              respectsId     := λ e   => Setoid.refl (id__ (S := functorStructure S T) e.toFun),
+                              respectsInv    := λ φ   => Setoid.refl (φ.toFunEquiv)⁻¹ } } }
+
+def invFunProj (S T : Structure) : StructureFunctor (equivStructure S T) (functorStructure T S) :=
+{ map     := StructureEquiv.invFun,
+  functor := { FF        := EquivEquiv.invFunEquiv,
+               isFunctor := { respectsSetoid := And.right,
+                              respectsComp   := λ φ ψ => Setoid.refl (ψ.invFunEquiv • φ.invFunEquiv),
+                              respectsId     := λ e   => Setoid.refl (id__ (S := functorStructure T S) e.invFun),
+                              respectsInv    := λ φ   => Setoid.refl (φ.invFunEquiv)⁻¹ } } }
+
+
+
 def congrArgComp {S T U : Structure} {e₁ e₂ : StructureEquiv S T} {f₁ f₂ : StructureEquiv T U} (he : e₁ ≃ e₂) (hf : f₁ ≃ f₂) :
   trans e₁ f₁ ≃ trans e₂ f₂ :=
 { toFunEquiv    := compFun.congrArg he.toFunEquiv  hf.toFunEquiv,
@@ -1700,10 +1810,7 @@ def rightInv' {S T : Structure} (e : StructureEquiv S T) : trans (symm e) e ≃ 
   rightInvEquiv := rightInvEquiv e }
 
 def invInv {S T : Structure} (e : StructureEquiv S T) : symm (symm e) ≃ e :=
-{ toFunEquiv    := FunctorEquiv.refl e.toFun,
-  invFunEquiv   := FunctorEquiv.refl e.invFun,
-  leftInvEquiv  := LeftInv.Equiv.refl e.isInv.leftInv,
-  rightInvEquiv := LeftInv.Equiv.refl e.isInv.rightInv }
+symm_symm e ▸ EquivEquiv.refl e
 
 def compInv {S T U : Structure} (e : StructureEquiv S T) (f : StructureEquiv T U) :
   symm (trans e f) ≃ trans (symm f) (symm e) :=
@@ -1770,19 +1877,21 @@ instance equivHasIso : HasIsomorphisms structureEquiv :=
 
 end StructureEquiv
 
+
+
 instance structureHasStructure : HasStructure Structure := ⟨StructureEquiv.structureEquiv⟩
 instance structureHasEquivalence : HasEquivalence Structure Structure := ⟨StructureEquiv.structureEquiv⟩
 instance structureEquivIsType : IsType (HasEquivalence.γ Structure Structure) := bundledSetoidIsType
 instance (S T : Structure) : Setoid (IsType.type (S ≃ T)) := bundledSetoid (StructureEquiv.structureEquiv S T)
 instance (S T : Structure) : HasStructure (IsType.type (S ≃ T)) := StructureEquiv.equivHasStructure S T
 
-instance hasComp : HasComp         (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasComp'
-instance hasCmp  : HasComposition  (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasCmp'
-instance hasId   : HasId           (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasId'
-instance hasMor  : HasMorphisms    (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasMor'
-instance hasInv  : HasInv          (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasInv'
-instance hasIso  : HasIsomorphisms (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasIso'
-instance isEquiv : IsEquivalence   (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.isEquiv'
+instance : HasComp         (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasComp'
+instance : HasComposition  (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasCmp'
+instance : HasId           (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasId'
+instance : HasMorphisms    (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasMor'
+instance : HasInv          (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasInv'
+instance : HasIsomorphisms (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasIso'
+instance : IsEquivalence   (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.isEquiv'
 
 
 
@@ -1811,6 +1920,7 @@ def trans {S T U : Structure} (e : S ≃ T) (f : T ≃ U) (a : S) (b : T) (c : U
   a ≃[e] b → b ≃[f] c → a ≃[f • e] c :=
 λ φ ψ => IsEquivalence.trans (congrArgMap f.toFun φ) ψ
 
+-- TODO: We should probably replace `→` with `≃` here.
 def congrArgEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (φ : e₁ ≃ e₂) (a : S) (b : T) :
   a ≃[e₁] b → a ≃[e₂] b :=
 IsEquivalence.trans (IsEquivalence.symm (φ.toFunEquiv.ext a))
