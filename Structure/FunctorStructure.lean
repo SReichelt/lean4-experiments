@@ -37,9 +37,9 @@ def respectsComp {T₁ T₂ T₃ : Structure} (e : T₁ ≃ T₂) (f : T₂ ≃ 
   outgoingToFun S (f • e) ≃ outgoingToFun S f ⊙ outgoingToFun S e :=
 compFun.congrArgRight.functor.respectsCompFun S e.toFun f.toFun
 
-theorem respectsComp.nat {T₁ T₂ T₃ : Structure} {e₁ e₂ : T₁ ≃ T₂} {f₁ f₂ : T₂ ≃ T₃} (φ : e₁ ≃ e₂) (ψ : f₁ ≃ f₂) :
-  compFun.congrArg (respectsEquiv S φ) (respectsEquiv S ψ) • respectsComp S e₁ f₁ ≈ respectsComp S e₂ f₂ • respectsEquiv S (StructureEquiv.congrArgComp φ ψ) :=
-compFun.congrArgRight.functor.respectsCompFun.nat S φ.toFunEquiv ψ.toFunEquiv
+theorem respectsComp.nat {T₁ T₂ T₃ : Structure} {e₁ e₂ : T₁ ≃ T₂} {f₁ f₂ : T₂ ≃ T₃} (η : e₁ ≃ e₂) (θ : f₁ ≃ f₂) :
+  compFun.congrArg (respectsEquiv S η) (respectsEquiv S θ) • respectsComp S e₁ f₁ ≈ respectsComp S e₂ f₂ • respectsEquiv S (StructureEquiv.congrArgComp η θ) :=
+compFun.congrArgRight.functor.respectsCompFun.nat S η.toFunEquiv θ.toFunEquiv
 
 def respectsId (T : Structure) :
   outgoingToFun S (id_ T) ≃ @idFun (functorStructure S T) :=
@@ -74,9 +74,9 @@ def respectsComp {T₁ T₂ T₃ : Structure} (e : T₁ ≃ T₂) (f : T₂ ≃ 
   incomingToFun S (f • e) ≃ incomingToFun S f ⊙ incomingToFun S e :=
 compFun.congrArgLeft.functor.respectsCompFun S f.invFun e.invFun
 
-theorem respectsComp.nat {T₁ T₂ T₃ : Structure} {e₁ e₂ : T₁ ≃ T₂} {f₁ f₂ : T₂ ≃ T₃} (φ : e₁ ≃ e₂) (ψ : f₁ ≃ f₂) :
-  compFun.congrArg (respectsEquiv S φ) (respectsEquiv S ψ) • respectsComp S e₁ f₁ ≈ respectsComp S e₂ f₂ • respectsEquiv S (StructureEquiv.congrArgComp φ ψ) :=
-compFun.congrArgLeft.functor.respectsCompFun.nat S ψ.invFunEquiv φ.invFunEquiv
+theorem respectsComp.nat {T₁ T₂ T₃ : Structure} {e₁ e₂ : T₁ ≃ T₂} {f₁ f₂ : T₂ ≃ T₃} (η : e₁ ≃ e₂) (θ : f₁ ≃ f₂) :
+  compFun.congrArg (respectsEquiv S η) (respectsEquiv S θ) • respectsComp S e₁ f₁ ≈ respectsComp S e₂ f₂ • respectsEquiv S (StructureEquiv.congrArgComp η θ) :=
+compFun.congrArgLeft.functor.respectsCompFun.nat S θ.invFunEquiv η.invFunEquiv
 
 def respectsId (T : Structure) :
   incomingToFun S (id_ T) ≃ @idFun (functorStructure T S) :=

@@ -108,11 +108,11 @@ def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructur
 
 theorem congrMap' {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
   F₁ ≃ F₂ → a ≃ b → F₁ a ≃ F₂ b :=
-λ φ e => StructureFunctor.congrMap φ ⟨e⟩
+λ η e => StructureFunctor.congrMap η ⟨e⟩
 
 theorem congrMap {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
   F₁ ≃ F₂ → a ≈ b → F₁ a ≈ F₂ b :=
-λ φ ⟨e⟩ => ⟨congrMap' φ e⟩
+λ η ⟨e⟩ => ⟨congrMap' η e⟩
 
 end SetoidStructureFunctor
 
@@ -149,7 +149,7 @@ namespace toSetoidStructureEquiv
 
 theorem respectsSetoid {S T : Structure} {e₁ e₂ : StructureEquiv S T} :
   e₁ ≈ e₂ → toSetoidStructureEquiv e₁ ≈ toSetoidStructureEquiv e₂ :=
-λ ⟨φ⟩ => ⟨makeSetoidStructureEquivEquiv' (setoidFunctor.respectsEquivalence φ.toFunEquiv) (setoidFunctor.respectsEquivalence φ.invFunEquiv)⟩
+λ ⟨η⟩ => ⟨makeSetoidStructureEquivEquiv' (setoidFunctor.respectsEquivalence η.toFunEquiv) (setoidFunctor.respectsEquivalence η.invFunEquiv)⟩
 
 theorem respectsComp {S T U : Structure} (e : S ≃ T) (f : T ≃ U) :
   toSetoidStructureEquiv (StructureEquiv.trans e f) ≈ StructureEquiv.trans (toSetoidStructureEquiv e) (toSetoidStructureEquiv f) :=
@@ -201,8 +201,8 @@ InstanceEquiv.symm (toSetoidStructureEquiv e) a b
 
 theorem trans {S T U : Structure} (e : S ≃ T) (f : T ≃ U) (a : S) (b : T) (c : U) :
   a ≈[e] b → b ≈[f] c → a ≈[f • e] c :=
-λ φ ψ => let χ : f.toFun (e.toFun a) ≈ c := InstanceEquiv.trans (toSetoidStructureEquiv e) (toSetoidStructureEquiv f) a b c φ ψ;
-         χ
+λ h i => let j : f.toFun (e.toFun a) ≈ c := InstanceEquiv.trans (toSetoidStructureEquiv e) (toSetoidStructureEquiv f) a b c h i;
+         j
 
 theorem setoidInstanceEquiv' {S T : Structure} (e : SetoidStructureEquiv S T) (a : S) (b : T) :
   a ≃[e] b ↔ e.toFun a ≈ b :=
@@ -214,8 +214,8 @@ Iff.refl (e.toFun a ≈ b)
 
 theorem congrArgEquiv' {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T} (h : e₁ ≈ e₂) (a : S) (b : T) :
   a ≃[e₁] b → a ≃[e₂] b :=
-let ⟨φ⟩ := h;
-InstanceEquiv.congrArgEquiv φ a b
+let ⟨η⟩ := h;
+InstanceEquiv.congrArgEquiv η a b
 
 theorem congrArgEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (h : e₁ ≈ e₂) (a : S) (b : T) :
   a ≈[e₁] b → a ≈[e₂] b :=

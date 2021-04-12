@@ -168,8 +168,8 @@ structure UniverseStructureFunctorDesc where
 (toFun         {S T   : Structure}                         : S ≃ T → StructureFunctor (map S) (map T))
 (respectsEquiv {S T   : Structure}                         : GeneralizedFunctor.Functor (S := StructureEquiv.equivStructure S T) (T := functorStructure (map S) (map T)) toFun)
 (respectsComp  {S T U : Structure} (e : S ≃ T) (f : T ≃ U) : toFun (f • e) ≃ toFun f ⊙ toFun e)
-(respectsCompNat {S T U : Structure} {e₁ e₂ : S ≃ T} {f₁ f₂ : T ≃ U} (φ : e₁ ≃ e₂) (ψ : f₁ ≃ f₂) :
-   compFun.congrArg (respectsEquiv φ) (respectsEquiv ψ) • respectsComp e₁ f₁ ≈ respectsComp e₂ f₂ • respectsEquiv (StructureEquiv.congrArgComp φ ψ))
+(respectsCompNat {S T U : Structure} {e₁ e₂ : S ≃ T} {f₁ f₂ : T ≃ U} (η : e₁ ≃ e₂) (θ : f₁ ≃ f₂) :
+   compFun.congrArg (respectsEquiv η) (respectsEquiv θ) • respectsComp e₁ f₁ ≈ respectsComp e₂ f₂ • respectsEquiv (StructureEquiv.congrArgComp η θ))
 (respectsId    (S     : Structure)                         : toFun (id_ S) ≃ @idFun (map S))
 
 namespace UniverseStructureFunctorDesc
@@ -183,9 +183,9 @@ def toFunFunctor (S T : Structure) : StructureFunctor (StructureEquiv.equivStruc
   functor := D.respectsEquiv }
 
 def targetLeftInv {S T : Structure} (e : S ≃ T) : D.toFun e⁻¹ ⊙ D.toFun e ≃ @idFun (D.map S) :=
-let φ₁ := FunctorEquiv.symm (D.respectsComp e e⁻¹);
-let φ₂ := D.respectsEquiv (StructureEquiv.leftInv' e);
-FunctorEquiv.trans (FunctorEquiv.trans φ₁ φ₂) (D.respectsId S)
+let η₁ := FunctorEquiv.symm (D.respectsComp e e⁻¹);
+let η₂ := D.respectsEquiv (StructureEquiv.leftInv' e);
+FunctorEquiv.trans (FunctorEquiv.trans η₁ η₂) (D.respectsId S)
 
 def targetRightInv {S T : Structure} (e : S ≃ T) : D.toFun e ⊙ D.toFun e⁻¹ ≃ @idFun (D.map T) :=
 StructureEquiv.symm_symm e ▸ targetLeftInv D e⁻¹
@@ -200,8 +200,8 @@ def targetEquiv {S T : Structure} (e : S ≃ T) : StructureEquiv (D.map S) (D.ma
 
 theorem targetRespectsSetoid {S T : Structure} {e₁ e₂ : S ≃ T} :
   e₁ ≈ e₂ → targetEquiv D e₁ ≈ targetEquiv D e₂ :=
-λ ⟨φ⟩ => ⟨{ toFunEquiv    := D.respectsEquiv φ,
-            invFunEquiv   := D.respectsEquiv (StructureEquiv.congrArgInv φ),
+λ ⟨η⟩ => ⟨{ toFunEquiv    := D.respectsEquiv η,
+            invFunEquiv   := D.respectsEquiv (StructureEquiv.congrArgInv η),
             leftInvEquiv  := sorry,
             rightInvEquiv := sorry }⟩
 

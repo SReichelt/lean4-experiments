@@ -31,10 +31,10 @@ def TypeClassEquiv (C D : TypeClass) := ∀ α, C α ≃ D α
 
 class StructuralTypeClass (C : TypeClass) where
 (F : TypeClassFunctor)
-(φ : TypeClassEquiv C F.map)
+(η : TypeClassEquiv C F.map)
 
 def toTypeClassFunctor (C : TypeClass) [h : StructuralTypeClass C] : TypeClassFunctor :=
-proxyFunctor C h.F h.φ
+proxyFunctor C h.F h.η
 
 
 
