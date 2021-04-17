@@ -48,8 +48,8 @@ def inverseElement (b : T) := (h.snd.fst b).fst
 
 namespace inverseElement
 
-def isInverse  (b : T) : F (inverseElement F h b) ≃ b := (h.snd.fst b).snd
-def isInverse' (a : S) : inverseElement F h (F a) ≃ a := h.fst.mapEquiv (isInverse F h (F a))
+def is_inverse  (b : T) : F (inverseElement F h b) ≃ b := (h.snd.fst b).snd
+def is_inverse' (a : S) : inverseElement F h (F a) ≃ a := h.fst.mapEquiv (is_inverse F h (F a))
 
 end inverseElement
 
@@ -57,7 +57,7 @@ end inverseElement
 -- Writing it in this way has the advantage that `PiEquiv.transport` already contains the proof
 -- that the result is a functor.
 
-def uniqueValueFunctor := Pi.PiEquiv.transport.invFunctor (inverseElement.isInverse F h)
+def uniqueValueFunctor := Pi.PiEquiv.transport.invFunctor (inverseElement.is_inverse F h)
 def inverseFunctor := comp.genFun' (inverseElement F h) (uniqueValueFunctor F h) h.fst
 
 def inverse : StructureFunctor T S :=
@@ -68,13 +68,14 @@ namespace inverse
 
 -- TODO: For the naturality condition, we should probably build some infrastructure around the
 -- interaction between `PiEquiv` and `GeneralizedNaturalTransformation`.
+-- We may also need to add some conditions to our definitions.
 
 def leftInv : inverse F h ⊙ F ≃ @idFun S :=
-{ ext := inverseElement.isInverse' F h,
+{ ext := inverseElement.is_inverse' F h,
   nat := sorry }
 
 def rightInv : F ⊙ inverse F h ≃ @idFun T :=
-{ ext := inverseElement.isInverse F h,
+{ ext := inverseElement.is_inverse F h,
   nat := sorry }
 
 instance isInverse : IsInverse F (inverse F h) :=

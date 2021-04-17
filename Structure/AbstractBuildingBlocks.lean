@@ -42,7 +42,7 @@ namespace BuildingBlocks
 -- that the two types are equivalent.
 
 def HasIso {F : StructureDependency} (a b : SigmaExpr F) (I : ∀ e : a.fst ≃ b.fst, Prop) :=
-∀ e : a.fst ≃ b.fst, a.snd ≈[congrArgMap F.F e] b.snd ↔ I e
+∀ e : a.fst ≃ b.fst, a.snd ≈[congrArg F.F e] b.snd ↔ I e
 
 structure InstanceIsoCriterion {F : StructureDependency} (a b : SigmaExpr F) where
 {I : ∀ e : a.fst ≃ b.fst, Prop}
@@ -87,7 +87,7 @@ def isoCriterion : IsoCriterion (independentPairDependency S T) := λ a b => ⟨
 
 -- For this particular case, we can also specialize `isoEquiv` a bit.
 
-def equiv (a b : IndependentPair S T) : SigmaEquiv a b ≃ PProd (IsType.type (a.fst ≃ b.fst)) (SetoidEquiv T a.snd b.snd) :=
+def equiv (a b : IndependentPair S T) : SigmaExpr.SigmaEquiv a b ≃ PProd (IsType.type (a.fst ≃ b.fst)) (SetoidEquiv T a.snd b.snd) :=
 { toFun    := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   invFun   := λ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩,
   leftInv  := λ ⟨h₁, h₂⟩ => rfl,
@@ -152,8 +152,8 @@ end InstanceInstance
 --
 -- To give a general isomorphism criterion for `functorMap F G`, we need to consider `F` and `G` as
 -- functors again. Then we can prove the following: An `e : α ≃ β` is an isomorphism between `⟨α, f⟩` and
--- `⟨β, g⟩` (with functions `f` and `g`) iff for all `x y : α` such that `congrArgMap F e` transports `x`
--- to `y`, `congrArgMap G e` transports `f x` to `g y`.
+-- `⟨β, g⟩` (with functions `f` and `g`) iff for all `x y : α` such that `congrArg F e` transports `x`
+-- to `y`, `congrArg G e` transports `f x` to `g y`.
 --
 -- Applying this criterion to the examples above, we obtain all familiar special cases:
 --
@@ -174,7 +174,7 @@ variable {S : Structure} (F G : UniverseFunctor S)
 def functorMap (a : S) := functorStructure (F a) (G a)
 
 def functorToFun {a b : S} (e : a ≃ b) : SetoidStructureFunctor (functorMap F G a) (functorMap F G b) :=
-{ map     := λ f => ((congrArgMap G e).toFun ⊙ f) ⊙ (congrArgMap F e).invFun,
+{ map     := λ f => ((congrArg G e).toFun ⊙ f) ⊙ (congrArg F e).invFun,
   functor := sorry }  -- TODO: Since we are dealing with setoid functors here, we just need to combine `compFun.congrArg'` etc.
 
 def functorFunDesc : SetoidUniverseFunctorDesc S :=
@@ -195,16 +195,14 @@ namespace FunctorInstance
 -- The isomorphism criterion for the functors `a.snd` and `b.snd`, as described above.
 
 theorem iso (a b : FunctorInstance F G) :
-  HasIso a b (λ e => ∀ x y, x ≈[congrArgMap F e] y → a.snd.map x ≈[congrArgMap G e] b.snd.map y) :=
---λ e => let f := congrArgMap F e;
---       let g := congrArgMap G e;
---       ⟨λ h₁ x y h₂ => let ⟨h₃⟩ := h₁;
---                       let h₄ : g.toFun ⊙ a.snd ≃ b.snd ⊙ f.toFun := sorry;
---                       let h₅ : g.toFun (a.snd.map x) ≃ b.snd.map (f.toFun x) := h₄.ext x;
---                       let h₆ : g.toFun (a.snd.map x) ≃ b.snd.map y := sorry;
---                       h₆,
---        sorry⟩
-sorry
+  HasIso a b (λ e => ∀ x y, x ≈[congrArg F e] y → a.snd.map x ≈[congrArg G e] b.snd.map y) :=
+λ e => let f := congrArg F e;
+       let g := congrArg G e;
+       ⟨λ h₁ x y h₂ => let h₄ : g.toFun ⊙ a.snd ≃ b.snd ⊙ f.toFun := sorry;
+                       let h₅ : g.toFun (a.snd.map x) ≃ b.snd.map (f.toFun x) := h₄.ext x;
+                       let h₆ : g.toFun (a.snd.map x) ≃ b.snd.map y := sorry;
+                       ⟨h₆⟩,
+        sorry⟩
 
 -- If we have isomorphism criteria for `F` and `G`, we can combine them with `iso`. This way, we can not
 -- only compose the building blocks but also their isomorphism criteria.
@@ -265,13 +263,13 @@ def outerPair (a : SigmaInstance D) : UncurriedSigmaInstance D :=
 -- TODO: Make use of `PiSigmaEquivalences` here (and finish those first).
 
 def applyInnerEquiv (a b : SigmaInstance D) (e : a.fst ≃ b.fst)
-                    (h : a.snd.fst ≈[congrArgMap D.fst.F e] b.snd.fst) :
+                    (h : a.snd.fst ≈[congrArg D.fst.F e] b.snd.fst) :
   innerPair D a ≃ innerPair D b :=
 sorry
 
 theorem iso (a b : SigmaInstance D) :
-  HasIso a b (λ e => ∃ h : a.snd.fst ≈[congrArgMap D.fst.F e] b.snd.fst,
-                     a.snd.snd ≈[congrArgMap D.snd (applyInnerEquiv D a b e h)] b.snd.snd) :=
+  HasIso a b (λ e => ∃ h : a.snd.fst ≈[congrArg D.fst.F e] b.snd.fst,
+                     a.snd.snd ≈[congrArg D.snd (applyInnerEquiv D a b e h)] b.snd.snd) :=
 sorry
 
 def applyInnerEquiv' (a b : SigmaInstance D) (cF : IsoCriterion D.fst) (e : a.fst ≃ b.fst)

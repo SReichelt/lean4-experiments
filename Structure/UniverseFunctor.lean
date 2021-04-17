@@ -121,7 +121,7 @@ def targetEquiv {a b : S} (e : a ≃ b) : SetoidStructureEquiv (D.map a) (D.map 
 theorem targetRespectsSetoid {a b : S} {e₁ e₂ : a ≃ b} :
   e₁ ≈ e₂ → targetEquiv D e₁ ≈ targetEquiv D e₂ :=
 λ h => ⟨makeSetoidStructureEquivEquiv (D.respectsSetoid h)
-                                      (D.respectsSetoid (congrArgInv h))⟩
+                                      (D.respectsSetoid (inv_congrArg h))⟩
 
 theorem targetRespectsComp {a b c : S} (e : a ≃ b) (f : b ≃ c) :
   targetEquiv D (f • e) ≈ StructureEquiv.trans (targetEquiv D e) (targetEquiv D f) :=
@@ -169,7 +169,7 @@ structure UniverseStructureFunctorDesc where
 (respectsEquiv {S T   : Structure}                         : GeneralizedFunctor.Functor (S := StructureEquiv.equivStructure S T) (T := functorStructure (map S) (map T)) toFun)
 (respectsComp  {S T U : Structure} (e : S ≃ T) (f : T ≃ U) : toFun (f • e) ≃ toFun f ⊙ toFun e)
 (respectsCompNat {S T U : Structure} {e₁ e₂ : S ≃ T} {f₁ f₂ : T ≃ U} (η : e₁ ≃ e₂) (θ : f₁ ≃ f₂) :
-   compFun.congrArg (respectsEquiv η) (respectsEquiv θ) • respectsComp e₁ f₁ ≈ respectsComp e₂ f₂ • respectsEquiv (StructureEquiv.congrArgComp η θ))
+   compFun.congrArg (respectsEquiv η) (respectsEquiv θ) • respectsComp e₁ f₁ ≈ respectsComp e₂ f₂ • respectsEquiv (StructureEquiv.comp_congrArg η θ))
 (respectsId    (S     : Structure)                         : toFun (id_ S) ≃ @idFun (map S))
 
 namespace UniverseStructureFunctorDesc
@@ -201,7 +201,7 @@ def targetEquiv {S T : Structure} (e : S ≃ T) : StructureEquiv (D.map S) (D.ma
 theorem targetRespectsSetoid {S T : Structure} {e₁ e₂ : S ≃ T} :
   e₁ ≈ e₂ → targetEquiv D e₁ ≈ targetEquiv D e₂ :=
 λ ⟨η⟩ => ⟨{ toFunEquiv    := D.respectsEquiv η,
-            invFunEquiv   := D.respectsEquiv (StructureEquiv.congrArgInv η),
+            invFunEquiv   := D.respectsEquiv (StructureEquiv.inv_congrArg η),
             leftInvEquiv  := sorry,
             rightInvEquiv := sorry }⟩
 

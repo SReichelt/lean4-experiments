@@ -34,12 +34,12 @@ instance genEquiv : IsEquivalence   equivRel := ⟨Equiv.refl, Equiv.symm, Equiv
 
 instance hasComp  : HasComp         equivRel := ⟨Equiv.trans⟩
 
-theorem congrArgComp {α β γ : Sort u} {f₁ f₂ : equivRel α β} {g₁ g₂ : equivRel β γ} (h₁ : f₁ ≈ f₂) (h₂ : g₁ ≈ g₂) :
+theorem comp_congrArg {α β γ : Sort u} {f₁ f₂ : equivRel α β} {g₁ g₂ : equivRel β γ} (h₁ : f₁ ≈ f₂) (h₂ : g₁ ≈ g₂) :
   g₁ • f₁ ≈ g₂ • f₂ :=
 let h := congr (congrArg Equiv.trans h₁) h₂;
 h
 
-instance hasCmp   : HasComposition  equivRel := ⟨congrArgComp, Equiv.trans_assoc⟩
+instance hasCmp   : HasComposition  equivRel := ⟨comp_congrArg, Equiv.trans_assoc⟩
 
 instance hasId    : HasId           equivRel := ⟨Equiv.refl⟩
 
@@ -50,11 +50,11 @@ instance hasMor   : HasMorphisms    equivRel := ⟨leftId, rightId⟩
 
 instance hasInv   : HasInv          equivRel := ⟨Equiv.symm⟩
 
-theorem congrArgInv {α β : Sort u} {f₁ f₂ : equivRel α β} (h₁ : f₁ ≈ f₂) :
+theorem inv_congrArg {α β : Sort u} {f₁ f₂ : equivRel α β} (h₁ : f₁ ≈ f₂) :
   f₁⁻¹ ≈ f₂⁻¹ :=
 congrArg Equiv.symm h₁
 
-instance hasIso   : HasIsomorphisms equivRel := ⟨congrArgInv, Equiv.trans_symm, Equiv.symm_trans,
+instance hasIso   : HasIsomorphisms equivRel := ⟨inv_congrArg, Equiv.trans_symm, Equiv.symm_trans,
                                                  Equiv.symm_symm, Equiv.symm_trans_symm, λ _ => Equiv.refl_symm⟩
 
 end Equiv
@@ -154,13 +154,13 @@ variable {α : Sort u} {β : Sort v} [h : HasStructure β] (e : α ≃ β)
 def hasEquivalentStructure : HasStructure α :=
 { M       := λ x y => h.M (e.toFun x) (e.toFun y),
   hasIsos := { comp         := h.hasIsos.comp,
-               congrArgComp := h.hasIsos.congrArgComp,
+               comp_congrArg := h.hasIsos.comp_congrArg,
                assoc        := λ f g => h.hasIsos.assoc    f g,
                id           := λ x => h.hasIsos.id (e.toFun x),
                leftId       := λ f   => h.hasIsos.leftId   f,
                rightId      := λ f   => h.hasIsos.rightId  f,
                inv          := h.hasIsos.inv,
-               congrArgInv  := h.hasIsos.congrArgInv,
+               inv_congrArg  := h.hasIsos.inv_congrArg,
                leftInv      := λ f   => h.hasIsos.leftInv  f,
                rightInv     := λ f   => h.hasIsos.rightInv f,
                invInv       := λ f   => h.hasIsos.invInv   f,

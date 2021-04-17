@@ -3,82 +3,79 @@
 --              =========================================================================
 --
 --
--- In this project, written for Lean 4, we introduce a generalization of the concept of "isomorphism"
--- beyond the areas traditionally covered by universal algebra and category theory. The goal is to capture
--- the notion of "equality up to relabeling" in a very abstract and composable way, such that it can be
--- applied automatically to many different type-theoretic structures -- ideally without having to write a
--- single proof for any particular structure.
+-- This Lean 4 project aims to provide definitions and theorems that help automate reasoning based on
+-- structural properties. Besides the obvious connections to universal algebra and category theory, we
+-- also draw on ideas from Homotopy Type Theory (HoTT), in particular the Structure Identity Principle.
+-- However, in constrast to a native HoTT implementation (which is certainly possible and would in fact be
+-- much simpler), this formalization does not use any additional axioms, so that it can integrate well
+-- with other libraries.
 --
--- In particular, this can hopefully be used to replace many invocations of the "transport" tactic with
--- simple invocations of theorems, such that all prerequisites of these theorems can be verified
--- syntactically.
---
--- The framework can be extended with automatic generation of richer structure such as morphisms later.
+-- A Lean-specific way to state the main goal of this library is that it provides _definitions_ and
+-- _theorems_ covering use cases of the "transport" _tactic_ from mathlib. This can be regarded as
+-- replacing _metamathematical_ with _mathematical_ reasoning.
 --
 --
 --  Initial idea
 -- --------------
 --
--- The starting point of this formalization is actually quite simple: Frequently in mathematics, we are
--- dealing with a set/type together with some structure on it; in Lean this is most commonly realized as a
--- type class `C : Type u → Type v`. If we have a type `α` together with an instance `x : C α` of the type
--- class `C`, we define the "bundled structure" to be `⟨α, x⟩ : Σ α, C α`. For such bundled structures, we
--- are able to give a definition of "isomorphism" as follows:
+-- The idea behind this formalization is actually quite simple to state using the `Equiv` (`≃`) type from
+-- mathlib. This version applies to simple algebraic structures but not e.g. categories.
 --
--- * Given an `e : Equiv α β`, i.e. a "relabeling" operation that maps from one carrier type to another,
---   we need to correspondingly relabel instances of `C α` to `C β`, i.e. transport them along `e`. We
---   axiomatize this as a `transport` map which takes `e` to an `f : Equiv (C α) (C β)` in a way that
---   commutes with `refl`, `symm`, and `trans`.
---   We attach this `transport` map to the type class `C`.
+-- Consider a structure depending on a type, formalized in Lean as a type class `C : Type u → Type v`.
+-- (E.g. `C` might be `Group`, `Ring`, ...) We would like to give a definition that specifies when an
+-- instance `x : C α` is isomorphic to another instance `y : C β`. This very general definition will help
+-- us when transporting objects along isomorphisms or reasoning about isomorphism-invariant properties.
 --
--- * Then we can define an "isomorphism" between two bundled instances `⟨α, x⟩ ⟨β, y⟩ : Σ α, C α` to be an
---   `e : Equiv α β` together with a proof that the equivalence given by `transport e` maps `x` to `y`.
---   In other words, we simply require the `transport` operation to correctly apply the given relabeling
---   operation on the right-hand side of the bundled instance.
+-- As a prerequisite, we attach a function `mapEquiv : α ≃ β → C α ≃ C β` to the type class `C`, along
+-- with proofs that `mapEquiv` commutes with `refl`, `symm`, and `trans`. This function can be understood
+-- in multiple different ways:
 --
--- The intent of such a generic definition of "isomorphism" is twofold:
+-- * If `α` and `β` are equivalent, we demand the same of `C α` and `C β` in a compatible manner.
+-- * We can regard the type equivalence as a relabeling operation. Then `mapEquiv` specifies how to apply
+--   this relabeling operation to an instance of the structure.
+-- * When reading equivalence as equality, `mapEquiv` just says that `C` is a well-defined function.
+--   (Also note the similarity between `mapEquiv` and `congrArg C`.)
+-- * `mapEquiv` turns `C` into a groupoid functor, by specifying how to map groupoid (iso)morphisms.
+--   (Thus, commutation with `symm` actually follows from commutation with `refl` and `trans`.)
 --
--- * By capturing the behavior of isomorphisms in the `transport` map, we should be able to transport
---   elements and properties along concrete isomorphisms in a generic way, i.e. without writing either
---   individual proofs or tactics.
+-- Given these four interpretations, it should be evident that there is usually a single obvious
+-- definition of `mapEquiv` for a given type class `C`.
 --
--- * The correct `transport` map for a type class `C` can be derived from the definition of `C` more
---   directly than the correct definition of isomorphism. Therefore, the necessary analysis can be
---   automated more easily.
+-- Now we can define an `e : α ≃ β` to be an isomorphism between `x : C α` and `y : C β` iff `x` equals
+-- `y` taking into account the relabeling given by `mapEquiv e`, i.e. `mapEquiv e x = y` (or, using HoTT
+-- syntax, `x =[mapEquiv e] y`).
+--
+-- Equivalently, we can define an isomorphism between two _bundled instances_ `⟨α, x⟩ ⟨β, y⟩ : Σ α, C α`
+-- to be an `e : α ≃ β` together with a proof that `mapEquiv e x = y`. Here, we can see a first connection
+-- to HoTT because this definition matches the equivalence of sigma types given in section 2.7 of the HoTT
+-- book, except that in our case the left side is a type which we need to compare via `≃` instead of `=`.
 --
 --
 --  Generalization
 -- ----------------
 --
--- Although the initial version applies to a lot of basic algebraic structures, it does not compose very
--- well, as we require the left side of a bundled structure to be a type, and in Lean not everything is a
--- type. As a consequence, the `transport` map needs to be defined individually for each type class `C`.
--- Instead, we would like to define the `transport` map of a composite structure by combining the
--- `transport` maps of its parts.
+-- One obvious limitation of the above description is the use of equality when comparing instances of the
+-- type class. If `x : C α` contains at least one type (with or without additional structure), we need to
+-- replace equality with equivalence/isomorphism. Actually, even the return type of `mapEquiv` must take
+-- this into account because the definition of `Equiv` in mathlib contains equality comparisons as well.
 --
--- Most importantly, we would like to treat any bundled structure `⟨α, ⟨x₁, x₂⟩⟩` (where `x₂` may depend
--- on both `α` and `x₁`) canonically also as a nested bundled structure `⟨⟨α, x₁⟩, x₂⟩`, with equivalence
--- between `⟨α, x₁⟩` and some `⟨β, y₁⟩` given by isomorphism. Iterating this transformation would enable
--- us to compose `transport` maps and thus isomorphisms from basic building blocks. However, in the
--- initial version given above the term `⟨⟨α, x₁⟩, x₂⟩` does not type-check because `⟨α, x₁⟩` is not a
--- type (in Lean, at least).
+-- Moreover, we would like to automate
+-- * the definition of `mapEquiv` for each type class `C` and
+-- * the deduction of properties from that definition.
 --
--- Therefore, we generalize our initial version in two directions:
+-- If we regard `mapEquiv` as describing the structure given by `C`, we would like to compose that
+-- description from similar descriptions about individual parts of the structure. This is somewhat related
+-- to the Structure Identity Principle from HoTT in that we need to attach "additional structure" to some
+-- smaller existing structure. This enables us to build up `mapEquiv` analogously to how `C` is built up
+-- from individual (dependent) fields.
 --
--- * We generalize the type of the left-hand side from `Type u` to a generic "structure with
---   equivalences", defined in such a way that each bundled instance `⟨α, x⟩` is such a "structure", with
---   equivalence given by the isomorphism concept we just defined.
+-- Formally, we would like to treat a bundled structure `⟨α, ⟨x₁, x₂⟩⟩` (where `x₂` may depend on both `α`
+-- and `x₁`) canonically also as a nested bundled structure `⟨⟨α, x₁⟩, x₂⟩`, with equivalence between
+-- `⟨α, x₁⟩` and some `⟨β, y₁⟩` given by isomorphism. However, in the initial version given above the term
+-- `⟨⟨α, x₁⟩, x₂⟩` does not type-check because `⟨α, x₁⟩` is not a type.
 --
--- * Moreover, we also need to consider more carefully the case that `x` is again a bundled structure
---   `⟨β, y⟩` where `β` is or contains a type: Although we placed no restrictions on `x` in the
---   description above, we secretly relied on an equality comparison when giving the definition of
---   isomorphism. If the right-hand side is actually a structure with isomorphisms, we need to check for
---   isomorphism instead of equality.
---
---   Therefore, we need to generalize the return type of `C` from `Type v` to the same "structure" type we
---   use in place of `Type u`. However, in contrast to `α`, this does not actually change the type of `x`;
---   we only need to "wrap" that type in a structure in order to obtain the correct definition of
---   equivalence.
+-- To conclude, the left side of the `Σ` instance needs to be something more general than a type, and the
+-- right side needs to be something more general than an instance of a type.
 --
 --
 --  Preliminary results
@@ -92,22 +89,22 @@
 --  `Prop`                    | `Iff`
 --  `α : Sort u`              | `Eq`
 --  `α` with `[s : Setoid α]` | `s.r`
---  `Sort u`                  | `Equiv` from `data.equiv.basic`
+--  `Sort u`                  | `Equiv` from mathlib
 --  `Structure`               | `StructureEquiv` defined below
 --
--- It turns out that the required definition of `Structure` is something quite well-known: In theory, it
--- is best formalized as an ∞-groupoid. However, instead of working with the entire infinite hierarchy, in
--- Lean we have to make a compromise by coercing equivalences of equivalences to equivalence _relations_,
--- in effect working with a single level of the hierarchy at a time.
+-- From our mentioning of HoTT, it may already be apparent that ideally, `Structure` should be a Lean type
+-- defining an ∞-groupoid. However, a native definition of this type would be inductive-recursive in a way
+-- not supported by Lean. Fortunately, a version where equivalences of equivalences are propositions is
+-- sufficient for our use case. In other words, we define `Structure` to be a higher groupoid by replacing
+-- equality of equivalences with an equivalence relation, but we do not preserve the entire (potentially)
+-- infinite hierarchy of equivalences.
 --
--- In this groupoid-based framework, we can define basic building blocks of bundled structures, which we
--- now define to be Σ expressions that satisfy certain functorial properties. For each of the building
--- blocks, we can prove a _theorem_ that gives an "isomorphism criterion" for this building block, and in
--- fact all of the known special cases of isomorphisms can be stated very generally as such theorems (see
--- in particular the table at `FunctorInstanceDef` in `AbstractBuildingBlocks.lean`).
---
--- By defining a building block for nested Σ expressions, we can compose those building blocks into larger
--- structures.
+-- First, we work very generally within this framework. In `AbstractPiSigma.lean`, we define functorial
+-- variants of Π and Σ expressions. Then, in `AbstractBuildingBlocks.lean`, we construct the individual
+-- parts that can be composed into descriptions of larger structures. For each of the building blocks, we
+-- can prove a _theorem_ that states when two instances of the building block are isomorphic, i.e.
+-- equivalent as groupoids. Many common special cases of isomorphisms can be deduced directly from these
+-- theorems; see in particular the table at `FunctorInstanceDef` in `AbstractBuildingBlocks.lean`.
 --
 -- After finishing the basic building blocks, we will be able to obtain the properties of structures by
 -- "describing" them in terms of the framework. In Lean, this can likely be fully automated. However, this
@@ -122,14 +119,16 @@
 -- ---------
 --
 -- While the formalization in terms of ∞-groupoids is strongly related to HoTT, our formalization does not
--- use univalence in any way.
+-- use univalence in any way. This is because we always work with groupoid equivalence instead of equality
+-- (except where those coincide for a particular structure). As a result, we explicitly need to prove
+-- functoriality in a lot of cases where we would obtain it for free from univalence.
 --
 -- The formalization brought to light some surprising properties of groupoids, which may or may not be
 -- known. Most strikingly, we obtain the following result:
 -- If we interpret equivalence/isomorphism of objects in a groupoid as generalized equality, then groupoid
 -- functors are just generalized functions. If we then define "injective", "surjective", and "bijective"
--- in a straightforward way, each "bijective" functor actually has an inverse functor -- even though the
--- formalization is entirely constructive.
+-- in a straightforward way, each "bijective" functor actually has an inverse (i.e. adjoint) functor --
+-- even though the formalization is entirely constructive.
 -- (More details in `FunctorProperties.lean`.)
 
 

@@ -106,13 +106,13 @@ makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl (F a))
 
 def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructure S) (setoidStructure T)
 
-theorem congrMap' {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
+theorem congr' {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
   F₁ ≃ F₂ → a ≃ b → F₁ a ≃ F₂ b :=
-λ η e => StructureFunctor.congrMap η ⟨e⟩
+λ η e => StructureFunctor.congr η ⟨e⟩
 
-theorem congrMap {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
+theorem congr {S T : Structure} {F₁ F₂ : SetoidStructureFunctor S T} {a b : S} :
   F₁ ≃ F₂ → a ≈ b → F₁ a ≈ F₂ b :=
-λ η ⟨e⟩ => ⟨congrMap' η e⟩
+λ η ⟨e⟩ => ⟨congr' η e⟩
 
 end SetoidStructureFunctor
 
@@ -212,14 +212,14 @@ theorem setoidInstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) :
   a ≈[e] b ↔ e.toFun a ≈ b :=
 Iff.refl (e.toFun a ≈ b)
 
-theorem congrArgEquiv' {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T} (h : e₁ ≈ e₂) (a : S) (b : T) :
+theorem mapEquiv' {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T} (h : e₁ ≈ e₂) (a : S) (b : T) :
   a ≃[e₁] b → a ≃[e₂] b :=
 let ⟨η⟩ := h;
-InstanceEquiv.congrArgEquiv η a b
+InstanceEquiv.mapEquiv η a b
 
-theorem congrArgEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (h : e₁ ≈ e₂) (a : S) (b : T) :
+theorem mapEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (h : e₁ ≈ e₂) (a : S) (b : T) :
   a ≈[e₁] b → a ≈[e₂] b :=
-congrArgEquiv' (toSetoidStructureEquiv.respectsSetoid h) a b
+mapEquiv' (toSetoidStructureEquiv.respectsSetoid h) a b
 
 end SetoidInstanceEquiv
 
@@ -256,7 +256,7 @@ setoidToSkeletonFunctor S ⊙ toSetoidFunctor S
 
 def makeSkeletonStructureFunctor {S T : Structure} (map : StructureQuotient S → StructureQuotient T) :
   SkeletonStructureFunctor S T :=
-makeToSkeletonStructureFunctor map (congrArg map)
+makeToSkeletonStructureFunctor map (_root_.congrArg map)
 
 def makeSkeletonStructureFunctorInverse {S T : Structure} {F : SkeletonStructureFunctor S T} {G : SkeletonStructureFunctor T S}
                                         (leftInv : LeftInv F G) (rightInv : LeftInv G F) :

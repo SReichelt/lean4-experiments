@@ -44,7 +44,7 @@ proxyFunctor C h.F h.η
 def toStructureDependency {S : Structure} (F : StructureFunctor S sortStructure) : StructureDependency :=
 ⟨S, sortToStructureFunctor ⊙ F⟩
 
-def bundledStructure (C : TypeClass) [h : StructuralTypeClass C] := sigmaStructure (toStructureDependency (toTypeClassFunctor C))
+def bundledStructure (C : TypeClass) [h : StructuralTypeClass C] := SigmaExpr.sigmaStructure (toStructureDependency (toTypeClassFunctor C))
 
 def bundled (C : TypeClass) [h : StructuralTypeClass C] (α : Sort u) (x : C α) : bundledStructure C := ⟨α, x⟩
 
@@ -67,10 +67,10 @@ e.fst
 
 def isoInstanceEquiv {C : TypeClass} [h : StructuralTypeClass C] {α : Sort u} {x : C α} {β : Sort u} {y : C β} (e : Isomorphism α x β y) :
   C α ≃ C β :=
-congrArgMap (toTypeClassFunctor C) e.fst
+congrArg (toTypeClassFunctor C) e.fst
 
 theorem isoCondition {C : TypeClass} [h : StructuralTypeClass C] {α : Sort u} {x : C α} {β : Sort u} {y : C β} (e : Isomorphism α x β y) :
--- TODO: Write in terms of `congrArgMap D e.fst`.
+-- TODO: Write in terms of `congrArg D e.fst`.
   (isoInstanceEquiv e).toFun x = y :=
 -- TODO: Need to undo `sortToStructureFunctor`.
 sorry --e.snd
