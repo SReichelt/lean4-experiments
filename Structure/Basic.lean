@@ -1,11 +1,10 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
 --
---               An abstract formalization of "isomorphism is equality up to relabeling"
---              =========================================================================
+-- See `README.md` for more info.
 --
--- This file contains a very abstract and general definition of `Structure`, which is actually a variant
--- of an ∞-groupoid.
---
--- See `Structure.lean` for an explanation of the use case.
+-- This file contains the definition of `Structure` as a higher groupoid, along with related concepts, up
+-- to a structure of structures called `universeStructure`.
 
 
 

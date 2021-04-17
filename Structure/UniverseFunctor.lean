@@ -1,3 +1,12 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
+--
+-- See `README.md` for more info.
+--
+-- Helpers for the construction of functors into `universeStructure`.
+
+
+
 import Structure.Basic
 import Structure.Forgetfulness
 

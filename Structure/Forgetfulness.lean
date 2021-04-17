@@ -1,3 +1,12 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
+--
+-- See `README.md` for more info.
+--
+-- This file contains some definitions related to truncation and quotients.
+
+
+
 import Structure.Basic
 
 open Morphisms

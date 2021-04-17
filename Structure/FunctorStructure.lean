@@ -1,3 +1,12 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
+--
+-- See `README.md` for more info.
+--
+-- Definitions related to `functorStructure`.
+
+
+
 import Structure.Basic
 import Structure.Forgetfulness
 import Structure.UniverseFunctor

@@ -1,6 +1,9 @@
--- This file extends `Basic.lean` with definitions that are related to `Equiv` from mathlib.
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
 --
--- For more information, see the comment at the top of `Structure.lean`.
+-- See `README.md` for more info.
+--
+-- This file extends `Basic.lean` with definitions that are related to `Equiv` from mathlib.
 
 
 

@@ -1,1 +1,6 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
+--
+-- See `README.md` for more info.
+--
 -- TODO: Here, we need to specialize the building blocks from `AbstractBuildingBlocks.lean` to actual types and instances.

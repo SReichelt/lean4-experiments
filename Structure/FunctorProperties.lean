@@ -1,3 +1,12 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
+--
+-- See `README.md` for more info.
+--
+-- Some special properties of structure functors. Currently not used in the rest of the formalization.
+
+
+
 import Structure.Basic
 
 open GeneralizedFunctor

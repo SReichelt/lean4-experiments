@@ -1,3 +1,8 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
+--
+-- See `README.md` for more info.
+--
 -- As a prerequisite for `AbstractBuildingBlocks.lean`, here we define generalized versions of Π and Σ
 -- expressions, where all involved types are replaced by structures and all dependencies are functors.
 

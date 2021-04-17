@@ -1,5 +1,10 @@
+--  An abstract formalization of "isomorphism is equality up to relabeling"
+-- -------------------------------------------------------------------------
+--
+-- See `README.md` for more info.
+--
 -- In this file, we define some basic building blocks which are closely related to the cases mentioned in
--- the introduction in `Structure.lean`.
+-- `README.md`.
 
 
 
