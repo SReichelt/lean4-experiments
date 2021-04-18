@@ -20,7 +20,6 @@ open Pi
 open StructureFunctor
 open Forgetfulness
 open SetoidStructureFunctor
-open FunctorStructure
 
 
 
@@ -191,7 +190,7 @@ let θ := StructureDependencyEquiv.invFunEquiv φ;
                                   ⟨IsEquivalence.trans (n.toFunEquiv.ext (G (φ.e.invFun a))) (congrArg (θ.ext b).toFun m)⟩ }
 
 def dependentApplicationFunctor {S T : Structure} {F : UniverseFunctor S}
-                                (G : PiExpr ⟨S, incomingFunctorFunctor T ⊙ F⟩)
+                                (G : PiExpr ⟨S, functorStructure.incomingFunctorFunctor T ⊙ F⟩)
                                 (x : PiExpr ⟨S, F⟩) :
   SetoidStructureFunctor S T :=
 makeSetoidStructureFunctor (λ a => (G a).map (x a))
@@ -382,7 +381,7 @@ section MkProj
 variable (C : StructureDependency)
 
 def mkSndFunctor : UniverseFunctor C.S :=
-incomingFunctorFunctor (sigmaStructure C) ⊙ C.F
+functorStructure.incomingFunctorFunctor (sigmaStructure C) ⊙ C.F
 
 def mkDependency : StructureDependency := ⟨C.S, mkSndFunctor C⟩
 

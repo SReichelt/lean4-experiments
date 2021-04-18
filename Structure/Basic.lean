@@ -588,19 +588,19 @@ variable {ω : Sort w} (R S : MappedRelation ω) (m : ∀ {a b : ω}, R a b → 
 
 -- This corresponds to `m` also being a functor. With an inductive definition of `Structure`, the
 -- definition of `StructureFunctor` would need to be recursive.
-class IsSetoidFunctor where
+class IsSetoidFunctor : Prop where
 (respectsSetoid {a b   : ω} {f₁ f₂ : R a b}         : f₁ ≈ f₂ → m f₁ ≈ m f₂)
 
 class IsCompositionFunctor [HasComposition  R.R] [HasComposition  S.R]
-  extends IsSetoidFunctor      R S m where
+  extends IsSetoidFunctor      R S m : Prop where
 (respectsComp   {a b c : ω} (f : R a b) (g : R b c) : m (g • f)       ≈ m g • m f)
 
 class IsMorphismFunctor    [HasMorphisms    R.R] [HasMorphisms    S.R]
-  extends IsCompositionFunctor R S m where
+  extends IsCompositionFunctor R S m : Prop where
 (respectsId     (a     : ω)                         : m (id_ (R.f a)) ≈ id_ (S.f a))
 
 class IsIsomorphismFunctor [HasIsomorphisms R.R] [HasIsomorphisms S.R]
-  extends IsMorphismFunctor    R S m where
+  extends IsMorphismFunctor    R S m : Prop where
 (respectsInv    {a b   : ω} (f : R a b)             : m f⁻¹           ≈ (m f)⁻¹)
 
 end Functors

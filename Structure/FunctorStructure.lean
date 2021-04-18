@@ -8,14 +8,10 @@
 
 
 import Structure.Basic
-import Structure.Forgetfulness
 import Structure.UniverseFunctor
+import Structure.ProductStructure
 
 open Morphisms
-open Structure
-open StructureFunctor
-open Forgetfulness
-open SetoidStructureFunctor
 
 
 
@@ -23,13 +19,14 @@ set_option autoBoundImplicitLocal false
 
 
 
-namespace FunctorStructure
-
+namespace StructureFunctor.functorStructure
 
 -- `universeStructure` enables us to define functors for the two maps from a structure `T` to the
 -- functor structure with `T` on one side.
 --
 -- In other words, `functorStructure` is functorial in both arguments.
+
+section OneSided
 
 variable (S : Structure)
 
@@ -107,4 +104,36 @@ def incomingFunctorDesc : UniverseStructureFunctorDesc :=
 def incomingFunctorFunctor : UniverseStructureFunctor :=
 UniverseStructureFunctorDesc.universeStructureFunctor (incomingFunctorDesc S)
 
-end FunctorStructure
+end OneSided
+
+
+
+-- `outgoingFunctorFunctor` and `incomingFunctorFunctor` are themselves functors.
+
+def outgoingFunctorFunctorFunctor :
+  StructureFunctor universeStructure (functorStructure universeStructure universeStructure) :=
+{ map     := outgoingFunctorFunctor,
+  functor := { mapEquiv  := λ e => { ext := λ T => congrArg (incomingFunctorFunctor T) e,
+                                     nat := sorry },
+               isFunctor := sorry } }
+
+def incomingFunctorFunctorFunctor :
+  StructureFunctor universeStructure (functorStructure universeStructure universeStructure) :=
+{ map     := incomingFunctorFunctor,
+  functor := { mapEquiv  := λ e => { ext := λ T => congrArg (outgoingFunctorFunctor T) e,
+                                     nat := sorry },
+               isFunctor := sorry } }
+
+
+
+-- By uncurrying, we can obtain a `UniverseFunctor` that outputs arbitrary functor structures, i.e.
+-- `(S, T) ↦ (S → T)`.
+
+section TwoSided
+
+def functorStructureFunctor : UniverseFunctor (StructureProduct.productStructure universeStructure universeStructure) :=
+FunctorProductEquivalences.uncurry outgoingFunctorFunctorFunctor
+
+end TwoSided
+
+end StructureFunctor.functorStructure

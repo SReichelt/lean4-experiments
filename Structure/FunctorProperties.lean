@@ -24,7 +24,7 @@ variable {S T : Structure} (F : StructureFunctor S T)
 
 -- If we interpret `≃` as equality, we can pretend that functors are just functions and define their
 -- properties accordingly. Again, note that these definitions contain data.
--- However, the definitions are only well-behaved if we add some additional functoriality conditions.
+-- However, for the definitions to be well-behaved, we need to add some functoriality conditions.
 
 def Injective  := GeneralizedFunctor F.map id  -- `∀ a b, F a ≃ F b → a ≃ b` plus functoriality
 def Surjective := Σ' h : (∀ b, Σ' a, IsType.type (F a ≃ b)),
@@ -32,20 +32,12 @@ def Surjective := Σ' h : (∀ b, Σ' a, IsType.type (F a ≃ b)),
                         GeneralizedNaturalTransformation (comp.genFun' F.map F.functor φ) id.genFun
 def Bijective  := PProd (Injective F) (Surjective F)
 
--- We can even build an inverse functor for any functor that is bijective according to this definition,
--- even though we do not assume classical logic. This works because the equivalences in `Structure` can
--- hold the data we are defining here. Note that if we were dealing with propositions and using `∃` instead
--- of `Σ`, obtaining the inverse functor would require classical logic.
+-- We can even build an inverse (= adjoint) functor for any functor that is bijective according to this
+-- definition, even though we do not assume classical logic. This works because the equivalences in
+-- `Structure` can hold the data we are defining here. Note that if we were dealing with propositions and
+-- using `∃` instead of `Σ`, obtaining the inverse functor would require classical logic.
 --
--- What we are doing here can be described as working in an internal logic of the `universeStructure`. Our
--- functors model the functions of this internal logic. So in this internal logic,
--- * function extensionality holds, and
--- * every bijective function has an inverse,
--- even when using constructive logic externally.
---
--- Given how closely this formalization seems to be related to HoTT, maybe some variant of univalence also
--- holds in the internal logic. If this turned out to be the case, would it provide a "constructive
--- interpretation of univalence"?
+-- (This is somewhat related to the fact that in HoTT, choice holds in universes above `Prop`.)
 --
 -- The inverse functor is unique (modulo functor equivalence).
 
@@ -63,8 +55,8 @@ def is_inverse' (a : S) : inverseElement F h (F a) ≃ a := h.fst.mapEquiv (is_i
 end inverseElement
 
 -- This is just a very terse way of writing the classical proof that the inverse element is unique.
--- Writing it in this way has the advantage that `PiEquiv.transport` already contains the proof
--- that the result is a functor.
+-- Writing it in this way has the advantage that `PiEquiv.transport` already contains the proof that the
+-- result is a functor.
 
 def uniqueValueFunctor := Pi.PiEquiv.transport.invFunctor (inverseElement.is_inverse F h)
 def inverseFunctor := comp.genFun' (inverseElement F h) (uniqueValueFunctor F h) h.fst
@@ -75,8 +67,8 @@ def inverse : StructureFunctor T S :=
 
 namespace inverse
 
--- TODO: For the naturality condition, we should probably build some infrastructure around the
--- interaction between `PiEquiv` and `GeneralizedNaturalTransformation`.
+-- TODO: For the naturality condition, we should probably build some infrastructure around the interaction
+-- between `PiEquiv` and `GeneralizedNaturalTransformation`.
 -- We may also need to add some conditions to our definitions.
 
 def leftInv : inverse F h ⊙ F ≃ @idFun S :=

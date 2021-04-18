@@ -299,8 +299,10 @@ end SigmaInstanceDef
 
 -- TODO: Also define building blocks for everything we need in order to formalize categories and
 -- groupoids, and then define isomorphism for the `HasStructure` type class. This gives us an interesting
--- and probably quite powerful reflection principle. Maybe it will lead to a proof of something like
--- univalence in the internal logic.
+-- and probably quite powerful reflection principle.
+--
+-- Maybe it will lead to a proof of something like univalence in the internal logic. Or rather: We can
+-- construct an internal logic where "isomorphism is equality" holds.
 
 end BuildingBlocks
 
