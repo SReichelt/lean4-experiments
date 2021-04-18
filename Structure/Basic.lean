@@ -1856,7 +1856,8 @@ instance : IsEquivalence   (@HasEquivalence.Equiv Structure Structure structureH
 
 
 -- If we have a `StructureEquiv S T`, we can ask whether it maps `a : S` to `b : T`. This is similar to
--- an equivalence. It corresponds to a "dependent equivalence" or "pathover" in HoTT.
+-- an equivalence. It corresponds to a "dependent equivalence" or "pathover" in HoTT, so we adopt the same
+-- notation `a ≃[e] b`.
 
 def InstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) := e.toFun a ≃ b
 
@@ -1874,11 +1875,11 @@ refl' S (IsEquivalence.refl a)
 
 def symm  {S T   : Structure} (e : S ≃ T)             (a : S) (b : T)         :
   a ≃[e] b → b ≃[e⁻¹] a :=
-λ ε => IsEquivalence.trans (IsEquivalence.symm (congrArg e.invFun ε)) (e.isInv.leftInv.ext a)
+λ φ => IsEquivalence.trans (IsEquivalence.symm (congrArg e.invFun φ)) (e.isInv.leftInv.ext a)
 
 def trans {S T U : Structure} (e : S ≃ T) (f : T ≃ U) (a : S) (b : T) (c : U) :
   a ≃[e] b → b ≃[f] c → a ≃[f • e] c :=
-λ ε ζ => IsEquivalence.trans (congrArg f.toFun ε) ζ
+λ φ ψ => IsEquivalence.trans (congrArg f.toFun φ) ψ
 
 def mapEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (η : e₁ ≃ e₂) (a : S) (b : T) :
   a ≃[e₁] b → a ≃[e₂] b :=
