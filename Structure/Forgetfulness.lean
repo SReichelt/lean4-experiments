@@ -187,7 +187,8 @@ open SetoidStructureEquiv
 
 
 
--- An `InstanceEquiv` of a `SetoidStructureEquiv` is what we expect it to be.
+-- An `InstanceEquiv` of a `SetoidStructureEquiv` is the same as a regular `InstanceEquiv` with `≃`
+-- replaced by `≈`.
 
 @[reducible] def SetoidInstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) : Prop :=
 InstanceEquiv (toSetoidStructureEquiv e) a b
@@ -196,13 +197,12 @@ namespace SetoidInstanceEquiv
 
 notation:25 a:26 " ≈[" e:0 "] " b:26 => SetoidInstanceEquiv e a b
 
-theorem refl' (S     : Structure)                         {a b : S} (h : a ≈ b)   :
-  a ≈[id_ S] b :=
-h
+theorem fromEquiv (S : Structure) {a b : S} : a ≈ b → a ≈[id_ S] b := id
+theorem toEquiv   (S : Structure) {a b : S} : a ≈[id_ S] b → a ≈ b := id
 
 theorem refl  (S     : Structure)                         (a : S)                 :
   a ≈[id_ S] a :=
-refl' S (Setoid.refl a)
+fromEquiv S (Setoid.refl a)
 
 theorem symm  {S T   : Structure} (e : S ≃ T)             (a : S) (b : T)         :
   a ≈[e] b → b ≈[e⁻¹] a :=

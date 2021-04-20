@@ -6,6 +6,7 @@
 
 
 import Structure.Basic
+import Structure.ProductStructure
 import Structure.FunctorStructure
 import Structure.AbstractPiSigma
 import Structure.AbstractBuildingBlocks

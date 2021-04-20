@@ -1865,13 +1865,12 @@ namespace InstanceEquiv
 
 notation:25 a:26 " ≃[" e:0 "] " b:26 => InstanceEquiv e a b
 
-def refl' (S     : Structure)                         {a b : S} (h : a ≃ b)   :
-  a ≃[id_ S] b :=
-h
+def fromEquiv (S : Structure) {a b : S} : a ≃ b → a ≃[id_ S] b := id
+def toEquiv   (S : Structure) {a b : S} : a ≃[id_ S] b → a ≃ b := id
 
 def refl  (S     : Structure)                         (a : S)                 :
   a ≃[id_ S] a :=
-refl' S (IsEquivalence.refl a)
+fromEquiv S (IsEquivalence.refl a)
 
 def symm  {S T   : Structure} (e : S ≃ T)             (a : S) (b : T)         :
   a ≃[e] b → b ≃[e⁻¹] a :=
