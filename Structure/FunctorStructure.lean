@@ -64,8 +64,11 @@ def outgoingFunctorDesc : UniverseStructureFunctorDesc :=
   respectsCompNat := outgoingToFun.respectsComp.nat S,
   respectsId      := outgoingToFun.respectsId       S }
 
-def outgoingFunctorFunctor : UniverseStructureFunctor :=
+def outgoingFunctorFunctor' : UniverseStructureFunctor :=
 UniverseStructureFunctorDesc.universeStructureFunctor (outgoingFunctorDesc S)
+
+def outgoingFunctorFunctor : UniverseFunctor universeStructure :=
+UniverseStructureFunctorDesc.universeFunctor (outgoingFunctorDesc S)
 
 def incomingToFun {T₁ T₂ : Structure} (e : T₁ ≃ T₂) :
   StructureFunctor (functorStructure T₁ S) (functorStructure T₂ S) :=
@@ -101,8 +104,11 @@ def incomingFunctorDesc : UniverseStructureFunctorDesc :=
   respectsCompNat := incomingToFun.respectsComp.nat S,
   respectsId      := incomingToFun.respectsId       S }
 
-def incomingFunctorFunctor : UniverseStructureFunctor :=
+def incomingFunctorFunctor' : UniverseStructureFunctor :=
 UniverseStructureFunctorDesc.universeStructureFunctor (incomingFunctorDesc S)
+
+def incomingFunctorFunctor : UniverseFunctor universeStructure :=
+UniverseStructureFunctorDesc.universeFunctor (incomingFunctorDesc S)
 
 end OneSided
 

@@ -179,7 +179,7 @@ variable {S : Structure} (F G : UniverseFunctor S)
 def functorMap (a : S) := functorStructure (F a) (G a)
 
 def functorToFun {a b : S} (e : a ≃ b) : SetoidStructureFunctor (functorMap F G a) (functorMap F G b) :=
-{ map     := λ f => ((congrArg G e).toFun ⊙ f) ⊙ (congrArg F e).invFun,
+{ map     := λ f => ((StructureFunctor.congrArg G e).toFun ⊙ f) ⊙ (StructureFunctor.congrArg F e).invFun,
   functor := sorry }  -- TODO: Since we are dealing with setoid functors here, we just need to combine `compFun.congrArg'` etc.
 
 def functorFunDesc : SetoidUniverseFunctorDesc S :=
@@ -201,8 +201,8 @@ namespace FunctorInstance
 
 theorem iso (a b : FunctorInstance F G) :
   HasIso a b (λ e => ∀ x y, x ≈[congrArg F e] y → a.snd.map x ≈[congrArg G e] b.snd.map y) :=
-λ e => let f := congrArg F e;
-       let g := congrArg G e;
+λ e => let f := StructureFunctor.congrArg F e;
+       let g := StructureFunctor.congrArg G e;
        ⟨λ h₁ x y h₂ => let h₄ : g.toFun ⊙ a.snd ≃ b.snd ⊙ f.toFun := sorry;
                        let h₅ : g.toFun (a.snd.map x) ≃ b.snd.map (f.toFun x) := h₄.ext x;
                        let h₆ : g.toFun (a.snd.map x) ≃ b.snd.map y := sorry;
@@ -259,7 +259,7 @@ def SigmaInstance          := SigmaExpr (nestedSigmaDependency D)
 
 namespace SigmaInstance
 
-def innerPair (a : SigmaInstance D) : SigmaExpr D.fst :=
+def innerPair (a : SigmaInstance D) : innerPairStructure D.fst :=
 ⟨a.fst, a.snd.fst⟩
 
 def outerPair (a : SigmaInstance D) : UncurriedSigmaInstance D :=
@@ -268,28 +268,28 @@ def outerPair (a : SigmaInstance D) : UncurriedSigmaInstance D :=
 -- TODO: Make use of `PiSigmaEquivalences` here (and finish those first).
 
 def applyInnerEquiv (a b : SigmaInstance D) (e : a.fst ≃ b.fst)
-                    (h : a.snd.fst ≈[congrArg D.fst.F e] b.snd.fst) :
+                    (h : a.snd.fst ≈[UniverseStructureFunctor.congrArg D.fst e] b.snd.fst) :
   innerPair D a ≃ innerPair D b :=
 sorry
 
 theorem iso (a b : SigmaInstance D) :
-  HasIso a b (λ e => ∃ h : a.snd.fst ≈[congrArg D.fst.F e] b.snd.fst,
+  HasIso a b (λ e => ∃ h : a.snd.fst ≈[UniverseStructureFunctor.congrArg D.fst e] b.snd.fst,
                      a.snd.snd ≈[congrArg D.snd (applyInnerEquiv D a b e h)] b.snd.snd) :=
 sorry
 
-def applyInnerEquiv' (a b : SigmaInstance D) (cF : IsoCriterion D.fst) (e : a.fst ≃ b.fst)
-                     (h : (cF (innerPair D a) (innerPair D b)).I e) :
-  innerPair D a ≃ innerPair D b :=
-sorry
-
-theorem iso' (a b : SigmaInstance D) (cF : IsoCriterion D.fst) (cG : IsoCriterion (innerPairDependency D)) :
-  HasIso a b (λ e => ∃ h : (cF (innerPair D a) (innerPair D b)).I e,
-                     (cG (outerPair D a) (outerPair D b)).I (applyInnerEquiv' D a b cF e h)) :=
-sorry
-
-def isoCriterion (cF : IsoCriterion D.fst) (cG : IsoCriterion (innerPairDependency D)) :
-  IsoCriterion (nestedSigmaDependency D) :=
-λ a b => ⟨iso' D a b cF cG⟩
+--def applyInnerEquiv' (a b : SigmaInstance D) (cF : IsoCriterion D.fst) (e : a.fst ≃ b.fst)
+--                     (h : (cF (innerPair D a) (innerPair D b)).I e) :
+--  innerPair D a ≃ innerPair D b :=
+--sorry
+--
+--theorem iso' (a b : SigmaInstance D) (cF : IsoCriterion D.fst) (cG : IsoCriterion (innerPairDependency D)) :
+--  HasIso a b (λ e => ∃ h : (cF (innerPair D a) (innerPair D b)).I e,
+--                     (cG (outerPair D a) (outerPair D b)).I (applyInnerEquiv' D a b cF e h)) :=
+--sorry
+--
+--def isoCriterion (cF : IsoCriterion D.fst) (cG : IsoCriterion (innerPairDependency D)) :
+--  IsoCriterion (nestedSigmaDependency D) :=
+--λ a b => ⟨iso' D a b cF cG⟩
 
 end SigmaInstance
 

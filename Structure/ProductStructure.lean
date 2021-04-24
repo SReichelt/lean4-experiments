@@ -106,14 +106,22 @@ section OneSided
 variable (S : Structure)
 
 def fstFunctor : UniverseStructureFunctor :=
-{ map     := λ T => productStructure T S,
-  functor := { mapEquiv  := λ e => mapProdEquiv e (StructureEquiv.refl S),
-               isFunctor := sorry } }
+{ map           := λ T => productStructure T S,
+  mapEquiv      := λ e => mapProdEquiv e (StructureEquiv.refl S),
+  respectsEquiv := { mapEquiv  := sorry,
+                     isFunctor := sorry },
+  respectsComp  := sorry,
+  respectsId    := sorry,
+  respectsInv   := sorry }
 
 def sndFunctor : UniverseStructureFunctor :=
-{ map     := λ T => productStructure S T,
-  functor := { mapEquiv  := λ e => mapProdEquiv (StructureEquiv.refl S) e,
-               isFunctor := sorry } }
+{ map           := λ T => productStructure S T,
+  mapEquiv      := λ e => mapProdEquiv (StructureEquiv.refl S) e,
+  respectsEquiv := { mapEquiv  := sorry,
+                     isFunctor := sorry },
+  respectsComp  := sorry,
+  respectsId    := sorry,
+  respectsInv   := sorry }
 
 end OneSided
 
@@ -137,7 +145,7 @@ def curry {S T U : Structure} (F : StructureFunctor (productStructure S T) U) :
 def uncurry {S T U : Structure} (F : StructureFunctor S (functorStructure T U)) :
   StructureFunctor (productStructure S T) U :=
 { map     := λ P => F P.fst P.snd,
-  functor := { mapEquiv  := λ {P Q} e => IsEquivalence.trans ((congrArg F e.fst).ext P.snd) (congrArg (F Q.fst) e.snd),
+  functor := { mapEquiv  := λ {P Q} e => IsEquivalence.trans ((StructureFunctor.congrArg F e.fst).ext P.snd) (congrArg (F Q.fst) e.snd),
                isFunctor := sorry } }
 
 variable (S T U : Structure)

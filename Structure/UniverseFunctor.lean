@@ -28,7 +28,6 @@ set_option autoBoundImplicitLocal false
 -- Aliases for functors into `universeStructure`.
 
 @[reducible] def UniverseFunctor (S : Structure) := StructureFunctor S universeStructure
-@[reducible] def UniverseStructureFunctor := UniverseFunctor universeStructure
 
 
 
@@ -64,12 +63,10 @@ def constFun {S : Structure} (T : Structure) : SetoidUniverseFunctor S :=
 
 end SetoidUniverseFunctor
 
-@[reducible] def SetoidUniverseStructureFunctor := SetoidUniverseFunctor universeStructure
-
 
 
 -- The function `setoidStructure`, which truncates the equivalences of a structure to setoids, is a
--- `UniverseStructureFunctor`.
+-- `UniverseFunctor`.
 
 def structureToSetoidStructureFunctor' : SetoidUniverseFunctor universeStructure :=
 { map     := id,
@@ -78,7 +75,7 @@ def structureToSetoidStructureFunctor' : SetoidUniverseFunctor universeStructure
 def setoidUniverseFunctor {S : Structure} (F : UniverseFunctor S) : SetoidUniverseFunctor S :=
 SetoidUniverseFunctor.compFun F structureToSetoidStructureFunctor'
 
-def structureToSetoidStructureFunctor : UniverseStructureFunctor :=
+def structureToSetoidStructureFunctor : UniverseFunctor universeStructure :=
 SetoidUniverseFunctor.universeFunctor structureToSetoidStructureFunctor'
 
 
@@ -161,10 +158,44 @@ def setoidUniverseFunctor : SetoidUniverseFunctor S :=
 
 def universeFunctor : UniverseFunctor S := SetoidUniverseFunctor.universeFunctor (setoidUniverseFunctor D)
 
-instance {S : Structure} : Coe (SetoidUniverseFunctorDesc S) (SetoidUniverseFunctor S) := ⟨setoidUniverseFunctor⟩
-instance {S : Structure} : Coe (SetoidUniverseFunctorDesc S) (UniverseFunctor S)       := ⟨universeFunctor⟩
-
 end SetoidUniverseFunctorDesc
+
+instance {S : Structure} : Coe (SetoidUniverseFunctorDesc S) (SetoidUniverseFunctor S) := ⟨SetoidUniverseFunctorDesc.setoidUniverseFunctor⟩
+instance {S : Structure} : Coe (SetoidUniverseFunctorDesc S) (UniverseFunctor S)       := ⟨SetoidUniverseFunctorDesc.universeFunctor⟩
+
+
+
+-- A 2-functor specifically between universe structures. I.e. we have a functor between structures and a
+-- functor between equivalences.
+
+structure UniverseStructureFunctor where
+(map                                                       : Structure → Structure)
+(mapEquiv      {S T   : Structure}                         : S ≃ T → map S ≃ map T)
+(respectsEquiv {S T   : Structure}                         : GeneralizedFunctor.Functor (S := StructureEquiv.equivStructure S T) (T := StructureEquiv.equivStructure (map S) (map T)) mapEquiv)
+(respectsComp  {S T U : Structure} (e : S ≃ T) (f : T ≃ U) : mapEquiv (f • e) ≃ mapEquiv f • mapEquiv e)
+-- TODO: Why don't `≃` and `id_` work as they should here?
+(respectsId    (S     : Structure)                         : StructureEquiv.EquivEquiv (mapEquiv (id_ S)) (StructureEquiv.refl (map S)))
+(respectsInv   {S T   : Structure} (e : S ≃ T)             : mapEquiv e⁻¹ ≃ (mapEquiv e)⁻¹)
+
+namespace UniverseStructureFunctor
+
+instance universeStructureFunctorCoeFun : CoeFun UniverseStructureFunctor (λ _ => Structure → Structure) := ⟨UniverseStructureFunctor.map⟩
+
+variable (F : UniverseStructureFunctor)
+
+def congrArg {S T : Structure} (e : S ≃ T) : F S ≃ F T := F.mapEquiv e
+
+def universeFunctor : UniverseFunctor universeStructure :=
+{ map     := F.map,
+  functor := { mapEquiv  := F.mapEquiv,
+               isFunctor := { respectsSetoid := λ ⟨η⟩ => ⟨F.respectsEquiv η⟩,
+                              respectsComp   := λ e f => ⟨F.respectsComp  e f⟩,
+                              respectsId     := λ S   => ⟨F.respectsId    S⟩,
+                              respectsInv    := λ e   => ⟨F.respectsInv   e⟩ } } }
+
+end UniverseStructureFunctor
+
+instance : Coe UniverseStructureFunctor (UniverseFunctor universeStructure) := ⟨UniverseStructureFunctor.universeFunctor⟩
 
 
 
@@ -197,7 +228,14 @@ let η₂ := D.respectsEquiv (StructureEquiv.leftInv' e);
 FunctorEquiv.trans (FunctorEquiv.trans η₁ η₂) (D.respectsId S)
 
 def targetRightInv {S T : Structure} (e : S ≃ T) : D.toFun e ⊙ D.toFun e⁻¹ ≃ @idFun (D.map T) :=
-StructureEquiv.symm_symm e ▸ targetLeftInv D e⁻¹
+let η₁ := FunctorEquiv.symm (D.respectsComp e⁻¹ e);
+let η₂ := D.respectsEquiv (StructureEquiv.rightInv' e);
+FunctorEquiv.trans (FunctorEquiv.trans η₁ η₂) (D.respectsId T)
+
+-- This might simplify some proofs.
+theorem targetInv {S T : Structure} (e : S ≃ T) :
+  targetRightInv D e ≈ StructureEquiv.symm_symm e ▸ targetLeftInv D e⁻¹ :=
+sorry
 
 def targetEquiv {S T : Structure} (e : S ≃ T) : StructureEquiv (D.map S) (D.map T) :=
 { toFun  := D.toFun e,
@@ -207,42 +245,50 @@ def targetEquiv {S T : Structure} (e : S ≃ T) : StructureEquiv (D.map S) (D.ma
               lrCompat := sorry,
               rlCompat := sorry } }
 
-theorem targetRespectsSetoid {S T : Structure} {e₁ e₂ : S ≃ T} :
-  e₁ ≈ e₂ → targetEquiv D e₁ ≈ targetEquiv D e₂ :=
-λ ⟨η⟩ => ⟨{ toFunEquiv    := D.respectsEquiv η,
-            invFunEquiv   := D.respectsEquiv (StructureEquiv.inv_congrArg η),
-            leftInvEquiv  := sorry,
-            rightInvEquiv := sorry }⟩
+def targetRespectsEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (η : e₁ ≃ e₂) :
+  targetEquiv D e₁ ≃ targetEquiv D e₂ :=
+{ toFunEquiv    := D.respectsEquiv η,
+  invFunEquiv   := D.respectsEquiv (StructureEquiv.inv_congrArg η),
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
 
-theorem targetRespectsComp {S T U : Structure} (e : S ≃ T) (f : T ≃ U) :
-  targetEquiv D (StructureEquiv.trans e f) ≈ StructureEquiv.trans (targetEquiv D e) (targetEquiv D f) :=
-⟨{ toFunEquiv    := D.respectsComp e   f,
-   invFunEquiv   := D.respectsComp f⁻¹ e⁻¹,
-   leftInvEquiv  := sorry,
-   rightInvEquiv := sorry }⟩
+def targetEquiv.functor {S T : Structure} :
+  GeneralizedFunctor.Functor (S := StructureEquiv.equivStructure S T) (T := StructureEquiv.equivStructure (D.map S) (D.map T)) (targetEquiv D) :=
+{ mapEquiv  := targetRespectsEquiv D,
+  isFunctor := sorry }
 
-theorem targetRespectsId (S : Structure) :
-  targetEquiv D (StructureEquiv.refl S) ≈ StructureEquiv.refl (D.map S) :=
-⟨{ toFunEquiv    := D.respectsId S,
-   invFunEquiv   := D.respectsId S,
-   leftInvEquiv  := sorry,
-   rightInvEquiv := sorry }⟩
+def targetRespectsComp {S T U : Structure} (e : S ≃ T) (f : T ≃ U) :
+  targetEquiv D (StructureEquiv.trans e f) ≃ StructureEquiv.trans (targetEquiv D e) (targetEquiv D f) :=
+{ toFunEquiv    := D.respectsComp e   f,
+  invFunEquiv   := D.respectsComp f⁻¹ e⁻¹,
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
 
-theorem targetRespectsInv {S T : Structure} (e : S ≃ T) :
-  targetEquiv D (StructureEquiv.symm e) ≈ StructureEquiv.symm (targetEquiv D e) :=
-⟨{ toFunEquiv    := FunctorEquiv.refl (D.toFun e⁻¹),
-   invFunEquiv   := D.respectsEquiv (StructureEquiv.invInv e),
-   leftInvEquiv  := sorry,
-   rightInvEquiv := sorry }⟩
+def targetRespectsId (S : Structure) :
+  targetEquiv D (StructureEquiv.refl S) ≃ StructureEquiv.refl (D.map S) :=
+{ toFunEquiv    := D.respectsId S,
+  invFunEquiv   := D.respectsId S,
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
+
+def targetRespectsInv {S T : Structure} (e : S ≃ T) :
+  targetEquiv D (StructureEquiv.symm e) ≃ StructureEquiv.symm (targetEquiv D e) :=
+{ toFunEquiv    := FunctorEquiv.refl (D.toFun e⁻¹),
+  invFunEquiv   := D.respectsEquiv (StructureEquiv.invInv e),
+  leftInvEquiv  := sorry,
+  rightInvEquiv := sorry }
 
 def universeStructureFunctor : UniverseStructureFunctor :=
-{ map     := D.map,
-  functor := { mapEquiv  := targetEquiv D,
-               isFunctor := { respectsSetoid := targetRespectsSetoid D,
-                              respectsComp   := targetRespectsComp   D,
-                              respectsId     := targetRespectsId     D,
-                              respectsInv    := targetRespectsInv    D } } }
+{ map            := D.map,
+  mapEquiv       := targetEquiv         D,
+  respectsEquiv  := targetEquiv.functor D,
+  respectsComp   := targetRespectsComp  D,
+  respectsId     := targetRespectsId    D,
+  respectsInv    := targetRespectsInv   D }
 
-instance {S : Structure} : Coe UniverseStructureFunctorDesc UniverseStructureFunctor := ⟨universeStructureFunctor⟩
+def universeFunctor : UniverseFunctor universeStructure := UniverseStructureFunctor.universeFunctor (universeStructureFunctor D)
 
 end UniverseStructureFunctorDesc
+
+instance : Coe UniverseStructureFunctorDesc UniverseStructureFunctor := ⟨UniverseStructureFunctorDesc.universeStructureFunctor⟩
+instance : Coe UniverseStructureFunctorDesc (UniverseFunctor universeStructure) := ⟨UniverseStructureFunctorDesc.universeFunctor⟩
