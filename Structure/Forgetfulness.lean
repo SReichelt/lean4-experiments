@@ -42,11 +42,15 @@ namespace Forgetfulness
 
 section Setoid
 
+-- TODO: Use `propFunctor` as in the past.
 def makeToSetoidStructureFunctor {S T : Structure} (map : S → T) (mapEquiv : ∀ {a b : S}, a ≃ b → map a ≈ map b) :
   StructureFunctor S (setoidStructure T) :=
 { map     := map,
   functor := { mapEquiv  := mapEquiv,
-               isFunctor := propFunctor } }
+               isFunctor := { respectsEquiv := λ _   => proofIrrel _ _,
+                              respectsComp  := λ _ _ => proofIrrel _ _,
+                              respectsId    := λ _   => proofIrrel _ _,
+                              respectsInv   := λ _   => proofIrrel _ _ } } }
 
 def makeToSetoidStructureFunctorEquiv' {S T : Structure} {F G : StructureFunctor S (setoidStructure T)} (ext : ∀ a, F a ≃ G a) :
   F ≃ G :=
@@ -60,7 +64,7 @@ makeToSetoidStructureFunctorEquiv' (λ a => let ⟨e⟩ := ext a; e)
 
 
 def toSetoidFunctor (S : Structure) : StructureFunctor S (setoidStructure S) :=
-makeToSetoidStructureFunctor id (toSetoidEquiv S)
+makeToSetoidStructureFunctor id (structureSetoidEquiv S)
 
 @[reducible] def SetoidStructureFunctor (S T : Structure) := StructureFunctor (setoidStructure S) (setoidStructure T)
 
@@ -112,7 +116,7 @@ makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl ((setoidFunctor F) a))
 
 def setoidIdempotenceSquare {S T : Structure} (F : SetoidStructureFunctor S T) :
   F ⊙ setoidIdempotenceFunctor S ≃ setoidIdempotenceFunctor T ⊙ setoidFunctor F :=
-makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl (F a))
+sorry
 
 def setoidFunctorStructure (S T : Structure) := functorStructure (setoidStructure S) (setoidStructure T)
 
@@ -216,7 +220,7 @@ theorem trans {S T U : Structure} (e : S ≃ T) (f : T ≃ U) (a : S) (b : T) (c
 
 theorem setoidInstanceEquiv' {S T : Structure} (e : SetoidStructureEquiv S T) (a : S) (b : T) :
   a ≃[e] b ↔ e.toFun a ≈ b :=
-equivInSetoidStructure T (e.toFun a) b
+⟨λ φ => ⟨φ⟩, λ ⟨φ⟩ => φ⟩
 
 theorem setoidInstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) :
   a ≈[e] b ↔ e.toFun a ≈ b :=

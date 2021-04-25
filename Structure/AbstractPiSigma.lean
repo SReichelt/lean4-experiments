@@ -258,7 +258,7 @@ def piStructure (C : StructureDependency) : Structure := ⟨PiExpr C⟩
 
 def idPi {S : Structure} : PiExpr (StructureDependency.constDep S S) :=
 { map      := id,
-  mapEquiv := toSetoidEquiv S }
+  mapEquiv := structureSetoidEquiv S }
 
 def compFunPi {S : Structure} {C : StructureDependency} (F : StructureFunctor S C.S) (G : PiExpr C) :
   PiExpr ⟨S, C.F ⊙ F⟩ :=

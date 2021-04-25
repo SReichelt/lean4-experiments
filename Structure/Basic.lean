@@ -664,15 +664,8 @@ def      setoidHasStructure (α : Sort u) [s : Setoid α] : HasStructure α    :
 
 
 
--- Now we put everything together to define our general "structure with equivalence". Concrete instances are
--- any `Sort u` with `Equiv` as equivalence, any `α : Sort u` with `Eq` as equivalence, and so on, but also
--- some new structures we are going to define below.
---
--- As mentioned before, this type is also
--- * an ∞-groupoid where higher-level equivalences have been truncated to equivalence relations, and
--- * a model of a "set" in the HLM logic of the Slate theorem prover, with equality modeled by the notion of
---   equivalence we have just defined. This is significant because it inspires treating equivalence like an
---   abstract notion of equality throughout the rest of this file.
+-- We bundle a type with a structure together because we frequently parameterize definitions by
+-- arbitrary structures.
 
 structure Structure where
 (α         : Sort u)
@@ -726,6 +719,8 @@ def isoStructure {S : Structure} (a b : S) := bundledSetoidStructure (iso S a b)
 -- 2. In Lean, where quotients are available, we can additionally take the quotient with respect to
 --    equivalence, obtaining a "skeleton structure" where equivalence is equality.
 --
+-- Moreover, if we have a type with general equivalences, we can obtain a `Structure` by truncating them.
+--
 -- In `Forgetfulness.lean`, we prove some properties of these operations.
 --
 -- Within this file, we truncate structures to setoids whenever we want to use structures as isomorphisms,
@@ -734,26 +729,57 @@ def isoStructure {S : Structure} (a b : S) := bundledSetoidStructure (iso S a b)
 
 namespace Forgetfulness
 
-variable (S : Structure)
+section SetoidEquiv
 
-def SetoidEquiv (a b : S) := Nonempty (IsType.type (a ≃ b))
-def toSetoidEquiv {a b : S} (e : a ≃ b) : SetoidEquiv S a b := ⟨e⟩
-def setoidEquiv : Equivalence (SetoidEquiv S) :=
+variable (α : Sort u) [HasInstanceEquivalence α]
+
+def SetoidEquiv (a b : α) := Nonempty (IsType.type (a ≃ b))
+def toSetoidEquiv {a b : α} (e : a ≃ b) : SetoidEquiv α a b := ⟨e⟩
+def setoidEquiv : Equivalence (SetoidEquiv α) :=
 ⟨λ a => ⟨HasRefl.refl a⟩, λ ⟨e⟩ => ⟨HasSymm.symm e⟩, λ ⟨e⟩ ⟨f⟩ => ⟨HasTrans.trans e f⟩⟩
 
-instance structureToSetoid : Setoid (IsType.type S) := ⟨SetoidEquiv S, setoidEquiv S⟩
+instance instanceEquivSetoid : Setoid α := ⟨SetoidEquiv α, setoidEquiv α⟩
+
+end SetoidEquiv
+
+section Structures
+
+variable (S : Structure)
+
+def structureSetoidEquiv {a b : S} (e : a ≃ b) := toSetoidEquiv (IsType.type S) e
+def structureToSetoid := instanceEquivSetoid (IsType.type S)
 def setoidStructure : Structure := setoidInstanceStructure (IsType.type S)
-
--- Make type class resolution happy.
-instance : IsEquivalence (λ a b : IsType.type (setoidStructure S) => (structureToSetoid S).r a b) :=
-setoidIsEquiv (IsType.type S)
-
-theorem equivInSetoidStructure (a b : setoidStructure S) : a ≃ b ↔ a ≈ b := ⟨λ e => ⟨e⟩, λ ⟨e⟩ => e⟩
 
 def StructureQuotient := Quotient (structureToSetoid S)
 def skeletonStructure : Structure := instanceStructure (StructureQuotient S)
 
-theorem equivInSkeletonStructure (a b : skeletonStructure S) : a ≃ b ↔ a = b := ⟨id, id⟩
+end Structures
+
+section SetoidEquivEquiv
+
+def equivSetoid {α : Sort u} [HasGeneralStructure α] (a b : α) : BundledSetoid :=
+{ α := IsType.type (a ≃ b),
+  s := instanceEquivSetoid (IsType.type (a ≃ b)) }
+
+instance equivHasIso {α : Sort u} [h : HasGeneralStructure α] : HasIsomorphisms (@equivSetoid α h) :=
+{ refl          := h.hasIsos.refl,
+  symm          := h.hasIsos.symm,
+  trans         := h.hasIsos.trans,
+  comp_congrArg := λ ⟨he⟩ ⟨hf⟩ => ⟨h.hasIsos.comp_congrArg he hf⟩,
+  inv_congrArg  := λ ⟨he⟩      => ⟨h.hasIsos.inv_congrArg  he⟩,
+  assoc         := λ e f g     => ⟨h.hasIsos.assoc         e f g⟩,
+  leftId        := λ e         => ⟨h.hasIsos.leftId        e⟩,
+  rightId       := λ e         => ⟨h.hasIsos.rightId       e⟩,
+  leftInv       := λ e         => ⟨h.hasIsos.leftInv       e⟩,
+  rightInv      := λ e         => ⟨h.hasIsos.rightInv      e⟩,
+  invInv        := λ e         => ⟨h.hasIsos.invInv        e⟩,
+  compInv       := λ e f       => ⟨h.hasIsos.compInv       e f⟩,
+  idInv         := λ a         => ⟨h.hasIsos.idInv         a⟩ }
+
+instance hasTruncatedStructure (α : Sort u) [h : HasGeneralStructure α] : HasStructure α :=
+⟨@equivSetoid α h⟩
+
+end SetoidEquivEquiv
 
 end Forgetfulness
 
@@ -2009,51 +2035,32 @@ EquivEquiv.refl (symm (trans e f))
 def idInv (S : Structure) : symm (refl S) ≃ refl S :=
 EquivEquiv.refl (refl S)
 
-
-
--- When using `StructureEquiv` as an equivalence within the `universeStructure` we wish to define, we
--- need to truncate `EquivEquiv` to its setoid structure.
---
--- There are a lot of alternative places we could choose for this truncation. E.g. we could first define a
--- notion of a 2-structure, then define a 2-structure of (1-)structures, and then truncate that
--- 2-structure. If we additionally defined functors of those 2-structures, we could eliminate the setoid
--- truncations in `AbstractPiSigma.lean`. In particular, this would make Π and Σ structures fully
--- equivalent to functor and pair (1-)structures if they are independent. However, this would come at a
--- cost of essentially duplicating the basic definitions -- potentially endlessly, even.
-
--- TODO Use new infrastructure.
-
-instance equivIsSetoid (S T : Structure) : Setoid (StructureEquiv S T) := structureToSetoid (equivStructure S T)
-
-def structureEquiv (S T : Structure) : BundledSetoid := ⟨StructureEquiv S T⟩
-
-instance equivHasIso : HasIsomorphisms structureEquiv :=
+instance equivHasIso : HasIsomorphisms equivStructure :=
 { refl          := refl,
   symm          := symm,
   trans         := trans,
-  comp_congrArg := λ ⟨he⟩ ⟨hf⟩ => ⟨comp_congrArg he hf⟩,
-  inv_congrArg  := λ ⟨he⟩      => ⟨inv_congrArg  he⟩,
-  assoc         := λ e f g     => ⟨assoc         e f g⟩,
-  leftId        := λ e         => ⟨leftId        e⟩,
-  rightId       := λ e         => ⟨rightId       e⟩,
-  leftInv       := λ e         => ⟨leftInv'      e⟩,
-  rightInv      := λ e         => ⟨rightInv'     e⟩,
-  invInv        := λ e         => ⟨invInv        e⟩,
-  compInv       := λ e f       => ⟨compInv       e f⟩,
-  idInv         := λ S         => ⟨idInv         S⟩ }
+  comp_congrArg := comp_congrArg,
+  inv_congrArg  := inv_congrArg,
+  assoc         := assoc,
+  leftId        := leftId,
+  rightId       := rightId,
+  leftInv       := leftInv',
+  rightInv      := rightInv',
+  invInv        := invInv,
+  compInv       := compInv,
+  idInv         := idInv }
 
 end StructureEquiv
 
 
 
-instance structureHasStructure : HasStructure Structure := ⟨StructureEquiv.structureEquiv⟩
-instance structureHasEquivalence : HasEquivalence Structure Structure := ⟨StructureEquiv.structureEquiv⟩
-instance structureEquivIsTypeWithEquiv : IsTypeWithEquivalence (HasEquivalence.γ Structure Structure) := BundledSetoid.isTypeWithEquivalence
+instance structureHasGeneralStructure : HasGeneralStructure Structure := ⟨StructureEquiv.equivStructure⟩
+instance structureHasEquivalence : HasEquivalence Structure Structure := ⟨StructureEquiv.equivStructure⟩
+instance structureEquivIsTypeWithEquiv : IsTypeWithEquivalence (HasEquivalence.γ Structure Structure) := Structure.structureIsTypeWithEquiv
 instance structureEquivIsType : IsType (HasEquivalence.γ Structure Structure) := structureEquivIsTypeWithEquiv.toIsType
-instance (S T : Structure) : Setoid (IsType.type (S ≃ T)) := BundledSetoid.isSetoid (StructureEquiv.structureEquiv S T)
+instance (S T : Structure) : Setoid (IsType.type (S ≃ T)) := instanceEquivSetoid (IsType.type (S ≃ T))
 instance (S T : Structure) : HasStructure (IsType.type (S ≃ T)) := StructureEquiv.equivHasStructure S T
-
-instance : HasIsomorphisms (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasIso
+instance : HasIsomorphisms (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasGeneralStructure.hasIso
 
 
 
@@ -2092,6 +2099,10 @@ end InstanceEquiv
 
 -- Using `StructureEquiv`, we can build a "universe" structure where the objects are structures. This is
 -- the same as the groupoid of lower-level groupoids.
+--
+-- `universeStructure` contains an implicit truncation of `EquivEquiv` to a proposition, via
+-- `hasTruncatedStructure`. In `TwoStructure.lean`, we give the definition of an enlarged structure that
+-- allows us to keep this data instead.
 
 def universeStructure : Structure := ⟨Structure⟩
 
