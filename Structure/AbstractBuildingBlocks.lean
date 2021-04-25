@@ -86,7 +86,7 @@ def equivProd : IndependentPair S T ≃ PProd (IsType.type S) (IsType.type T) :=
 -- The instance equivalence does not depend on the type equivalence.
 
 theorem iso (a b : IndependentPair S T) : HasIso a b (λ e => SetoidEquiv T a.snd b.snd) :=
-λ e => Iff.refl (SetoidEquiv T a.snd b.snd)
+λ e => Iff.rfl
 
 def isoCriterion : IsoCriterion (independentPairDependency S T) := λ a b => ⟨iso S T a b⟩
 

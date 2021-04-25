@@ -71,7 +71,7 @@ def sortStructure : Structure := ⟨Sort u⟩
 
 
 -- When using `sortStructure` to encode `Sort u` as a `Structure` with equivalences given by `Equiv`,
--- we also want to transport individual instances `x : α` of a type `α : Sort u` along an encoded
+-- we also want to transport individual instances `a : α` of a type `α : Sort u` along an encoded
 -- `Equiv`. Since the introductory description in `Basic.lean` contains precisely this operation, we
 -- need to provide an abstraction for it.
 --
@@ -88,9 +88,7 @@ def sortStructure : Structure := ⟨Sort u⟩
 
 -- An equivalence between instance structures is actually the same as `Equiv`.
 
-@[reducible] def InstanceStructureEquiv (α β : Sort u) := StructureEquiv (instanceStructure α) (instanceStructure β)
-
-def instanceStructureEquiv {α β : Sort u} (e : α ≃ β) : InstanceStructureEquiv α β :=
+def instanceStructureEquiv {α β : Sort u} (e : α ≃ β) : instanceStructure α ≃ instanceStructure β :=
 { toFun    := instanceStructureFunctor e.toFun,
   invFun   := instanceStructureFunctor e.invFun,
   isInv  := { leftInv  := { ext := e.leftInv,
@@ -102,11 +100,9 @@ def instanceStructureEquiv {α β : Sort u} (e : α ≃ β) : InstanceStructureE
 
 namespace instanceStructureEquiv
 
-instance {α β : Sort u} : Coe (α ≃ β) (InstanceStructureEquiv α β) := ⟨instanceStructureEquiv⟩
-
 @[simp] theorem instanceEquiv {α β : Sort u} (e : α ≃ β) (a : α) (b : β) :
-  (a ≃[instanceStructureEquiv e] b) = (e.toFun a = b) :=
-rfl
+  a ≃[instanceStructureEquiv e] b ↔ e.toFun a = b :=
+Iff.rfl
 
 theorem respectsEquiv {α β   : Sort u} {e₁ e₂ : α ≃ β} (h : e₁ = e₂) :
   instanceStructureEquiv e₁ ≈ instanceStructureEquiv e₂ :=
@@ -114,25 +110,34 @@ Setoid.of_Eq (congrArg instanceStructureEquiv h)
 
 theorem respectsComp  {α β γ : Sort u} (e : α ≃ β) (f : β ≃ γ) :
   instanceStructureEquiv (Equiv.trans e f) ≈ StructureEquiv.trans (instanceStructureEquiv e) (instanceStructureEquiv f) :=
---⟨⟨makeToSetoidStructureFunctorEquiv (λ a => let c : setoidStructure (instanceStructure γ) := f.toFun  (e.toFun  a);
---                                            Setoid.refl c)⟩,
--- ⟨makeToSetoidStructureFunctorEquiv (λ c => let a : setoidStructure (instanceStructure α) := e.invFun (f.invFun c);
---                                            Setoid.refl a)⟩⟩
-sorry
+⟨{ toFunEquiv    := { ext := λ a => let c : instanceStructure γ := f.toFun  (e.toFun  a);
+                                    let ⟨h⟩ := Setoid.refl c; h,
+                      nat := λ _ => proofIrrel _ _ },
+   invFunEquiv   := { ext := λ c => let a : instanceStructure α := e.invFun (f.invFun c);
+                                    let ⟨h⟩ := Setoid.refl a; h,
+                      nat := λ _ => proofIrrel _ _ },
+   leftInvEquiv  := λ _ => proofIrrel _ _,
+   rightInvEquiv := λ _ => proofIrrel _ _ }⟩
 
 theorem respectsId    (α     : Sort u) :
   instanceStructureEquiv (Equiv.refl α) ≈ StructureEquiv.refl (instanceStructure α) :=
---⟨⟨makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl a)⟩,
--- ⟨makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl a)⟩⟩
-sorry
+⟨{ toFunEquiv    := { ext := λ a => let ⟨h⟩ := Setoid.refl a; h,
+                      nat := λ _ => proofIrrel _ _ },
+   invFunEquiv   := { ext := λ a => let ⟨h⟩ := Setoid.refl a; h,
+                      nat := λ _ => proofIrrel _ _ },
+   leftInvEquiv  := λ _ => proofIrrel _ _,
+   rightInvEquiv := λ _ => proofIrrel _ _ }⟩
 
 theorem respectsInv   {α β   : Sort u} (e : α ≃ β) :
   instanceStructureEquiv (Equiv.symm e) ≈ StructureEquiv.symm (instanceStructureEquiv e) :=
---⟨⟨makeToSetoidStructureFunctorEquiv (λ b => let a : setoidStructure (instanceStructure α) := e.invFun b;
---                                            Setoid.refl a)⟩,
--- ⟨makeToSetoidStructureFunctorEquiv (λ a => let b : setoidStructure (instanceStructure β) := e.toFun  a;
---                                            Setoid.refl b)⟩⟩
-sorry
+⟨{ toFunEquiv    := { ext := λ b => let a : instanceStructure α := e.invFun b;
+                                    let ⟨h⟩ := Setoid.refl a; h,
+                      nat := λ _ => proofIrrel _ _ },
+   invFunEquiv   := { ext := λ a => let b : instanceStructure β := e.toFun  a;
+                                    let ⟨h⟩ := Setoid.refl b; h,
+                      nat := λ _ => proofIrrel _ _ },
+   leftInvEquiv  := λ _ => proofIrrel _ _,
+   rightInvEquiv := λ _ => proofIrrel _ _ }⟩
 
 end instanceStructureEquiv
 

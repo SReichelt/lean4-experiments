@@ -220,7 +220,7 @@ equivInSetoidStructure T (e.toFun a) b
 
 theorem setoidInstanceEquiv {S T : Structure} (e : S ≃ T) (a : S) (b : T) :
   a ≈[e] b ↔ e.toFun a ≈ b :=
-Iff.refl (e.toFun a ≈ b)
+Iff.rfl
 
 theorem mapEquiv' {S T : Structure} {e₁ e₂ : SetoidStructureEquiv S T} (h : e₁ ≈ e₂) (a : S) (b : T) :
   a ≃[e₁] b → a ≃[e₂] b :=
