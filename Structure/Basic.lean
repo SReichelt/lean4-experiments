@@ -209,7 +209,7 @@ variable {α : Sort u} {β : Sort v}
 
 section Notation
 
-variable [h : IsType β]
+variable [IsType β]
 
 -- Note that we use a nonstandard order in `HasComp.comp` so that it directly matches
 -- `HasTrans.trans`. When using `•` notation (which we use to avoid clashing with function
@@ -256,8 +256,8 @@ instance isoEquiv [h : HasIsomorphisms R] : IsEquivalence R :=
 instance mapHasIso [h : HasIsomorphisms R] {ω : Sort w} (m : ω → α) :
   HasIsomorphisms (mapRelation m R) :=
 { refl          := λ a => h.refl (m a),
-  trans         := h.trans,
   symm          := h.symm,
+  trans         := h.trans,
   comp_congrArg := h.comp_congrArg,
   inv_congrArg  := h.inv_congrArg,
   assoc         := h.assoc,
@@ -286,8 +286,8 @@ variable {α : Sort u} (r : α → α → Prop) [h : IsEquivalence r]
 
 instance propEquivHasIso : HasIsomorphisms (RelationWithSetoid.relWithEq r) :=
 { refl          := h.refl,
-  trans         := h.trans,
   symm          := h.symm,
+  trans         := h.trans,
   comp_congrArg := λ _ _   => proofIrrel _ _,
   inv_congrArg  := λ _     => proofIrrel _ _,
   assoc         := λ _ _ _ => proofIrrel _ _,
@@ -723,9 +723,10 @@ open Functors
 -- If the target has equivalences in `Prop`, the functor axioms are satisfied trivially.
 
 instance propFunctor {α : Sort u} {β : Sort v} [IsTypeWithEquivalence β]
-                     {R : GeneralizedRelation α β} [HasIsomorphisms R] {s : α → α → Prop} [h : IsEquivalence s]
-                     {F : ∀ {a b : α}, R a b → s a b} :
-  IsIsomorphismFunctor R (RelationWithSetoid.relWithEq s) F :=
+                     {R : GeneralizedRelation α β} [HasIsomorphisms R]
+                     {γ : Sort w} {m : α → γ} {s : γ → γ → Prop} [h : IsEquivalence s]
+                     {F : ∀ {a b : α}, R a b → s (m a) (m b)} :
+  IsIsomorphismFunctor R (mapRelation m (RelationWithSetoid.relWithEq s)) F :=
 { respectsEquiv := λ _   => proofIrrel _ _,
   respectsComp  := λ _ _ => proofIrrel _ _,
   respectsId    := λ _   => proofIrrel _ _,
@@ -1623,7 +1624,7 @@ end IsInverse
 def congrArgFunctor {α : Sort u} {β : Sort v} (f : α → β) :
   @GeneralizedFunctor.Functor (instanceStructure α) (instanceStructure β) f :=
 { mapEquiv  := _root_.congrArg f,
-  isFunctor := propFunctor (h := IsEquivalence.mapEquiv Eq f) }
+  isFunctor := propFunctor }
 
 def InstanceStructureFunctor (α β : Sort u) := StructureFunctor (instanceStructure α) (instanceStructure β)
 
@@ -1924,6 +1925,7 @@ instance structureHasStructure : HasStructure Structure := ⟨StructureEquiv.str
 instance structureHasEquivalence : HasEquivalence Structure Structure := ⟨StructureEquiv.structureEquiv⟩
 instance structureEquivIsTypeWithEquiv : IsTypeWithEquivalence (HasEquivalence.γ Structure Structure) := BundledSetoid.isTypeWithEquivalence
 instance structureEquivIsType : IsType (HasEquivalence.γ Structure Structure) := structureEquivIsTypeWithEquiv.toIsType
+instance (S T : Structure) : Setoid (IsType.type (S ≃ T)) := BundledSetoid.isSetoid (StructureEquiv.structureEquiv S T)
 instance (S T : Structure) : HasStructure (IsType.type (S ≃ T)) := StructureEquiv.equivHasStructure S T
 
 instance : HasIsomorphisms (@HasEquivalence.Equiv Structure Structure structureHasEquivalence) := HasStructure.hasIso

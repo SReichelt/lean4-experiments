@@ -10,6 +10,7 @@
 import Structure.Basic
 
 open Morphisms
+open HasStructure
 open Structure
 open StructureFunctor
 
@@ -97,11 +98,11 @@ theorem respectsEquivalence {S T : Structure} {F₁ F₂ : StructureFunctor S T}
 
 theorem respectsComp {S T U : Structure} (F : StructureFunctor S T) (G : StructureFunctor T U) :
   setoidFunctor (G ⊙ F) ≃ setoidFunctor G ⊙ setoidFunctor F :=
-makeToSetoidStructureFunctorEquiv (λ a : S => ⟨⟨IsEquivalence.refl (G (F a))⟩⟩)
+makeToSetoidStructureFunctorEquiv (λ a : S => ⟨⟨HasRefl.refl (G (F a))⟩⟩)
 
 theorem respectsId (S : Structure) :
   setoidFunctor (@idFun S) ≃ @idFun (setoidStructure S) :=
-makeToSetoidStructureFunctorEquiv (λ a : S => ⟨⟨IsEquivalence.refl a⟩⟩)
+makeToSetoidStructureFunctorEquiv (λ a : S => ⟨⟨HasRefl.refl a⟩⟩)
 
 end setoidFunctor
 
@@ -156,7 +157,7 @@ def toSetoidStructureEquiv {S T : Structure} (e : StructureEquiv S T) : SetoidSt
 
 namespace toSetoidStructureEquiv
 
-theorem respectsSetoid {S T : Structure} {e₁ e₂ : StructureEquiv S T} :
+theorem respectsEquiv {S T : Structure} {e₁ e₂ : StructureEquiv S T} :
   e₁ ≈ e₂ → toSetoidStructureEquiv e₁ ≈ toSetoidStructureEquiv e₂ :=
 λ ⟨η⟩ => ⟨makeSetoidStructureEquivEquiv' (setoidFunctor.respectsEquivalence η.toFunEquiv) (setoidFunctor.respectsEquivalence η.invFunEquiv)⟩
 
@@ -170,14 +171,14 @@ theorem respectsId (S : Structure) :
 
 theorem respectsInv {S T : Structure} (e : S ≃ T) :
   toSetoidStructureEquiv (StructureEquiv.symm e) ≈ StructureEquiv.symm (toSetoidStructureEquiv e) :=
-⟨makeSetoidStructureEquivEquiv' (IsEquivalence.refl (setoidFunctor e.invFun)) (IsEquivalence.refl (setoidFunctor e.toFun))⟩
+⟨makeSetoidStructureEquivEquiv' (HasRefl.refl (setoidFunctor e.invFun)) (HasRefl.refl (setoidFunctor e.toFun))⟩
 
 def genFun : GeneralizedFunctor.Functor (S := universeStructure) (T := universeStructure) setoidStructure :=
 { mapEquiv  := toSetoidStructureEquiv,
-  isFunctor := { respectsSetoid := respectsSetoid,
-                 respectsComp   := respectsComp,
-                 respectsId     := respectsId,
-                 respectsInv    := respectsInv } }
+  isFunctor := { respectsEquiv := respectsEquiv,
+                 respectsComp  := respectsComp,
+                 respectsId    := respectsId,
+                 respectsInv   := respectsInv } }
 
 end toSetoidStructureEquiv
 
@@ -228,7 +229,7 @@ InstanceEquiv.mapEquiv η a b
 
 theorem mapEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (h : e₁ ≈ e₂) (a : S) (b : T) :
   a ≈[e₁] b → a ≈[e₂] b :=
-mapEquiv' (toSetoidStructureEquiv.respectsSetoid h) a b
+mapEquiv' (toSetoidStructureEquiv.respectsEquiv h) a b
 
 end SetoidInstanceEquiv
 
