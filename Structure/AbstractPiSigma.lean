@@ -64,46 +64,92 @@ def trans {C D E : StructureDependency} (φ : StructureDependencyEquiv C D) (ψ 
 ⟨StructureEquiv.trans φ.e ψ.e, FunctorEquiv.trans φ.η (compFun.congrArg_left (F := φ.e.toFun) ψ.η)⟩
 
 def StructureDependencyEquivEquiv {C D : StructureDependency} (φ ψ : StructureDependencyEquiv C D) :=
-∃ ζ : φ.e ≃ ψ.e, compFun.congrArg_right (G := D.F) ζ.toFunEquiv • φ.η ≈ ψ.η
+Σ' ζ : φ.e ≃ ψ.e, compFun.congrArg_right (G := D.F) ζ.toFunEquiv • φ.η ≈ ψ.η
 
 namespace StructureDependencyEquivEquiv
 
 variable {C D : StructureDependency}
 
-theorem refl  (φ     : StructureDependencyEquiv C D)                                                                                 : StructureDependencyEquivEquiv φ φ :=
+def refl  (φ     : StructureDependencyEquiv C D)                                                                                 : StructureDependencyEquivEquiv φ φ :=
 ⟨StructureEquiv.EquivEquiv.refl  φ.e,
  leftCancelId (compFun.congrArg_right.respectsId φ.e.toFun)⟩
 
-theorem symm  {φ ψ   : StructureDependencyEquiv C D} (h : StructureDependencyEquivEquiv φ ψ)                                         : StructureDependencyEquivEquiv ψ φ :=
-let ⟨ζ, hζ⟩ := h;
-let h₁ := (leftMulInv (h := functorHasStructure) φ.η ψ.η (compFun.congrArg_right ζ.toFunEquiv)).mp hζ;
-let h₂ := compFun.congrArg_right.respectsInv ζ.toFunEquiv;
-⟨StructureEquiv.EquivEquiv.symm  ζ,
+def symm  {φ ψ   : StructureDependencyEquiv C D} (ζ : StructureDependencyEquivEquiv φ ψ)                                         : StructureDependencyEquivEquiv ψ φ :=
+⟨StructureEquiv.EquivEquiv.symm  ζ.fst,
+ let h₁ := (leftMulInv (h := functorHasStructure) φ.η ψ.η (compFun.congrArg_right ζ.fst.toFunEquiv)).mp ζ.snd;
+ let h₂ := compFun.congrArg_right.respectsInv ζ.fst.toFunEquiv;
  comp_subst_left h₂ (Setoid.symm h₁)⟩
 
-theorem trans {φ ψ χ : StructureDependencyEquiv C D} (h : StructureDependencyEquivEquiv φ ψ) (i : StructureDependencyEquivEquiv ψ χ) : StructureDependencyEquivEquiv φ χ :=
-let ⟨ζ, hζ⟩ := h;
-let ⟨ξ, hξ⟩ := i;
-let h₁ := applyAssoc_left (comp_subst_right hζ hξ);
-let h₂ := compFun.congrArg_right.respectsComp ζ.toFunEquiv ξ.toFunEquiv;
-⟨StructureEquiv.EquivEquiv.trans ζ ξ,
+def trans {φ ψ χ : StructureDependencyEquiv C D} (ζ : StructureDependencyEquivEquiv φ ψ) (ξ : StructureDependencyEquivEquiv ψ χ) : StructureDependencyEquivEquiv φ χ :=
+⟨StructureEquiv.EquivEquiv.trans ζ.fst ξ.fst,
+ let h₁ := applyAssoc_left (comp_subst_right ζ.snd ξ.snd);
+ let h₂ := compFun.congrArg_right.respectsComp ζ.fst.toFunEquiv ξ.fst.toFunEquiv;
  comp_subst_left h₂ h₁⟩
 
-instance structureDependencyEquivSetoid : Setoid (StructureDependencyEquiv C D) := ⟨StructureDependencyEquivEquiv, ⟨refl, symm, trans⟩⟩
+def StructureDependencyEquivEquivEquiv {φ ψ : StructureDependencyEquiv C D} (ζ ξ : StructureDependencyEquivEquiv φ ψ) :=
+ζ.fst ≈ ξ.fst
+
+namespace StructureDependencyEquivEquivEquiv
+
+variable {φ ψ : StructureDependencyEquiv C D}
+
+theorem refl  (ζ     : StructureDependencyEquivEquiv φ ψ)                                                                                           : StructureDependencyEquivEquivEquiv ζ ζ :=
+Setoid.refl  ζ.fst
+
+theorem symm  {ζ ξ   : StructureDependencyEquivEquiv φ ψ} (h : StructureDependencyEquivEquivEquiv ζ ξ)                                              : StructureDependencyEquivEquivEquiv ξ ζ :=
+Setoid.symm  h
+
+theorem trans {ζ ξ σ : StructureDependencyEquivEquiv φ ψ} (h : StructureDependencyEquivEquivEquiv ζ ξ) (i : StructureDependencyEquivEquivEquiv ξ σ) : StructureDependencyEquivEquivEquiv ζ σ :=
+Setoid.trans h i
+
+instance structureDependencyEquivEquivSetoid : Setoid (StructureDependencyEquivEquiv φ ψ) := ⟨StructureDependencyEquivEquivEquiv, ⟨refl, symm, trans⟩⟩
+
+end StructureDependencyEquivEquivEquiv
+
+def structureDependencyEquivEquiv (φ ψ : StructureDependencyEquiv C D) : BundledSetoid := ⟨StructureDependencyEquivEquiv φ ψ⟩
+
+-- TODO: Is there a less annoying way to do this?
+def comp_congrArg {φ ψ χ : StructureDependencyEquiv C D}
+                  {ζ₁ ζ₂ : StructureDependencyEquivEquiv φ ψ}     {ξ₁ ξ₂ : StructureDependencyEquivEquiv ψ χ}
+                  (hζ : StructureDependencyEquivEquivEquiv ζ₁ ζ₂) (hξ : StructureDependencyEquivEquivEquiv ξ₁ ξ₂) :
+  StructureDependencyEquivEquivEquiv (trans ζ₁ ξ₁) (trans ζ₂ ξ₂) :=
+HasStructure.comp_congrArg hζ hξ
+
+instance structureDependencyEquivEquivHasIso : HasIsomorphisms (@structureDependencyEquivEquiv C D) :=
+{ comp          := trans,
+  comp_congrArg := comp_congrArg,
+  assoc         := λ ζ ξ σ => sorry,
+  id            := refl,
+  leftId        := λ ζ     => sorry,
+  rightId       := λ ζ     => sorry,
+  inv           := symm,
+  inv_congrArg  := λ hζ    => sorry,
+  leftInv       := λ ζ     => sorry,
+  rightInv      := λ ζ     => sorry,
+  invInv        := λ ζ     => sorry,
+  compInv       := λ ζ ξ   => sorry,
+  idInv         := λ φ     => sorry }
 
 end StructureDependencyEquivEquiv
+
+instance structureDependencyEquivHasStructure (C D : StructureDependency) : HasStructure (StructureDependencyEquiv C D) :=
+⟨StructureDependencyEquivEquiv.structureDependencyEquivEquiv⟩
+
+def structureDependencyEquivStructure (C D : StructureDependency) : Structure := ⟨StructureDependencyEquiv C D⟩
+
+instance structureDependencyEquivSetoid (C D : StructureDependency) : Setoid (StructureDependencyEquiv C D) := structureToSetoid (structureDependencyEquivStructure C D)
 
 def structureDependencyEquiv (C D : StructureDependency) : BundledSetoid := ⟨StructureDependencyEquiv C D⟩
 
 instance structureDependencyEquivHasIso : HasIsomorphisms structureDependencyEquiv :=
 { comp          := trans,
-  comp_congrArg := λ he hf => sorry,
+  comp_congrArg := λ hφ hψ => sorry,
   assoc         := λ φ ψ χ => sorry,
   id            := refl,
   leftId        := λ φ     => sorry,
   rightId       := λ φ     => sorry,
   inv           := symm,
-  inv_congrArg  := λ he    => sorry,
+  inv_congrArg  := λ hφ    => sorry,
   leftInv       := λ φ     => sorry,
   rightInv      := λ φ     => sorry,
   invInv        := λ φ     => sorry,
@@ -126,12 +172,27 @@ structure StructureDependencyFunctorDesc where
 (mapEquiv           {S T : Structure} (e : S ≃ T)                   : FunctorEquiv (FF S) (FF T ⊙ (FS.mapEquiv e).toFun))
 (respectsEquivEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (η : e₁ ≃ e₂) : compFun.congrArg_right (G := FF T) (FS.respectsEquiv η).toFunEquiv • mapEquiv e₁ ≈ mapEquiv e₂)
 
-def mkFunctor (D : StructureDependencyFunctorDesc) :
-  StructureFunctor universeStructure structureDependencyStructure :=
-{ map     := λ S => ⟨D.FS S, D.FF S⟩,
-  functor := { mapEquiv  := λ e => ⟨D.FS.mapEquiv e, D.mapEquiv e⟩,
-               isFunctor := { respectsSetoid := λ ⟨η⟩ => ⟨D.FS.respectsEquiv η, D.respectsEquivEquiv η⟩,
-                              respectsComp   := sorry,
+variable (D : StructureDependencyFunctorDesc)
+
+def structureDependency (S : Structure) : StructureDependency := ⟨D.FS S, D.FF S⟩
+
+def mkFunctor_equiv {S T : Structure} (e : S ≃ T) :
+  structureDependency D S ≃ structureDependency D T :=
+⟨D.FS.mapEquiv e, D.mapEquiv e⟩
+
+def mkFunctor_respectsEquiv {S T : Structure} {e₁ e₂ : S ≃ T} (η : e₁ ≃ e₂) :
+  StructureDependencyEquiv.StructureDependencyEquivEquiv (mkFunctor_equiv D e₁) (mkFunctor_equiv D e₂) :=
+⟨D.FS.respectsEquiv η, D.respectsEquivEquiv η⟩
+
+def mkFunctor_respectsComp {S T U : Structure} (e : S ≃ T) (f : T ≃ U) :
+  StructureDependencyEquiv.StructureDependencyEquivEquiv (mkFunctor_equiv D (f • e)) (mkFunctor_equiv D f • mkFunctor_equiv D e) :=
+⟨D.FS.respectsComp e f, sorry⟩
+
+def mkFunctor : StructureFunctor universeStructure structureDependencyStructure :=
+{ map     := structureDependency D,
+  functor := { mapEquiv  := mkFunctor_equiv D,
+               isFunctor := { respectsSetoid := λ ⟨η⟩ => ⟨mkFunctor_respectsEquiv D η⟩,
+                              respectsComp   := λ e f => ⟨mkFunctor_respectsComp D e f⟩,
                               respectsId     := sorry,
                               respectsInv    := sorry } } }
 
@@ -308,6 +369,15 @@ def piStructureFunctor : UniverseFunctor structureDependencyStructure :=
                isFunctor := sorry } }
 
 def piStructureDependency : StructureDependency := ⟨structureDependencyStructure, piStructureFunctor⟩
+
+def piStructureMkFunctor (D : structureDependencyStructure.StructureDependencyFunctorDesc) :
+  UniverseStructureFunctor :=
+{ map           := λ S => piStructure (structureDependencyStructure.structureDependency D S),
+  mapEquiv      := λ e => piStructureFunctor_equiv (structureDependencyStructure.mkFunctor_equiv D e),
+  respectsEquiv := sorry,
+  respectsComp  := sorry,
+  respectsId    := sorry,
+  respectsInv   := sorry }
 
 end piStructure
 
