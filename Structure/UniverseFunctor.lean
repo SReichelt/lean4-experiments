@@ -124,7 +124,7 @@ def targetEquiv {a b : S} (e : a ≃ b) : SetoidStructureEquiv (D.map a) (D.map 
   invFun := D.toFun e⁻¹,
   isInv  := makeSetoidStructureFunctorInverse (targetLeftInv D e) (targetRightInv D e) }
 
-theorem targetRespectsSetoid {a b : S} {e₁ e₂ : a ≃ b} :
+theorem targetRespectsEquiv {a b : S} {e₁ e₂ : a ≃ b} :
   e₁ ≈ e₂ → targetEquiv D e₁ ≈ targetEquiv D e₂ :=
 λ h => ⟨makeSetoidStructureEquivEquiv (D.respectsSetoid h)
                                       (D.respectsSetoid (inv_congrArg h))⟩
@@ -151,10 +151,10 @@ theorem targetRespectsInv {a b : S} (e : a ≃ b) :
 def setoidUniverseFunctor : SetoidUniverseFunctor S :=
 { map     := D.map,
   functor := { mapEquiv  := targetEquiv D,
-               isFunctor := { respectsSetoid := targetRespectsSetoid D,
-                              respectsComp   := targetRespectsComp   D,
-                              respectsId     := targetRespectsId     D,
-                              respectsInv    := targetRespectsInv    D } } }
+               isFunctor := { respectsEquiv := targetRespectsEquiv D,
+                              respectsComp  := targetRespectsComp   D,
+                              respectsId    := targetRespectsId     D,
+                              respectsInv   := targetRespectsInv    D } } }
 
 def universeFunctor : UniverseFunctor S := SetoidUniverseFunctor.universeFunctor (setoidUniverseFunctor D)
 
@@ -188,10 +188,10 @@ def congrArg {S T : Structure} (e : S ≃ T) : F S ≃ F T := F.mapEquiv e
 def universeFunctor : UniverseFunctor universeStructure :=
 { map     := F.map,
   functor := { mapEquiv  := F.mapEquiv,
-               isFunctor := { respectsSetoid := λ ⟨η⟩ => ⟨F.respectsEquiv η⟩,
-                              respectsComp   := λ e f => ⟨F.respectsComp  e f⟩,
-                              respectsId     := λ S   => ⟨F.respectsId    S⟩,
-                              respectsInv    := λ e   => ⟨F.respectsInv   e⟩ } } }
+               isFunctor := { respectsEquiv := λ ⟨η⟩ => ⟨F.respectsEquiv η⟩,
+                              respectsComp  := λ e f => ⟨F.respectsComp  e f⟩,
+                              respectsId    := λ S   => ⟨F.respectsId    S⟩,
+                              respectsInv   := λ e   => ⟨F.respectsInv   e⟩ } } }
 
 end UniverseStructureFunctor
 

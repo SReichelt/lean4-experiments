@@ -12,6 +12,7 @@ import Structure.UniverseFunctor
 import Structure.ProductStructure
 
 open Morphisms
+open HasStructure
 
 
 

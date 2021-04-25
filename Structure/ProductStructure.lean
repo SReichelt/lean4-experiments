@@ -11,6 +11,7 @@ import Structure.Basic
 import Structure.UniverseFunctor
 
 open Morphisms
+open HasStructure
 open StructureProduct
 open StructureFunctor
 
@@ -46,10 +47,10 @@ def mkFunctor {S T U : Structure} (F : StructureFunctor S T) (G : StructureFunct
   StructureFunctor S (productStructure T U) :=
 { map     := λ a => ⟨F a, G a⟩,
   functor := { mapEquiv  := λ e => ⟨congrArg F e, congrArg G e⟩,
-               isFunctor := { respectsSetoid := λ h   => ⟨respectsSetoid F h,   respectsSetoid G h⟩,
-                              respectsComp   := λ e f => ⟨respectsComp   F e f, respectsComp   G e f⟩,
-                              respectsId     := λ a   => ⟨respectsId     F a,   respectsId     G a⟩,
-                              respectsInv    := λ e   => ⟨respectsInv    F e,   respectsInv    G e⟩ } } }
+               isFunctor := { respectsEquiv := λ h   => ⟨respectsSetoid F h,   respectsSetoid G h⟩,
+                              respectsComp  := λ e f => ⟨respectsComp   F e f, respectsComp   G e f⟩,
+                              respectsId    := λ a   => ⟨respectsId     F a,   respectsId     G a⟩,
+                              respectsInv   := λ e   => ⟨respectsInv    F e,   respectsInv    G e⟩ } } }
 
 variable (S T : Structure)
 
@@ -62,18 +63,18 @@ mkFunctor (constFun a) idFun
 def projFstFunctor : StructureFunctor (productStructure S T) S :=
 { map     := PProd.fst,
   functor := { mapEquiv  := PProd.fst,
-               isFunctor := { respectsSetoid := λ h   => h.left,
-                              respectsComp   := λ e f => Setoid.refl (f.fst • e.fst),
-                              respectsId     := λ P   => Setoid.refl (id_ P.fst),
-                              respectsInv    := λ e   => Setoid.refl e.fst⁻¹ } } }
+               isFunctor := { respectsEquiv := λ h   => h.left,
+                              respectsComp  := λ e f => Setoid.refl (f.fst • e.fst),
+                              respectsId    := λ P   => Setoid.refl (id_ P.fst),
+                              respectsInv   := λ e   => Setoid.refl e.fst⁻¹ } } }
 
 def projSndFunctor : StructureFunctor (productStructure S T) T :=
 { map     := PProd.snd,
   functor := { mapEquiv  := PProd.snd,
-               isFunctor := { respectsSetoid := λ h   => h.right,
-                              respectsComp   := λ e f => Setoid.refl (f.snd • e.snd),
-                              respectsId     := λ P   => Setoid.refl (id_ P.snd),
-                              respectsInv    := λ e   => Setoid.refl e.snd⁻¹ } } }
+               isFunctor := { respectsEquiv := λ h   => h.right,
+                              respectsComp  := λ e f => Setoid.refl (f.snd • e.snd),
+                              respectsId    := λ P   => Setoid.refl (id_ P.snd),
+                              respectsInv   := λ e   => Setoid.refl e.snd⁻¹ } } }
 
 end MkProj
 
@@ -85,10 +86,10 @@ def mapProdFunctor {S₁ S₂ T₁ T₂ : Structure} (F : StructureFunctor S₁ 
   StructureFunctor (productStructure S₁ T₁) (productStructure S₂ T₂) :=
 { map     := PProd.map F G,
   functor := { mapEquiv  := PProd.map (congrArg F) (congrArg G),
-               isFunctor := { respectsSetoid := λ h   => ⟨respectsSetoid F h.left,      respectsSetoid G h.right⟩,
-                              respectsComp   := λ e f => ⟨respectsComp   F e.fst f.fst, respectsComp   G e.snd f.snd⟩,
-                              respectsId     := λ P   => ⟨respectsId     F P.fst,       respectsId     G P.snd⟩,
-                              respectsInv    := λ e   => ⟨respectsInv    F e.fst,       respectsInv    G e.snd⟩ } } }
+               isFunctor := { respectsEquiv := λ h   => ⟨respectsSetoid F h.left,      respectsSetoid G h.right⟩,
+                              respectsComp  := λ e f => ⟨respectsComp   F e.fst f.fst, respectsComp   G e.snd f.snd⟩,
+                              respectsId    := λ P   => ⟨respectsId     F P.fst,       respectsId     G P.snd⟩,
+                              respectsInv   := λ e   => ⟨respectsInv    F e.fst,       respectsInv    G e.snd⟩ } } }
 
 def mapProdEquiv {S₁ S₂ T₁ T₂ : Structure} (e : S₁ ≃ S₂) (f : T₁ ≃ T₂) :
   productStructure S₁ T₁ ≃ productStructure S₂ T₂ :=
@@ -138,14 +139,14 @@ namespace FunctorProductEquivalences
 def curry {S T U : Structure} (F : StructureFunctor (productStructure S T) U) :
   StructureFunctor S (functorStructure T U) :=
 { map     := λ a => F ⊙ productStructure.mkSndFunctor S T a,
-  functor := { mapEquiv  := λ e => { ext := λ b => congrArg F ⟨e, IsEquivalence.refl b⟩,
+  functor := { mapEquiv  := λ e => { ext := λ b => congrArg F ⟨e, HasRefl.refl b⟩,
                                      nat := sorry },
                isFunctor := sorry } }
 
 def uncurry {S T U : Structure} (F : StructureFunctor S (functorStructure T U)) :
   StructureFunctor (productStructure S T) U :=
 { map     := λ P => F P.fst P.snd,
-  functor := { mapEquiv  := λ {P Q} e => IsEquivalence.trans ((StructureFunctor.congrArg F e.fst).ext P.snd) (congrArg (F Q.fst) e.snd),
+  functor := { mapEquiv  := λ {P Q} e => HasTrans.trans ((StructureFunctor.congrArg F e.fst).ext P.snd) (congrArg (F Q.fst) e.snd),
                isFunctor := sorry } }
 
 variable (S T U : Structure)

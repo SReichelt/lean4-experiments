@@ -31,34 +31,33 @@ universes u v
 
 namespace Equiv
 
-def equivRel := genRel Equiv
+def equivRel := RelationWithSetoid.relWithEq Equiv
 
-instance genEquiv : IsEquivalence   equivRel := ⟨Equiv.refl, Equiv.symm, Equiv.trans⟩
-
-instance hasComp  : HasComp         equivRel := ⟨Equiv.trans⟩
+instance genEquiv : IsEquivalence equivRel :=
+{ refl  := Equiv.refl,
+  symm  := Equiv.symm,
+  trans := Equiv.trans }
 
 theorem comp_congrArg {α β γ : Sort u} {f₁ f₂ : equivRel α β} {g₁ g₂ : equivRel β γ} (h₁ : f₁ ≈ f₂) (h₂ : g₁ ≈ g₂) :
   g₁ • f₁ ≈ g₂ • f₂ :=
 let h := congr (congrArg Equiv.trans h₁) h₂;
 h
 
-instance hasCmp   : HasComposition  equivRel := ⟨comp_congrArg, Equiv.trans_assoc⟩
-
-instance hasId    : HasId           equivRel := ⟨Equiv.refl⟩
-
-theorem leftId  {α β : Sort u} (f : equivRel α β) : id_ β • f ≈ f := Equiv.trans_refl f
-theorem rightId {α β : Sort u} (f : equivRel α β) : f • id_ α ≈ f := Equiv.refl_trans f
-
-instance hasMor   : HasMorphisms    equivRel := ⟨leftId, rightId⟩
-
-instance hasInv   : HasInv          equivRel := ⟨Equiv.symm⟩
-
 theorem inv_congrArg {α β : Sort u} {f₁ f₂ : equivRel α β} (h₁ : f₁ ≈ f₂) :
   f₁⁻¹ ≈ f₂⁻¹ :=
 congrArg Equiv.symm h₁
 
-instance hasIso   : HasIsomorphisms equivRel := ⟨inv_congrArg, Equiv.trans_symm, Equiv.symm_trans,
-                                                 Equiv.symm_symm, Equiv.symm_trans_symm, λ _ => Equiv.refl_symm⟩
+instance hasIso : HasIsomorphisms equivRel :=
+{ comp_congrArg := comp_congrArg,
+  inv_congrArg  := inv_congrArg,
+  assoc         := Equiv.trans_assoc,
+  leftId        := Equiv.trans_refl,
+  rightId       := Equiv.refl_trans,
+  leftInv       := Equiv.trans_symm,
+  rightInv      := Equiv.symm_trans,
+  invInv        := Equiv.symm_symm,
+  compInv       := Equiv.symm_trans_symm,
+  idInv         := @Equiv.refl_symm }
 
 end Equiv
 
@@ -109,11 +108,11 @@ instance {α β : Sort u} : Coe (α ≃ β) (InstanceStructureEquiv α β) := �
   (a ≃[instanceStructureEquiv e] b) = (e.toFun a = b) :=
 rfl
 
-theorem respectsSetoid {α β   : Sort u} {e₁ e₂ : α ≃ β} (h : e₁ = e₂) :
+theorem respectsEquiv {α β   : Sort u} {e₁ e₂ : α ≃ β} (h : e₁ = e₂) :
   instanceStructureEquiv e₁ ≈ instanceStructureEquiv e₂ :=
 Setoid.of_Eq (congrArg instanceStructureEquiv h)
 
-theorem respectsComp   {α β γ : Sort u} (e : α ≃ β) (f : β ≃ γ) :
+theorem respectsComp  {α β γ : Sort u} (e : α ≃ β) (f : β ≃ γ) :
   instanceStructureEquiv (Equiv.trans e f) ≈ StructureEquiv.trans (instanceStructureEquiv e) (instanceStructureEquiv f) :=
 --⟨⟨makeToSetoidStructureFunctorEquiv (λ a => let c : setoidStructure (instanceStructure γ) := f.toFun  (e.toFun  a);
 --                                            Setoid.refl c)⟩,
@@ -121,13 +120,13 @@ theorem respectsComp   {α β γ : Sort u} (e : α ≃ β) (f : β ≃ γ) :
 --                                            Setoid.refl a)⟩⟩
 sorry
 
-theorem respectsId     (α     : Sort u) :
+theorem respectsId    (α     : Sort u) :
   instanceStructureEquiv (Equiv.refl α) ≈ StructureEquiv.refl (instanceStructure α) :=
 --⟨⟨makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl a)⟩,
 -- ⟨makeToSetoidStructureFunctorEquiv (λ a => Setoid.refl a)⟩⟩
 sorry
 
-theorem respectsInv    {α β   : Sort u} (e : α ≃ β) :
+theorem respectsInv   {α β   : Sort u} (e : α ≃ β) :
   instanceStructureEquiv (Equiv.symm e) ≈ StructureEquiv.symm (instanceStructureEquiv e) :=
 --⟨⟨makeToSetoidStructureFunctorEquiv (λ b => let a : setoidStructure (instanceStructure α) := e.invFun b;
 --                                            Setoid.refl a)⟩,
@@ -140,10 +139,10 @@ end instanceStructureEquiv
 def sortToStructureFunctor : StructureFunctor sortStructure universeStructure :=
 { map     := instanceStructure,
   functor := { mapEquiv  := instanceStructureEquiv,
-               isFunctor := { respectsSetoid := instanceStructureEquiv.respectsSetoid,
-                              respectsComp   := instanceStructureEquiv.respectsComp,
-                              respectsId     := instanceStructureEquiv.respectsId,
-                              respectsInv    := instanceStructureEquiv.respectsInv } } }
+               isFunctor := { respectsEquiv := instanceStructureEquiv.respectsEquiv,
+                              respectsComp  := instanceStructureEquiv.respectsComp,
+                              respectsId    := instanceStructureEquiv.respectsId,
+                              respectsInv   := instanceStructureEquiv.respectsInv } } }
 
 
 
@@ -156,19 +155,19 @@ variable {α : Sort u} {β : Sort v} [h : HasStructure β] (e : α ≃ β)
 
 def hasEquivalentStructure : HasStructure α :=
 { M       := λ x y => h.M (e.toFun x) (e.toFun y),
-  hasIsos := { comp         := h.hasIsos.comp,
+  hasIsos := { refl          := λ x => h.hasIsos.refl (e.toFun x),
+               symm          := h.hasIsos.symm,
+               trans         := h.hasIsos.trans,
                comp_congrArg := h.hasIsos.comp_congrArg,
-               assoc        := λ f g => h.hasIsos.assoc    f g,
-               id           := λ x => h.hasIsos.id (e.toFun x),
-               leftId       := λ f   => h.hasIsos.leftId   f,
-               rightId      := λ f   => h.hasIsos.rightId  f,
-               inv          := h.hasIsos.inv,
                inv_congrArg  := h.hasIsos.inv_congrArg,
-               leftInv      := λ f   => h.hasIsos.leftInv  f,
-               rightInv     := λ f   => h.hasIsos.rightInv f,
-               invInv       := λ f   => h.hasIsos.invInv   f,
-               compInv      := λ f g => h.hasIsos.compInv  f g,
-               idInv        := λ x   => h.hasIsos.idInv    (e.toFun x) } }
+               assoc         := λ f g => h.hasIsos.assoc    f g,
+               leftId        := λ f   => h.hasIsos.leftId   f,
+               rightId       := λ f   => h.hasIsos.rightId  f,
+               leftInv       := λ f   => h.hasIsos.leftInv  f,
+               rightInv      := λ f   => h.hasIsos.rightInv f,
+               invInv        := λ f   => h.hasIsos.invInv   f,
+               compInv       := λ f g => h.hasIsos.compInv  f g,
+               idInv         := λ x   => h.hasIsos.idInv    (e.toFun x) } }
 
 def equivalentStructure := @defaultStructure α (hasEquivalentStructure e)
 

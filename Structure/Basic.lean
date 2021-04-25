@@ -879,11 +879,11 @@ PiEquiv.symm  e
 def trans {b c d : β} (e : MappedPiEquiv m b c) (f : MappedPiEquiv m c d) : MappedPiEquiv m b d :=
 PiEquiv.trans e f
 
-instance EquivEquiv.dependentPiEquivSetoid {b c : β} : Setoid (MappedPiEquiv m b c) := EquivEquiv.piEquivSetoid
+instance EquivEquiv.mappedPiEquivSetoid {b c : β} : Setoid (MappedPiEquiv m b c) := EquivEquiv.piEquivSetoid
 
 def mappedPiEquiv : RelationWithSetoid β := λ b c => ⟨MappedPiEquiv m b c⟩
 
-instance dependentPiEquivHasIso : HasIsomorphisms (@mappedPiEquiv α C β m) :=
+instance mappedPiEquivHasIso : HasIsomorphisms (@mappedPiEquiv α C β m) :=
 mapHasIso (@piEquiv α C) m
 
 end MappedPiEquiv
@@ -1108,11 +1108,11 @@ def FunExt (F G : StructureFunctor S T) := PiEquiv.MappedPiEquiv StructureFuncto
 namespace FunExt
 
 instance {F G : StructureFunctor S T} : Setoid (FunExt F G) :=
-PiEquiv.MappedPiEquiv.EquivEquiv.dependentPiEquivSetoid
+PiEquiv.MappedPiEquiv.EquivEquiv.mappedPiEquivSetoid
 
 def funExt : RelationWithSetoid (StructureFunctor S T) := λ F G => ⟨FunExt F G⟩
 
-instance funExtHasIso : HasIsomorphisms (@funExt S T) := PiEquiv.MappedPiEquiv.dependentPiEquivHasIso
+instance funExtHasIso : HasIsomorphisms (@funExt S T) := PiEquiv.MappedPiEquiv.mappedPiEquivHasIso
 
 end FunExt
 
