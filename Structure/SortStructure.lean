@@ -196,7 +196,7 @@ def equivalentStructureDefEquivInvFun : StructureFunctor (defaultStructure β) (
   functor := { mapEquiv  := equivalentEquivInv e,
                isFunctor := sorry } }
 
-def equivalentStructureDefEquiv : StructureEquiv (equivalentStructure e) (defaultStructure β) :=
+def equivalentStructureDefEquiv : equivalentStructure e ≃ defaultStructure β :=
 { toFun  := equivalentStructureDefEquivToFun  e,
   invFun := equivalentStructureDefEquivInvFun e,
   isInv  := sorry }

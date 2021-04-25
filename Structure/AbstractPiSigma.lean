@@ -25,6 +25,9 @@ open SetoidStructureFunctor
 
 set_option autoBoundImplicitLocal false
 
+-- TODO: Can we avoid this?
+set_option maxHeartbeats 200000
+
 universes u v
 
 
@@ -192,7 +195,7 @@ def mkFunctor : StructureFunctor universeStructure structureDependencyStructure 
 { map     := structureDependency D,
   functor := { mapEquiv  := mkFunctor_equiv D,
                isFunctor := { respectsEquiv := λ ⟨η⟩ => ⟨mkFunctor_respectsEquiv D η⟩,
-                              respectsComp  := sorry, --λ e f => ⟨mkFunctor_respectsComp D e f⟩,
+                              respectsComp  := λ e f => ⟨mkFunctor_respectsComp D e f⟩,
                               respectsId    := sorry,
                               respectsInv   := sorry } } }
 
