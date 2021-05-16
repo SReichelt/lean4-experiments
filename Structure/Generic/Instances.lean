@@ -173,7 +173,7 @@ end EquivRel
 
 def TypeClass := Sort u → Sort v
 
-structure Bundled (C : TypeClass.{u, v}) : Sort (max (u + 1) v) where
+structure Bundled (C : TypeClass.{u, v}) where
 (α    : Sort u)
 (inst : C α)
 
@@ -183,13 +183,13 @@ namespace Bundled
 
   instance hasInstances : HasInstances (Bundled C) := ⟨Bundled.α⟩
 
-  class HasFunctoriality : Sort (max (u + 1) v (w + 1)) where
+  class HasFunctoriality where
   (IsFunctorial {S T : Bundled.{u, v} C} : (S → T) → Sort w)
 
   instance hasIsFun [h : HasFunctoriality C] : HasIsFun (Bundled C) := ⟨h.IsFunctorial⟩
 
-  class HasFunctorInstances [HasFunctoriality.{max 1 u w, v, w} C] : Sort (max ((max 1 u w) + 1) v) where
-  (funInst (S T : Bundled.{max 1 u w, v} C) : C (S ⟶' T))
+  class HasFunctorInstances [HasFunctoriality C] where
+  (funInst (S T : Bundled C) : C (S ⟶' T))
 
   instance hasFun [HasFunctoriality C] [h : HasFunctorInstances C] : HasFun (Bundled C) :=
   { Fun      := λ S T => ⟨S ⟶' T, h.funInst S T⟩,

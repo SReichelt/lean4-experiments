@@ -29,7 +29,7 @@ universes u v w w'
 -- * Another common case is `Bundled C` for a type class `C : Sort u → Sort v`.
 -- Both examples are defined in `Instances.lean`.
 
-class HasInstances (V : Sort v) : Sort (max (u + 1) v) where
+class HasInstances (V : Sort v) where
 (Inst : V → Sort u)
 
 namespace HasInstances
@@ -60,10 +60,10 @@ end HasInstances
 -- `C`, so we can define `α ⟶ β` to be the same as `α ⟶' β`. However, in the case of `Sort u`, `α ⟶' β`
 -- is not an instance of `Sort u` if `u = 0` (i.e. `Sort u` is actually `Prop`).
 
-class HasIsFun (V : Sort v) extends HasInstances.{u, v} V : Sort (max (u + 1) v (w + 1)) where
+class HasIsFun (V : Sort v) extends HasInstances V where
 (IsFun {α β : V} : (α → β) → Sort w)
 
-structure BundledFunctor {V : Sort v} [h : HasIsFun.{u, v, w} V] (α β : V) : Sort (max 1 u w) where
+structure BundledFunctor {V : Sort v} [h : HasIsFun V] (α β : V) where
 (f     : α → β)
 (isFun : h.IsFun f)
 
@@ -77,7 +77,7 @@ namespace BundledFunctor
 
 end BundledFunctor
 
-class HasFun (V : Sort v) extends HasIsFun.{u, v, w} V : Sort (max (u + 1) v (w + 1)) where
+class HasFun (V : Sort v) extends HasIsFun V where
 (Fun                : V → V → V)
 (funEquiv (α β : V) : Inst (Fun α β) ≃ (α ⟶' β))
 
@@ -181,7 +181,7 @@ end HasFun
 -- subst : `(α ⟶ β ⟶ γ) ⟶ (α ⟶ β) ⟶ (α ⟶ γ), F ↦ (G ↦ (a ↦ F a (G a)))`
 -- from these axioms, and give a general algorithm for proving that a function is functorial.
 
-class HasFunOp (V : Sort v) [h : HasFun.{u, v, w} V] : Sort (max 1 u v w) where
+class HasFunOp (V : Sort v) [h : HasFun V] where
 (idIsFun         (α : V)                               : h.IsFun (λ a : α         => a))
 (constIsFun      (α : V) {β : V} (c : β)               : h.IsFun (λ a : α         => c))
 (constFunIsFun   (α β : V)                             : h.IsFun (λ c : β         => HasFun.mkFun (constIsFun α c)))
