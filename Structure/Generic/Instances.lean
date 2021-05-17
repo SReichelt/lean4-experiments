@@ -16,7 +16,7 @@ import mathlib4_experiments.Data.Equiv.Basic
 
 set_option autoBoundImplicitLocal false
 
-universes u v w
+universes u v u' v' w
 
 
 
@@ -24,7 +24,7 @@ namespace AnySort
 
   instance hasInstances : HasInstances (Sort u) := ⟨id⟩
 
-  instance hasIsFun : HasIsFun (Sort u) := ⟨λ _ => True⟩
+  instance hasIsFun : HasIsFun (Sort u) (Sort v) := ⟨λ _ => True⟩
 
   instance hasFun : HasFun (Sort u) :=
   { Fun      := λ α β => α → β,
@@ -179,19 +179,18 @@ structure Bundled (C : TypeClass.{u, v}) where
 
 namespace Bundled
 
-  variable (C : TypeClass)
+  instance hasInstances (C : TypeClass) : HasInstances (Bundled C) := ⟨Bundled.α⟩
 
-  instance hasInstances : HasInstances (Bundled C) := ⟨Bundled.α⟩
+  class HasFunctoriality (C D : TypeClass) where
+  (IsFunctorial {S : Bundled.{u, v} C} {T : Bundled.{u', v'} D} : (S → T) → Sort w)
 
-  class HasFunctoriality where
-  (IsFunctorial {S T : Bundled.{u, v} C} : (S → T) → Sort w)
+  instance hasIsFun (C D : TypeClass) [h : HasFunctoriality C D] : HasIsFun (Bundled.{u, v} C) (Bundled.{u', v'} D) := ⟨h.IsFunctorial⟩
 
-  instance hasIsFun [h : HasFunctoriality C] : HasIsFun (Bundled C) := ⟨h.IsFunctorial⟩
+  class HasFunctorInstances (C : TypeClass) [hf : HasFunctoriality.{max 1 u w, v, max 1 u w, v, w} C C] where
+  (funInst (S T : Bundled.{max 1 u w, v} C) : C (S ⟶' T))
 
-  class HasFunctorInstances [HasFunctoriality C] where
-  (funInst (S T : Bundled C) : C (S ⟶' T))
-
-  instance hasFun [HasFunctoriality C] [h : HasFunctorInstances C] : HasFun (Bundled C) :=
+  instance hasFun (C : TypeClass) [hf : HasFunctoriality.{max 1 u w, v, max 1 u w, v, w} C C] [h : HasFunctorInstances.{u, v, w} C] :
+    HasFun (Bundled.{max 1 u w, v} C) :=
   { Fun      := λ S T => ⟨S ⟶' T, h.funInst S T⟩,
     funEquiv := λ S T => Equiv.refl (S ⟶' T) }
 
@@ -203,9 +202,12 @@ end Bundled
 
 namespace BundledSetoid
 
-  instance isSetoid (S : Bundled Setoid) : Setoid (HasInstances.Inst S) := S.inst
+  instance isSetoid (S : BundledSetoid) : Setoid (HasInstances.Inst S) := S.inst
 
-  instance hasFunctoriality : Bundled.HasFunctoriality Setoid := ⟨λ f => ∀ {a b}, a ≈ b → f a ≈ f b⟩
+  class IsFunctorial {S T : BundledSetoid} (f : S → T) where
+  (mapEquiv {a b : S} : a ≈ b → f a ≈ f b)
+
+  instance hasFunctoriality : Bundled.HasFunctoriality.{u + 1, u + 1, u' + 1, u' + 1, 1} Setoid Setoid := ⟨IsFunctorial⟩
 
   namespace BundledFunctor
 
@@ -224,23 +226,23 @@ namespace BundledSetoid
     end Equiv
 
     instance isSetoid (S T : BundledSetoid) : Setoid (S ⟶' T) := ⟨Equiv, Equiv.isEquivalence⟩
-    instance hasFunctorInstances : Bundled.HasFunctorInstances Setoid := ⟨isSetoid⟩
+    instance hasFunctorInstances : Bundled.HasFunctorInstances.{u + 1, u + 1, 1} Setoid := ⟨isSetoid⟩
 
   end BundledFunctor
 
-  instance hasFun : HasFun (Bundled Setoid) := Bundled.hasFun Setoid (h := BundledFunctor.hasFunctorInstances)
+  instance hasFun : HasFun BundledSetoid := Bundled.hasFun Setoid
 
   instance hasFunOp : HasFunOp BundledSetoid :=
-  { idIsFun         := λ S {a₁ a₂} ha           => ha,
-    constIsFun      := λ S {T} c {a₁ a₂} ha     => Setoid.refl c,
-    constFunIsFun   := λ S T {c₁ c₂} hc a       => hc,
-    appIsFun        := λ {S} a T {F₁ F₂} hF     => hF a,
-    appFunIsFun     := λ S T {a₁ a₂} ha F       => F.isFun ha,
-    dupIsFun        := λ {S T} F {a₁ a₂} ha     => Setoid.trans (F.isFun ha a₁) ((F a₂).isFun ha),
-    dupFunIsFun     := λ S T {F₁ F₂} hF a       => hF a a,
-    compIsFun       := λ {S T U} F G {a₁ a₂} ha => G.isFun (F.isFun ha),
-    compFunIsFun    := λ {S T} F U {G₁ G₂} hG a => hG (F a),
-    compFunFunIsFun := λ S T U {F₁ F₂} hF G a   => G.isFun (hF a) }
+  { idIsFun         := λ S           => ⟨λ ha         => ha⟩,
+    constIsFun      := λ S {T} c     => ⟨λ ha         => Setoid.refl c⟩,
+    constFunIsFun   := λ S T         => ⟨λ hc a       => hc⟩,
+    appIsFun        := λ {S} a T     => ⟨λ hF         => hF a⟩,
+    appFunIsFun     := λ S T         => ⟨λ ha F       => F.isFun.mapEquiv ha⟩,
+    dupIsFun        := λ {S T} F     => ⟨λ {a₁ a₂} ha => Setoid.trans (F.isFun.mapEquiv ha a₁) ((F a₂).isFun.mapEquiv ha)⟩,
+    dupFunIsFun     := λ S T         => ⟨λ hF a       => hF a a⟩,
+    compIsFun       := λ {S T U} F G => ⟨λ ha         => G.isFun.mapEquiv (F.isFun.mapEquiv ha)⟩,
+    compFunIsFun    := λ {S T} F U   => ⟨λ hG a       => hG (F a)⟩,
+    compFunFunIsFun := λ S T U       => ⟨λ hF G a     => G.isFun.mapEquiv (hF a)⟩ }
 
   instance isKind : IsKind BundledSetoid := ⟨⟩
 
@@ -248,7 +250,7 @@ namespace BundledSetoid
   { EquivType       := Prop,
     equivIsKind     := AnySort.isKind,
     hasEquivalences := λ S => HasEquivalences.setoid (HasInstances.Inst S),
-    equivCongr      := λ {S T F G a b} h₁ h₂ => Setoid.trans (h₁ a) (G.isFun h₂) }
+    equivCongr      := λ {S T F G a b} h₁ h₂ => Setoid.trans (h₁ a) (G.isFun.mapEquiv h₂) }
 
   def eq (α : Sort u) : Bundled Setoid :=
   { α    := α,

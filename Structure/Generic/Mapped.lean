@@ -15,7 +15,7 @@ open GeneralizedRelation
 
 set_option autoBoundImplicitLocal false
 
-universes u v w
+universes u v w w'
 
 
 
@@ -83,9 +83,10 @@ end Morphisms
 
 section Functors
 
-  variable {α : Sort u} {V : Sort v} [IsKind V] [HasInstanceArrows V]
-           {ω : Sort w} (m : ω → α)
-           (R S : GeneralizedRelation α V) (F : BaseFunctor R S)
+  variable {α : Sort u} {V : Sort v} {W : Sort w} [IsKind V] [IsKind W] [HasInstanceArrows W] [HasIsFun V W]
+           {ω : Sort w'} (m : ω → α)
+           (R : GeneralizedRelation α V) (S : GeneralizedRelation α W)
+           (F : BaseFunctor R S)
 
   instance mapReflFunctor  [HasRefl  R] [HasRefl  S] [h : IsReflFunctor  R S F] :
     IsReflFunctor  (mapOperation m R) (mapOperation m S) F :=
@@ -110,9 +111,9 @@ end Functors
 
 section NaturalTransformations
 
-  variable {α : Sort u} {β : Sort w} {V : Sort v} [IsKind V] [HasInstanceEquivalences V]
-           {ω : Sort w} (m : ω → α)
-           (R : GeneralizedRelation α V) (S : GeneralizedRelation β V) [HasMorphisms S]
+  variable {α : Sort u} {β : Sort w} {V : Sort v} {W : Sort w} [IsKind V] [IsKind W] [HasInstanceEquivalences W] [HasIsFun V W]
+           {ω : Sort w'} (m : ω → α)
+           (R : GeneralizedRelation α V) (S : GeneralizedRelation β W) [HasTrans S]
            {mF mG : α → β} (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) (G : ∀ {a b}, R a b ⟶' S (mG a) (mG b))
            (n : ∀ a, S (mF a) (mG a))
   

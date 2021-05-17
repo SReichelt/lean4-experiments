@@ -452,8 +452,8 @@ end Functors
 
 section NaturalTransformations
 
-  variable {α : Sort u} {V : Sort v} [IsKind V] [HasInstanceEquivalences V]
-           {β : Sort w} (R : GeneralizedRelation α V) (S : GeneralizedRelation β V)
+  variable {α : Sort u} {V : Sort v} {W : Sort w} [IsKind V] [IsKind W] [HasInstanceEquivalences W] [HasIsFun V W]
+           {β : Sort w} (R : GeneralizedRelation α V) (S : GeneralizedRelation β W)
 
   namespace IsNaturalTransformation
 
@@ -466,15 +466,15 @@ section NaturalTransformations
               (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) (G : ∀ {a b}, R a b ⟶' S (mG a) (mG b))
               (n : ∀ a, S (mF a) (mG a)) [hn : IsNaturalTransformation R S F G n] :
       IsNaturalTransformation R S G F (λ a => h.symm (n a)) :=
-    ⟨λ {a b} f => HasSymm.symm' ((HasIsomorphisms.leftRightMul V (n a) (F f) (G f) (n b)).mpr (hn.nat f))⟩
+    ⟨λ {a b} f => HasSymm.symm' ((HasIsomorphisms.leftRightMul W (n a) (F f) (G f) (n b)).mpr (hn.nat f))⟩
 
     def trans [h : HasComposition  S] {mF mG mH : α → β}
               (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) (G : ∀ {a b}, R a b ⟶' S (mG a) (mG b)) (H : ∀ {a b}, R a b ⟶' S (mH a) (mH b))
               (nFG : ∀ a, S (mF a) (mG a))                 (nGH : ∀ a, S (mG a) (mH a))
               [hnFG : IsNaturalTransformation R S F G nFG] [hnGH : IsNaturalTransformation R S G H nGH] :
       IsNaturalTransformation R S F H (λ a => h.trans (nFG a) (nGH a)) :=
-    ⟨λ {a b} f => let e₁ := HasComposition.applyAssocLR_left V (HasComposition.comp_congrArg_left  V (f := nFG a) (hnGH.nat f));
-                  let e₂ := HasComposition.applyAssocRL      V (HasComposition.comp_congrArg_right V (g := nGH b) (hnFG.nat f));
+    ⟨λ {a b} f => let e₁ := HasComposition.applyAssocLR_left W (HasComposition.comp_congrArg_left  W (f := nFG a) (hnGH.nat f));
+                  let e₂ := HasComposition.applyAssocRL      W (HasComposition.comp_congrArg_right W (g := nGH b) (hnFG.nat f));
                   HasTrans.trans' e₁ e₂⟩
 
   end IsNaturalTransformation

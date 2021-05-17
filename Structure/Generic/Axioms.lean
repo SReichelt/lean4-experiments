@@ -24,7 +24,7 @@ universes u v w w'
 
 
 -- A type class that says that a given type can be used like `Sort u`, i.e. its instances can be regarded
--- as types.
+-- as types. We can also regard this as `V` defining a universe (corresponding to the Lean universe `u`).
 -- * The canonical instance is `Sort u` itself (with `Prop` as a special case).
 -- * Another common case is `Bundled C` for a type class `C : Sort u → Sort v`.
 -- Both examples are defined in `Instances.lean`.
@@ -59,25 +59,28 @@ end HasInstances
 -- In the case of `Bundled C`, we can make sure that `α ⟶' β` is actually an instance of the type class
 -- `C`, so we can define `α ⟶ β` to be the same as `α ⟶' β`. However, in the case of `Sort u`, `α ⟶' β`
 -- is not an instance of `Sort u` if `u = 0` (i.e. `Sort u` is actually `Prop`).
+--
+-- Moreover, `α ⟶' β` is defined so that `α` and `β` can live in different universes.
 
-class HasIsFun (V : Sort v) extends HasInstances V where
-(IsFun {α β : V} : (α → β) → Sort w)
+class HasIsFun (V : Sort v) (W : Sort w) [HasInstances V] [HasInstances W] where
+(IsFun {α : V} {β : W} : (α → β) → Sort u)
 
-structure BundledFunctor {V : Sort v} [h : HasIsFun V] (α β : V) where
+structure BundledFunctor {V : Sort v} {W : Sort w} [HasInstances V] [HasInstances W] [h : HasIsFun V W]
+                         (α : V) (β : W) where
 (f     : α → β)
 (isFun : h.IsFun f)
 
 namespace BundledFunctor
 
-  variable {V : Sort v} [h : HasIsFun V]
+  variable {V : Sort v} {W : Sort w} [HasInstances V] [HasInstances W] [h : HasIsFun V W]
 
   infixr:20 " ⟶' " => BundledFunctor
 
-  instance coeFun (α β : V) : CoeFun (α ⟶' β) (λ _ => α → β) := ⟨BundledFunctor.f⟩
+  instance coeFun (α : V) (β : W) : CoeFun (α ⟶' β) (λ _ => α → β) := ⟨BundledFunctor.f⟩
 
 end BundledFunctor
 
-class HasFun (V : Sort v) extends HasIsFun V where
+class HasFun (V : Sort v) extends HasInstances V, HasIsFun V V where
 (Fun                : V → V → V)
 (funEquiv (α β : V) : Inst (Fun α β) ≃ (α ⟶' β))
 
@@ -136,6 +139,27 @@ namespace HasFun
   instance : HasFun   (((V (⟶) V) (⟶) (V (⟶) V)) (⟶) ((V (⟶) V) (⟶)     V    )) := h
   instance : HasArrow  ((V (⟶) V) (⟶) (V (⟶) V))     ((V (⟶) V) (⟶) (V (⟶) V))  := hasArrow
   instance : HasFun   (((V (⟶) V) (⟶) (V (⟶) V)) (⟶) ((V (⟶) V) (⟶) (V (⟶) V))) := h
+
+  instance : HasIsFun              V                 (    V     (⟶)     V    )  := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶)     V    )                 V              := h.toHasIsFun
+  instance : HasIsFun              V                 (    V     (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶)     V    )     (    V     (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun              V                 ((V (⟶) V) (⟶)     V    )  := h.toHasIsFun
+  instance : HasIsFun              V                 ((V (⟶) V) (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶)     V    )     ((V (⟶) V) (⟶)     V    )  := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶)     V    )     ((V (⟶) V) (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶) (V (⟶) V))                 V              := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶) (V (⟶) V))     (    V     (⟶)     V    )  := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶) (V (⟶) V))     ((V (⟶) V) (⟶)     V    )  := h.toHasIsFun
+  instance : HasIsFun  (    V     (⟶) (V (⟶) V))     ((V (⟶) V) (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶)     V    )                 V              := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶)     V    )     (    V     (⟶)     V    )  := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶)     V    )     (    V     (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶)     V    )     ((V (⟶) V) (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶) (V (⟶) V))                 V              := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶) (V (⟶) V))     (    V     (⟶)     V    )  := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶) (V (⟶) V))     (    V     (⟶) (V (⟶) V))  := h.toHasIsFun
+  instance : HasIsFun  ((V (⟶) V) (⟶) (V (⟶) V))     ((V (⟶) V) (⟶)     V    )  := h.toHasIsFun
 
   def toBundled   {α β : V} (F : α ⟶  β) : α ⟶' β := (h.funEquiv α β).toFun  F
   def fromBundled {α β : V} (F : α ⟶' β) : α ⟶  β := (h.funEquiv α β).invFun F
@@ -582,7 +606,9 @@ class HasInstanceArrows (V : Sort v) [s : IsKind V] where
 (ArrowType                                    : Sort w)
 [arrowIsKind                                  : IsKind ArrowType]
 [hasArrows (α : V)                            : HasArrows (s.Inst α) ArrowType]
-(arrowCongr {α β : V} {F G : α ⟶ β} {a b : α} : (hasArrows (α ⟶ β)).Arrow F G ⟶ (hasArrows α).Arrow a b ⟶ (hasArrows β).Arrow (F a) (G b))
+(arrowCongr {α β : V} {F G : α ⟶ β} {a b : α} : (hasArrows (α ⟶ β)).Arrow F G ⟶
+                                                (hasArrows α).Arrow a b ⟶
+                                                (hasArrows β).Arrow (F a) (G b))
 
 namespace HasInstanceArrows
 
@@ -637,7 +663,9 @@ class HasInstanceEquivalences' (V : Sort v) [s : IsKind V] where
 (EquivType                                    : Sort w)
 [equivIsKind                                  : IsKind EquivType]
 [hasEquivalences (α : V)                      : HasEquivalences (s.Inst α) EquivType]
-(equivCongr {α β : V} {F G : α ⟶ β} {a b : α} : (hasEquivalences (α ⟶ β)).Equiv F G ⟶ (hasEquivalences α).Equiv a b ⟶ (hasEquivalences β).Equiv (F a) (G b))
+(equivCongr {α β : V} {F G : α ⟶ β} {a b : α} : (hasEquivalences (α ⟶ β)).Equiv F G ⟶
+                                                (hasEquivalences α).Equiv a b ⟶
+                                                (hasEquivalences β).Equiv (F a) (G b))
 
 namespace HasInstanceEquivalences'
 
@@ -708,11 +736,10 @@ end Morphisms
 
 
 
--- TODO: Generalize bundled functors so they can be between two different kinds.
-
 section Functors
 
-  variable {α : Sort u} {V : Sort v} [IsKind V] [HasInstanceArrows V] (R S : GeneralizedRelation α V)
+  variable {α : Sort u} {V : Sort v} {W : Sort w} [IsKind V] [IsKind W] [HasInstanceArrows W] [HasIsFun V W]
+           (R : GeneralizedRelation α V) (S : GeneralizedRelation α W)
 
   def BaseFunctor := ∀ {a b}, R a b ⟶' S a b
 
@@ -736,8 +763,8 @@ end Functors
 
 section NaturalTransformations
 
-  variable {α : Sort u} {β : Sort w} {V : Sort v} [IsKind V] [HasInstanceEquivalences V]
-           (R : GeneralizedRelation α V) (S : GeneralizedRelation β V) [h : HasTrans S]
+  variable {α : Sort u} {β : Sort w} {V : Sort v} {W : Sort w} [IsKind V] [IsKind W] [HasInstanceEquivalences W] [HasIsFun V W]
+           (R : GeneralizedRelation α V) (S : GeneralizedRelation β W) [h : HasTrans S]
            {mF mG : α → β} (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) (G : ∀ {a b}, R a b ⟶' S (mG a) (mG b))
 
   class IsNaturalTransformation (n : ∀ a, S (mF a) (mG a)) where
