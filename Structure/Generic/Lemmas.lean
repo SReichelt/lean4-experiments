@@ -231,9 +231,7 @@ namespace GeneralizedRelation
 
   variable {α : Sort u} {V : Sort v} [s : IsKind V]
 
-  def HasTrans.revTrans {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} : R b c ⟶ R a b ⟶ R a c := HasFunOp.swapFunFun h.trans
-
-  def HasTrans.trans''  {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (f : R a b) : R b c ⟶ R a c := h.trans f
+  def HasTrans.revTrans   {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} : R b c ⟶ R a b ⟶ R a c := HasFunOp.swapFunFun h.trans
   def HasTrans.revTrans'' {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (g : R b c) : R a b ⟶ R a c := HasFunOp.swapFun h.trans g
 
 end GeneralizedRelation

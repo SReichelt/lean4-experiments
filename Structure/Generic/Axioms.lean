@@ -389,7 +389,8 @@ namespace GeneralizedRelation
   end Properties
 
   def HasSymm.symm' {R : GeneralizedRelation α V} [h : HasSymm R] {a b : α} (f : R a b) : R b a := h.symm f
-  def HasTrans.trans' {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (f : R a b) (g : R b c) : R a c := h.trans f g
+  def HasTrans.trans''  {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (f : R a b) : R b c ⟶ R a c := h.trans f
+  def HasTrans.trans' {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (f : R a b) (g : R b c) : R a c := trans'' f g
 
   -- When reasoning about instances of `R a b`, we would like to write `trans` as composition, `refl` as
   -- identity, and `symm` as inverse.
@@ -522,10 +523,18 @@ namespace GeneralizedDependentRelation
   end Properties
 
   def HasDependentSymm.symm' {D : GeneralizedDependentRelation R W} [HasSymm R] [h : HasDependentSymm D] {α β : U}
-                             {F : R α β} {a : α} {b : β} (f : D F a b) : D (HasSymm.symm' F) b a := h.symm f
+                             {F : R α β} {a : α} {b : β} (f : D F a b) : D (HasSymm.symm' F) b a :=
+  h.symm f
 
-  def HasDependentTrans.trans' {D : GeneralizedDependentRelation R W} [HasTrans R] [h : HasDependentTrans D] {α β γ : U}
-                               {F : R α β} {G : R β γ} {a : α} {b : β} {c : γ} (f : D F a b) (g : D G b c) := h.trans f g
+  def HasDependentTrans.trans'' {D : GeneralizedDependentRelation R W} [HasTrans R] [h : HasDependentTrans D] {α β γ : U}
+                                {F : R α β} {G : R β γ} {a : α} {b : β} {c : γ} (f : D F a b) :
+    D G b c ⟶ D (HasTrans.trans' F G) a c :=
+  h.trans f
+
+  def HasDependentTrans.trans'  {D : GeneralizedDependentRelation R W} [HasTrans R] [h : HasDependentTrans D] {α β γ : U}
+                                {F : R α β} {G : R β γ} {a : α} {b : β} {c : γ} (f : D F a b) (g : D G b c) :
+    D (HasTrans.trans' F G) a c
+  := h.trans f g
 
   section Notation
 
