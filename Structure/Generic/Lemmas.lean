@@ -190,7 +190,44 @@ end HasFunOp
 
 
 
+namespace GeneralizedProperty
+
+  def ConstProp (α : Sort u) {V : Sort v} [s : HasInstances V] {β : V} (c : β) : GeneralizedProperty α V := λ _ => β
+
+  namespace ConstProp
+
+    variable (α : Sort u) {V : Sort v} [s : HasInstances V] {β : V} (c : β)
+
+    instance hasInst : HasInst (ConstProp α c) := ⟨λ _ => c⟩
+
+  end ConstProp
+
+end GeneralizedProperty
+
+
+
 namespace GeneralizedRelation
+
+  def ConstRel (α : Sort u) {V : Sort v} [s : IsKind V] {β : V} (c : β) : GeneralizedRelation α V := λ _ _ => β
+
+  namespace ConstRel
+  
+    variable (α : Sort u) {V : Sort v} [s : IsKind V] {β : V} (c : β)
+
+    instance hasRefl  : HasRefl  (ConstRel α c) := ⟨λ _ => c⟩
+    instance hasSymm  : HasSymm  (ConstRel α c) := ⟨HasFunOp.idFun β⟩
+    instance hasTrans : HasTrans (ConstRel α c) := ⟨HasFunOp.constFun β (HasFunOp.idFun β)⟩
+
+    instance isPreorder    : IsPreorder    (ConstRel α c) := ⟨⟩
+    instance isEquivalence : IsEquivalence (ConstRel α c) := ⟨⟩
+
+    @[simp] theorem symmEq  {a₁ a₂    : α} : (hasSymm  α c).symm'  (a := a₁) (b := a₂)           c   = c :=
+    HasFunOp.idFun.eff β c
+    @[simp] theorem transEq {a₁ a₂ a₃ : α} : (hasTrans α c).trans' (a := a₁) (b := a₂) (c := a₃) c c = c :=
+    let h₁ := congrArg HasFun.funCoe (HasFunOp.constFun.eff β (HasFunOp.idFun β) c);
+    Eq.trans (congrFun h₁ c) (HasFunOp.idFun.eff β c)
+
+  end ConstRel
 
   variable {α : Sort u} {V : Sort v} [s : IsKind V]
 
@@ -260,11 +297,11 @@ section Morphisms
 
   variable {α : Sort u} (V : Sort v) [IsKind V] [he : HasInstanceEquivalences V] {R : GeneralizedRelation α V}
 
-  open HasComposition
+  open IsCompositionRelation
 
-  namespace HasComposition
+  namespace IsCompositionRelation
 
-    variable [h : HasComposition R]
+    variable [h : IsCompositionRelation R]
 
     def comp_congrArg {a b c : α} {f₁ f₂ : R a b} {g₁ g₂ : R b c} : f₁ ≃ f₂ ⟶ g₁ ≃ g₂ ⟶ g₁ • f₁ ≃ g₂ • f₂ :=
     HasInstanceEquivalences.funCongr V ⊙ HasInstanceEquivalences.funCongrArg V HasTrans.trans
@@ -306,24 +343,24 @@ section Morphisms
       h₁ • (g₁ • f₁) ≃ h₂ • (g₂ • f₂) ⟶ (h₁ • g₁) • f₁ ≃ (h₂ • g₂) • f₂ :=
     applyAssocRL_right V ⊙ applyAssocRL_left V
 
-  end HasComposition
+  end IsCompositionRelation
 
-  namespace HasMorphisms
+  namespace IsMorphismRelation
 
-    variable [h : HasMorphisms R]
+    variable [h : IsMorphismRelation R]
 
     def leftCancelId  {a b : α} (f : R a b) {e : R b b} : e ≃ ident R b ⟶ e • f ≃ f :=
     HasFunOp.swapFun (comp_subst_left  V f) (h.leftId  f)
     def rightCancelId {a b : α} (f : R a b) {e : R a a} : e ≃ ident R a ⟶ f • e ≃ f :=
     HasFunOp.swapFun (comp_subst_right V f) (h.rightId f)
 
-  end HasMorphisms
+  end IsMorphismRelation
 
-  open HasMorphisms
+  open IsMorphismRelation
 
-  namespace HasIsomorphisms
+  namespace IsIsomorphismRelation
 
-    variable [HasIsomorphisms R]
+    variable [IsIsomorphismRelation R]
 
     def inv_congrArg {a b : α} {f₁ f₂ : R a b} : f₁ ≃ f₂ ⟶ f₁⁻¹ ≃ f₂⁻¹ :=
     HasInstanceEquivalences.funCongrArg V HasSymm.symm
@@ -342,38 +379,38 @@ section Morphisms
     def rightCancelInv' {a b c : α} (f : R a b) (g : R a c) : f • (g⁻¹ • g) ≃ f := rightCancelId V f (leftInv  g)
     def rightCancelInv  {a b c : α} (f : R a b) (g : R a c) : (f • g⁻¹) • g ≃ f := applyAssocRL_left V (rightCancelInv' V f g)
 
-    def leftMulInv  {a b c : α} (f₁ : R a b) (f₂ : R a c) (g : R b c) : g • f₁ ≃ f₂ ⟷{he.ArrowType} f₁ ≃ g⁻¹ • f₂ :=
+    def leftMulInv  {a b c : α} (f₁ : R a b) (f₂ : R a c) (g : R b c) : g • f₁ ≃ f₂ ⟷{he.ArrowKind} f₁ ≃ g⁻¹ • f₂ :=
     ⟨HasFunOp.swapFun (comp_subst_right' V g⁻¹) ((he.arrowSymm (R a b)).symm' (leftCancel V f₁ g)),
      HasFunOp.swapFun (comp_subst_right  V g)   (leftCancelInv V f₂ g)⟩
-    def leftMulInv' {a b c : α} (f₁ : R a b) (f₂ : R a c) (g : R c b) : g⁻¹ • f₁ ≃ f₂ ⟷{he.ArrowType} f₁ ≃ g • f₂ :=
+    def leftMulInv' {a b c : α} (f₁ : R a b) (f₂ : R a c) (g : R c b) : g⁻¹ • f₁ ≃ f₂ ⟷{he.ArrowKind} f₁ ≃ g • f₂ :=
     ⟨HasFunOp.swapFun (comp_subst_right' V g)   ((he.arrowSymm (R a b)).symm' (leftCancelInv V f₁ g)),
      HasFunOp.swapFun (comp_subst_right  V g⁻¹) (leftCancel V f₂ g)⟩
 
-    def leftMul {a b c : α} (f₁ f₂ : R a b) (g : R b c) : g • f₁ ≃ g • f₂ ⟷{he.ArrowType} f₁ ≃ f₂ :=
+    def leftMul {a b c : α} (f₁ f₂ : R a b) (g : R b c) : g • f₁ ≃ g • f₂ ⟷{he.ArrowKind} f₁ ≃ f₂ :=
     ⟨((he.hasArrows (R a b)).isPreorder).revTrans'' (leftCancel V f₂ g) ⊙ (leftMulInv V f₁ (g • f₂) g).mp,
      comp_congrArg_right V⟩
 
-    def rightMulInv  {a b c : α} (f₁ : R a c) (f₂ : R b c) (g : R b a) : f₁ • g ≃ f₂ ⟷{he.ArrowType} f₁ ≃ f₂ • g⁻¹ :=
+    def rightMulInv  {a b c : α} (f₁ : R a c) (f₂ : R b c) (g : R b a) : f₁ • g ≃ f₂ ⟷{he.ArrowKind} f₁ ≃ f₂ • g⁻¹ :=
     ⟨HasFunOp.swapFun (comp_subst_left' V g⁻¹) ((he.arrowSymm (R a c)).symm' (rightCancel V f₁ g)),
      HasFunOp.swapFun (comp_subst_left  V g)   (rightCancelInv V f₂ g)⟩
-    def rightMulInv' {a b c : α} (f₁ : R a c) (f₂ : R b c) (g : R a b) : f₁ • g⁻¹ ≃ f₂ ⟷{he.ArrowType} f₁ ≃ f₂ • g :=
+    def rightMulInv' {a b c : α} (f₁ : R a c) (f₂ : R b c) (g : R a b) : f₁ • g⁻¹ ≃ f₂ ⟷{he.ArrowKind} f₁ ≃ f₂ • g :=
     ⟨HasFunOp.swapFun (comp_subst_left' V g)   ((he.arrowSymm (R a c)).symm' (rightCancelInv V f₁ g)),
      HasFunOp.swapFun (comp_subst_left  V g⁻¹) (rightCancel V f₂ g)⟩
 
-    def rightMul {a b c : α} (f₁ f₂ : R a b) (g : R c a) : f₁ • g ≃ f₂ • g ⟷{he.ArrowType} f₁ ≃ f₂ :=
+    def rightMul {a b c : α} (f₁ f₂ : R a b) (g : R c a) : f₁ • g ≃ f₂ • g ⟷{he.ArrowKind} f₁ ≃ f₂ :=
     ⟨((he.hasArrows (R a b)).isPreorder).revTrans'' (rightCancel V f₂ g) ⊙ (rightMulInv V f₁ (f₂ • g) g).mp,
      comp_congrArg_left V⟩
 
-    def eqInvIffInvEq {a b : α} (f : R a b) (g : R b a) : f ≃ g⁻¹ ⟷{he.ArrowType} f⁻¹ ≃ g :=
+    def eqInvIffInvEq {a b : α} (f : R a b) (g : R b a) : f ≃ g⁻¹ ⟷{he.ArrowKind} f⁻¹ ≃ g :=
     ⟨HasFunOp.swapFun (inv_subst  V) (invInv g),
      HasFunOp.swapFun (inv_subst' V) ((he.arrowSymm (R a b)).symm' (invInv f))⟩
 
-    def eqIffEqInv {a b : α} (f₁ f₂ : R a b) : f₁⁻¹ ≃ f₂⁻¹ ⟷{he.ArrowType} f₁ ≃ f₂ :=
+    def eqIffEqInv {a b : α} (f₁ f₂ : R a b) : f₁⁻¹ ≃ f₂⁻¹ ⟷{he.ArrowKind} f₁ ≃ f₂ :=
     ⟨((he.hasArrows (R a b)).isPreorder).revTrans'' (invInv f₂) ⊙ (eqInvIffInvEq V f₁ f₂⁻¹).mpr,
      inv_congrArg V⟩
 
     def leftRightMul {a b c d : α} (f₁ : R a b) (f₂ : R a c) (g₁ : R b d) (g₂ : R c d) :
-      g₂⁻¹ • g₁ ≃ f₂ • f₁⁻¹ ⟷{he.ArrowType} g₁ • f₁ ≃ g₂ • f₂ :=
+      g₂⁻¹ • g₁ ≃ f₂ • f₁⁻¹ ⟷{he.ArrowKind} g₁ • f₁ ≃ g₂ • f₂ :=
     ⟨(leftMulInv' V (g₁ • f₁) f₂ g₂).mp ⊙ applyAssocLR_left V ⊙ (rightMulInv V (g₂⁻¹ • g₁) f₂ f₁).mpr,
      (leftMulInv' V g₁ (f₂ • f₁⁻¹) g₂).mpr ⊙ applyAssocLR_right V ⊙ (rightMulInv V g₁ (g₂ • f₂) f₁).mp⟩
 
@@ -385,9 +422,9 @@ section Morphisms
       f₂ • g₂⁻¹ ≃ g₁⁻¹ • f₁ ⟶ g₂ • f₂⁻¹ ≃ f₁⁻¹ • g₁ :=
     HasSymm.symm ⊙ swapInv V f₁ f₂ g₁ g₂ ⊙ HasSymm.symm
 
-  end HasIsomorphisms
+  end IsIsomorphismRelation
 
-  open HasIsomorphisms
+  open IsIsomorphismRelation
 
 end Morphisms
 
@@ -402,20 +439,40 @@ section Functors
     variable (R : GeneralizedRelation α V)
 
     instance isReflFunctor  [HasRefl  R] : IsReflFunctor  R R (HasFunOp.idFun' _) :=
-    ⟨λ a           => HasRefl.refl (ident R a)⟩
+    ⟨λ a   => HasRefl.refl (ident R a)⟩
 
     instance isSymmFunctor  [HasSymm  R] : IsSymmFunctor  R R (HasFunOp.idFun' _) :=
-    ⟨λ {a b}   f   => HasRefl.refl f⁻¹⟩
+    ⟨λ f   => HasRefl.refl f⁻¹⟩
 
     instance isTransFunctor [HasTrans R] : IsTransFunctor R R (HasFunOp.idFun' _) :=
-    ⟨λ {a b c} f g => HasRefl.refl (g • f)⟩
+    ⟨λ f g => HasRefl.refl (g • f)⟩
 
     instance isPreorderFunctor    [IsPreorder    R] : IsPreorderFunctor    R R (HasFunOp.idFun' _) := ⟨⟩
     instance isEquivalenceFunctor [IsEquivalence R] : IsEquivalenceFunctor R R (HasFunOp.idFun' _) := ⟨⟩
 
   end idFun
 
-  -- TODO: constFun, appFun, ...?
+  namespace constFun
+
+    variable (R : GeneralizedRelation α V) {β : V} (c : β)
+
+    def idArrow := (HasInstanceArrows.instArrows V β).isPreorder.refl c
+
+    instance isReflFunctor  [HasRefl  R] : IsReflFunctor  R (ConstRel α c) (HasFunOp.constFun' _ c) :=
+    ⟨λ _   => idArrow c⟩
+
+    instance isSymmFunctor  [HasSymm  R] : IsSymmFunctor  R (ConstRel α c) (HasFunOp.constFun' _ c) :=
+    ⟨λ _   => Eq.ndrec (motive := λ b => HasInstances.Inst (HasInstanceArrows.InstArrow V β c b))
+                       (idArrow c) (Eq.symm (ConstRel.symmEq  α c))⟩
+
+    instance isTransFunctor [HasTrans R] : IsTransFunctor R (ConstRel α c) (HasFunOp.constFun' _ c) :=
+    ⟨λ _ _ => Eq.ndrec (motive := λ b => HasInstances.Inst (HasInstanceArrows.InstArrow V β c b))
+                       (idArrow c) (Eq.symm (ConstRel.transEq α c))⟩
+
+    instance isPreorderFunctor    [IsPreorder    R] : IsPreorderFunctor    R (ConstRel α c) (HasFunOp.constFun' _ c) := ⟨⟩
+    instance isEquivalenceFunctor [IsEquivalence R] : IsEquivalenceFunctor R (ConstRel α c) (HasFunOp.constFun' _ c) := ⟨⟩
+
+  end constFun
 
   namespace compFun
 
@@ -457,24 +514,24 @@ section NaturalTransformations
 
   namespace IsNaturalTransformation
 
-    def refl  [h : HasMorphisms    S] {mF       : α → β}
+    def refl  [h : IsMorphismRelation    S] {mF       : α → β}
               (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) :
       IsNaturalTransformation R S F F (λ a => h.refl (mF a)) :=
     ⟨λ f => HasTrans.trans' (h.rightId (F f)) (HasSymm.symm' (h.leftId (F f)))⟩
 
-    def symm  [h : HasIsomorphisms S] {mF mG    : α → β}
+    def symm  [h : IsIsomorphismRelation S] {mF mG    : α → β}
               (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) (G : ∀ {a b}, R a b ⟶' S (mG a) (mG b))
               (n : ∀ a, S (mF a) (mG a)) [hn : IsNaturalTransformation R S F G n] :
       IsNaturalTransformation R S G F (λ a => h.symm (n a)) :=
-    ⟨λ {a b} f => HasSymm.symm' ((HasIsomorphisms.leftRightMul W (n a) (F f) (G f) (n b)).mpr (hn.nat f))⟩
+    ⟨λ {a b} f => HasSymm.symm' ((IsIsomorphismRelation.leftRightMul W (n a) (F f) (G f) (n b)).mpr (hn.nat f))⟩
 
-    def trans [h : HasComposition  S] {mF mG mH : α → β}
+    def trans [h : IsCompositionRelation S] {mF mG mH : α → β}
               (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) (G : ∀ {a b}, R a b ⟶' S (mG a) (mG b)) (H : ∀ {a b}, R a b ⟶' S (mH a) (mH b))
               (nFG : ∀ a, S (mF a) (mG a))                 (nGH : ∀ a, S (mG a) (mH a))
               [hnFG : IsNaturalTransformation R S F G nFG] [hnGH : IsNaturalTransformation R S G H nGH] :
       IsNaturalTransformation R S F H (λ a => h.trans (nFG a) (nGH a)) :=
-    ⟨λ {a b} f => let e₁ := HasComposition.applyAssocLR_left W (HasComposition.comp_congrArg_left  W (f := nFG a) (hnGH.nat f));
-                  let e₂ := HasComposition.applyAssocRL      W (HasComposition.comp_congrArg_right W (g := nGH b) (hnFG.nat f));
+    ⟨λ {a b} f => let e₁ := IsCompositionRelation.applyAssocLR_left W (IsCompositionRelation.comp_congrArg_left  W (f := nFG a) (hnGH.nat f));
+                  let e₂ := IsCompositionRelation.applyAssocRL      W (IsCompositionRelation.comp_congrArg_right W (g := nGH b) (hnFG.nat f));
                   HasTrans.trans' e₁ e₂⟩
 
   end IsNaturalTransformation

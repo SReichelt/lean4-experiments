@@ -59,18 +59,18 @@ section Morphisms
            {ω : Sort w} (m : ω → α)
            (R : GeneralizedRelation α V)
 
-  instance mapComposition  [h : HasComposition  R] :
-    HasComposition  (mapOperation m R) :=
+  instance mapComposition  [h : IsCompositionRelation  R] :
+    IsCompositionRelation (mapOperation m R) :=
   { assocLR  := h.assocLR,
     assocRL  := h.assocRL }
 
-  instance mapMorphisms    [h : HasMorphisms    R] :
-    HasMorphisms    (mapOperation m R) :=
+  instance mapMorphisms    [h : IsMorphismRelation    R] :
+    IsMorphismRelation    (mapOperation m R) :=
   { leftId   := h.leftId,
     rightId  := h.rightId }
 
-  instance mapIsomorphisms [h : HasIsomorphisms R] :
-    HasIsomorphisms (mapOperation m R) :=
+  instance mapIsomorphisms [h : IsIsomorphismRelation R] :
+    IsIsomorphismRelation (mapOperation m R) :=
   { leftInv  := h.leftInv,
     rightInv := h.rightInv,
     invInv   := h.invInv,

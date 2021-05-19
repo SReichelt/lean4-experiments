@@ -603,9 +603,9 @@ end AttachedDependentRelations
 -- TODO: describe arrows
 
 class HasInstanceArrows (V : Sort v) [s : IsKind V] where
-(ArrowType                                    : Sort w)
-[arrowIsKind                                  : IsKind ArrowType]
-[hasArrows (α : V)                            : HasArrows (s.Inst α) ArrowType]
+(ArrowKind                                    : Sort w)
+[arrowIsKind                                  : IsKind ArrowKind]
+[hasArrows (α : V)                            : HasArrows (s.Inst α) ArrowKind]
 (arrowCongr {α β : V} {F G : α ⟶ β} {a b : α} : (hasArrows (α ⟶ β)).Arrow F G ⟶
                                                 (hasArrows α).Arrow a b ⟶
                                                 (hasArrows β).Arrow (F a) (G b))
@@ -614,9 +614,9 @@ namespace HasInstanceArrows
 
   variable (V : Sort v) [s : IsKind V] [h : HasInstanceArrows V]
 
-  instance arrowType : IsKind h.ArrowType := h.arrowIsKind
-  instance instArrows (α : V) : HasArrows (s.Inst α) h.ArrowType := h.hasArrows α
-  def instArrow (α : V) : GeneralizedRelation (s.Inst α) h.ArrowType := (instArrows V α).Arrow
+  instance arrowKind : IsKind h.ArrowKind := h.arrowIsKind
+  instance instArrows (α : V) : HasArrows (s.Inst α) h.ArrowKind := h.hasArrows α
+  def InstArrow (α : V) : GeneralizedRelation (s.Inst α) h.ArrowKind := (instArrows V α).Arrow
 
   @[reducible] def InstArrowType (α : V) := s.Inst α (⇝) s.Inst α
 
@@ -641,7 +641,7 @@ namespace HasInstanceEquivalences
 
   instance (α : V) : HasSymm (h.hasArrows α).Arrow := h.arrowSymm α
   instance arrowIsEquiv (α : V) : IsEquivalence (h.hasArrows α).Arrow := ⟨⟩
-  instance instEquivs (α : V) : HasEquivalences (s.Inst α) h.ArrowType := ⟨(h.hasArrows α).Arrow⟩
+  instance instEquivs (α : V) : HasEquivalences (s.Inst α) h.ArrowKind := ⟨(h.hasArrows α).Arrow⟩
 
   @[reducible] def InstEquivType (α : V) := s.Inst α (≃) s.Inst α
 
@@ -660,9 +660,9 @@ namespace HasInstanceEquivalences
 end HasInstanceEquivalences
 
 class HasInstanceEquivalences' (V : Sort v) [s : IsKind V] where
-(EquivType                                    : Sort w)
-[equivIsKind                                  : IsKind EquivType]
-[hasEquivalences (α : V)                      : HasEquivalences (s.Inst α) EquivType]
+(EquivKind                                    : Sort w)
+[equivIsKind                                  : IsKind EquivKind]
+[hasEquivalences (α : V)                      : HasEquivalences (s.Inst α) EquivKind]
 (equivCongr {α β : V} {F G : α ⟶ β} {a b : α} : (hasEquivalences (α ⟶ β)).Equiv F G ⟶
                                                 (hasEquivalences α).Equiv a b ⟶
                                                 (hasEquivalences β).Equiv (F a) (G b))
@@ -671,10 +671,10 @@ namespace HasInstanceEquivalences'
 
   variable {V : Sort v} [s : IsKind V] [h : HasInstanceEquivalences' V]
 
-  instance equivType : IsKind h.EquivType := h.equivIsKind
+  instance equivKind : IsKind h.EquivKind := h.equivIsKind
 
   instance toHasInstancesEquivalences : HasInstanceEquivalences V :=
-  { ArrowType   := h.EquivType,
+  { ArrowKind   := h.EquivKind,
     arrowIsKind := h.equivIsKind,
     hasArrows   := λ α => HasEquivalences.toHasArrows (h.hasEquivalences α),
     arrowCongr  := h.equivCongr,
@@ -713,24 +713,24 @@ section Morphisms
 
   variable {α : Sort u} {V : Sort v} [IsKind V] [HasInstanceArrows V] (R : GeneralizedRelation α V)
 
-  class HasComposition extends HasTrans R where
+  class IsCompositionRelation extends HasTrans R where
   (assocLR {a b c d : α} (f : R a b) (g : R b c) (h : R c d) : (h • g) • f ⇝ h • (g • f))
   (assocRL {a b c d : α} (f : R a b) (g : R b c) (h : R c d) : h • (g • f) ⇝ (h • g) • f)
 
-  class HasMorphisms extends HasComposition R, HasRefl R where
+  class IsMorphismRelation extends IsCompositionRelation R, HasRefl R where
   (leftId  {a b : α} (f : R a b) : ident R b • f ⇝ f)
   (rightId {a b : α} (f : R a b) : f • ident R a ⇝ f)
 
-  instance morPreorder [HasMorphisms R] : IsPreorder R := ⟨⟩
+  instance morPreorder [IsMorphismRelation R] : IsPreorder R := ⟨⟩
 
-  class HasIsomorphisms extends HasMorphisms R, HasSymm R where
+  class IsIsomorphismRelation extends IsMorphismRelation R, HasSymm R where
   (leftInv  {a b   : α} (f : R a b)             : f⁻¹ • f       ⇝ ident R a)
   (rightInv {a b   : α} (f : R a b)             : f • f⁻¹       ⇝ ident R b)
   (invInv   {a b   : α} (f : R a b)             : (f⁻¹)⁻¹       ⇝ f)
   (compInv  {a b c : α} (f : R a b) (g : R b c) : (g • f)⁻¹     ⇝ f⁻¹ • g⁻¹)
   (idInv    (a     : α)                         : (ident R a)⁻¹ ⇝ ident R a)
 
-  instance isoEquiv [HasIsomorphisms R] : IsEquivalence R := ⟨⟩
+  instance isoEquiv [IsIsomorphismRelation R] : IsEquivalence R := ⟨⟩
 
 end Morphisms
 
@@ -775,3 +775,9 @@ end NaturalTransformations
 
 
 -- TODO: If arrows have equivalences, we can specify redundancies.
+
+
+
+class IsCategory (α : Sort u) {MorphismKind : Sort v} [IsKind MorphismKind] [HasInstanceEquivalences MorphismKind] where
+(M     : GeneralizedRelation α MorphismKind)
+[isMor : IsMorphismRelation M]

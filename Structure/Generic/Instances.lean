@@ -108,13 +108,13 @@ namespace HasInstanceEquivalences
   -- By specializing here, we avoid invoking proof irrelevance explicitly.
   -- Instead, we just declare all proofs to be equivalent according to our own notion of equivalence.
   instance prop : HasInstanceEquivalences' Prop :=
-  { EquivType       := Prop,
+  { EquivKind       := Prop,
     equivIsKind     := AnySort.isKind,
     hasEquivalences := HasEquivalences.univ,
     equivCongr      := λ _ _ => trivial }
 
   instance typeWithEq : HasInstanceEquivalences' (Type u) :=
-  { EquivType       := Prop,
+  { EquivKind       := Prop,
     equivIsKind     := AnySort.isKind,
     hasEquivalences := HasEquivalences.eq,
     equivCongr      := congr }
@@ -127,15 +127,15 @@ namespace PropRel
 
   variable {α : Sort u} (r : α → α → Prop) [GeneralizedRelation.IsEquivalence r]
 
-  instance hasComposition : HasComposition r :=
+  instance isCompositionRelation : IsCompositionRelation r :=
   { assocLR := λ _ _ _ => trivial,
     assocRL := λ _ _ _ => trivial }
 
-  instance hasMorphisms : HasMorphisms r :=
+  instance isMorphismRelation : IsMorphismRelation r :=
   { leftId  := λ _ => trivial,
     rightId := λ _ => trivial }
 
-  instance hasIsomorphisms : HasIsomorphisms r :=
+  instance isIsomorphismRelation : IsIsomorphismRelation r :=
   { leftInv  := λ _   => trivial,
     rightInv := λ _   => trivial,
     invInv   := λ _   => trivial,
@@ -152,15 +152,15 @@ end PropRel
 
 namespace EquivRel
 
-  instance hasComposition : HasComposition EquivRel :=
+  instance isCompositionRelation : IsCompositionRelation EquivRel :=
   { assocLR := λ f g h => Eq.symm (Equiv.trans_assoc f g h),
     assocRL := Equiv.trans_assoc }
 
-  instance hasMorphisms : HasMorphisms EquivRel :=
+  instance isMorphismRelation : IsMorphismRelation EquivRel :=
   { leftId  := Equiv.trans_refl,
     rightId := Equiv.refl_trans }
 
-  instance hasIsomorphisms : HasIsomorphisms EquivRel :=
+  instance isIsomorphismRelation : IsIsomorphismRelation EquivRel :=
   { leftInv  := Equiv.trans_symm,
     rightInv := Equiv.symm_trans,
     invInv   := Equiv.symm_symm,
@@ -247,7 +247,7 @@ namespace BundledSetoid
   instance isKind : IsKind BundledSetoid := ⟨⟩
 
   instance hasInstanceEquivalences : HasInstanceEquivalences' BundledSetoid :=
-  { EquivType       := Prop,
+  { EquivKind       := Prop,
     equivIsKind     := AnySort.isKind,
     hasEquivalences := λ S => HasEquivalences.setoid (HasInstances.Inst S),
     equivCongr      := λ {S T F G a b} h₁ h₂ => Setoid.trans (h₁ a) (G.isFun.mapEquiv h₂) }
