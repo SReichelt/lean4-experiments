@@ -15,7 +15,7 @@ class HasProduct (α : Sort u) (β : Sort v) where
 (Product : α → β → γ)
 
 infixr:35 " (⊓) " => HasProduct.γ
-infixr:35 " ⊓ " => HasProduct.Prod
+infixr:35 " ⊓ " => HasProduct.Product
 
 
 -- TODO: Figure out correct precendence level of arrows.
