@@ -7,41 +7,6 @@ open GeneralizedRelation
 
 
 
--- TODO: Are we overthinking this? Should we maybe just define that a _universe_ is a category/groupoid, with its instance arrows/equivalences?
--- HasMorphisms extends HasFunctorialArrows
--- HasIsomorphisms extends HasFunctorialEquivalences
--- But what about real-life categories that are not universes?
-
-section Categories
-
-  variable (M : Universe) [HasInternalFunctors M] [HasInstanceArrows M] (α : Sort u)
-
-  class IsCategory extends HasArrows α M where
-  [isMor : IsMorphismRelation Arrow]
-
-  namespace IsCategory
-
-    variable [h : IsCategory M α]
-
-    instance hasMor : IsMorphismRelation h.Arrow := h.isMor
-
-  end IsCategory
-
-  class IsGroupoid extends HasEquivalences α M where
-  [isIso : IsIsomorphismRelation Equiv]
-
-  namespace IsGroupoid
-
-    variable [h : IsGroupoid M α]
-
-    instance hasIso : IsIsomorphismRelation h.Equiv := h.isIso
-
-  end IsGroupoid
-
-end Categories
-
-
-
 section BundledCategories
 
   variable (M : Universe) [HasInternalFunctors M] [HasInstanceArrows M]

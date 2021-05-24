@@ -800,3 +800,65 @@ class HasNaturalQuantification (U₁ U₂ V W : Universe) [HasExternalFunctors U
 [hasNat {α : U₁} {β : U₂} (R : GeneralizedRelation ⌈α⌉ V) (S : GeneralizedRelation ⌈β⌉ W) [h : HasTrans S]
         {mF mG : α ⟶' β} (F : MappedBaseFunctor R S mF) (G : MappedBaseFunctor R S mG) :
    HasInternalNaturalQuantification R S F G]
+
+
+
+section Categories
+
+  variable (M : Universe) [HasInternalFunctors M] [HasInstanceArrows M] (α : Sort u)
+
+  class IsCategory extends HasArrows α M where
+  [isMor : IsMorphismRelation Arrow]
+
+  namespace IsCategory
+
+    variable [h : IsCategory M α]
+
+    instance hasMor : IsMorphismRelation h.Arrow := h.isMor
+
+  end IsCategory
+
+  class IsGroupoid extends HasEquivalences α M where
+  [isIso : IsIsomorphismRelation Equiv]
+
+  namespace IsGroupoid
+
+    variable [h : IsGroupoid M α]
+
+    instance hasIso : IsIsomorphismRelation h.Equiv := h.isIso
+
+  end IsGroupoid
+
+end Categories
+
+
+
+class HasInstanceMorphisms (U : Universe) [HasInternalFunctors U] extends HasFunctorialArrows U where
+[arrowHasArrows     : HasInstanceArrows arrowUniverse]
+[arrowIsMor (α : U) : IsMorphismRelation (Arrow α)]
+
+namespace HasInstanceMorphisms
+
+  variable (U : Universe) [HasInternalFunctors U] [h : HasInstanceMorphisms U]
+
+  instance arrowArrows : HasInstanceArrows h.arrowUniverse := h.arrowHasArrows
+
+  instance instIsCategory (α : U) : IsCategory h.arrowUniverse ⌈α⌉ :=
+  { isMor := h.arrowIsMor α }
+
+end HasInstanceMorphisms
+
+class HasInstanceIsomorphisms (U : Universe) [HasInternalFunctors U] extends HasFunctorialEquivalences U where
+[equivHasArrows     : HasInstanceArrows equivUniverse]
+[equivIsIso (α : U) : IsIsomorphismRelation (Equiv α)]
+
+namespace HasInstanceIsomorphisms
+
+  variable (U : Universe) [HasInternalFunctors U] [h : HasInstanceIsomorphisms U]
+
+  instance equivArrows : HasInstanceArrows h.equivUniverse := h.equivHasArrows
+
+  instance instIsCategory (α : U) : IsGroupoid h.equivUniverse ⌈α⌉ :=
+  { isIso := h.equivIsIso α }
+
+end HasInstanceIsomorphisms
