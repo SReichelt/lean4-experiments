@@ -8,392 +8,19 @@
 
 
 
-import mathlib4_experiments.CoreExt
+import Structure.Generic.Axioms
+
 import mathlib4_experiments.Data.Notation
 
 
 
-set_option autoBoundImplicitLocal false
+#exit
 
--- TODO: Can we avoid this?
-set_option maxHeartbeats 500000
 
-universes u v w w'
 
 
 
--- We want to formalize a very general "structure with equivalences", so we start with a very basic
--- abstraction for something that looks like an equivalence relation except that the codomain is
--- generalized to `Sort u` instead of `Prop`. Therefore, `⟨Equiv.refl, Equiv.symm, Equiv.trans⟩`, where
--- `Equiv` is the Lean 4 version of the `equiv` type in Lean 3 mathlib, is also an instance of this type
--- (with the restriction that both arguments must live in the same universe).
---
--- We actually need to generalize slightly further to a codomain that is not necessarily a sort but can be
--- coerced to a sort. This way, the codomain can be any Lean structure that bundles a sort, in particular
--- it can be our `Structure` type.
 
-class IsType (β : Sort v) where
-(type : β → Sort u)
-
-instance IsType.coeSort (β : Sort v) [h : IsType β] : CoeSort β (Sort u) := ⟨h.type⟩
-instance IsType.sort : IsType (Sort u) := ⟨id⟩
-
-def GeneralizedRelation (α : Sort u) (β : Sort v) [IsType β] := α → α → β
-
-section GeneralizedRelation
-
-variable {α : Sort u} {β : Sort v} [h : IsType β] (R : GeneralizedRelation α β)
-
-def GeneralizedRelation.toRelation : α → α → Sort v := λ a b => h.type (R a b)
-
-def mapRelation {ω : Sort w} {α : Sort u} {β : Sort v} (m : ω → α) (R : α → α → β) :
-  ω → ω → β :=
-λ a b => R (m a) (m b)
-
-class HasRefl where
-(refl  (a     : α) : R a a)
-
-class HasSymm where
-(symm  {a b   : α} : R a b → R b a)
-
-class HasTrans where
-(trans {a b c : α} : R a b → R b c → R a c)
-
-class IsEquivalence extends HasRefl R, HasSymm R, HasTrans R
-
-end GeneralizedRelation
-
-namespace IsEquivalence
-
--- Every equivalence relation can trivially be converted to an instance of `IsEquivalence`.
-instance relEquiv {α : Sort u} {r : α → α → Prop} (e : Equivalence r) : IsEquivalence r :=
-{ refl  := e.refl,
-  symm  := e.symm,
-  trans := e.trans }
-
--- So these are the instances that we obtain directly from Lean.
-instance iffIsEquiv                                : IsEquivalence Iff     := relEquiv Iff.isEquivalence
-instance eqIsEquiv     (α : Sort u)                : IsEquivalence (@Eq α) := relEquiv Eq.isEquivalence
-instance setoidIsEquiv (α : Sort u) [s : Setoid α] : IsEquivalence s.r     := relEquiv s.iseqv
-
-instance mapEquiv {α : Sort u} {β : Sort v} [h : IsType β] (R : GeneralizedRelation α β)
-                  [h : IsEquivalence R] {ω : Sort w} (m : ω → α) :
-  IsEquivalence (mapRelation m R) :=
-{ refl          := λ a => h.refl (m a),
-  trans         := h.trans,
-  symm          := h.symm }
-
-end IsEquivalence
-
-open IsEquivalence
-
-
-
-class HasInstanceEquivalence (α : Sort u) where
-(equivType   : Sort v)
-[equivIsType : IsType equivType]
-(Equiv       : GeneralizedRelation α equivType)
-[isEquiv     : IsEquivalence Equiv]
-
-namespace HasInstanceEquivalence
-
-instance equivHasType (α : Sort u) [h : HasInstanceEquivalence α] : IsType h.equivType :=
-h.equivIsType
-
-instance hasEquivalence (α : Sort u) [h : HasInstanceEquivalence α] : HasEquivalence α α :=
-⟨h.Equiv⟩
-
-instance (α : Sort u) [h : HasInstanceEquivalence α] : IsType (HasEquivalence.γ α α) :=
-h.equivIsType
-
-instance (α : Sort u) [h : HasInstanceEquivalence α] : IsEquivalence (@HasEquivalence.Equiv α α (hasEquivalence α)) :=
-h.isEquiv
-
-def iffEquiv                                : HasInstanceEquivalence Prop := ⟨Prop, Iff⟩
-def eqEquiv     (α : Sort u)                : HasInstanceEquivalence α    := ⟨Prop, Eq⟩
-def setoidEquiv (α : Sort u) [s : Setoid α] : HasInstanceEquivalence α    := ⟨Prop, s.r⟩
-
-end HasInstanceEquivalence
-
-
-
--- When defining the groupoid axioms, we need to compare equivalences for equivalence. Although this will
--- frequently be an equality or at least a setoid equivalence, we need to prepare for the most generic
--- case where equivalences are arbitrary objects. Since we then need to define a relation into the type
--- of equivalences, we need to bundle equivalences with their equivalences.
-
-class IsTypeWithEquivalence (β : Sort v) extends IsType β where
-(equiv (b : β) : HasInstanceEquivalence (type b))
-
-namespace IsTypeWithEquivalence
-
-instance instEquiv {β : Sort v} [h : IsTypeWithEquivalence β] (b : β) :
-  HasInstanceEquivalence (IsType.type b) :=
-h.equiv b
-
-end IsTypeWithEquivalence
-
-
-
-structure BundledSetoid where
-(α : Sort u)
-[s : Setoid α]
-
-namespace BundledSetoid
-
-instance isTypeWithEquivalence : IsTypeWithEquivalence BundledSetoid :=
-{ type  := BundledSetoid.α,
-  equiv := λ S => @HasInstanceEquivalence.setoidEquiv S.α S.s }
-
-instance isSetoid (S : BundledSetoid) : Setoid (IsType.type S) := S.s
-
-def eq (α : Sort u) : BundledSetoid :=
-{ α := α,
-  s := ⟨Eq, Eq.isEquivalence⟩ }
-
-end BundledSetoid
-
-
-
-def RelationWithSetoid (α : Sort u) := GeneralizedRelation α BundledSetoid
-
-namespace RelationWithSetoid
-
-def relWithEq {α : Sort u} (r : α → α → Sort v) : RelationWithSetoid α :=
-λ a b => BundledSetoid.eq (r a b)
-
-end RelationWithSetoid
-
-
-
--- We would also like to be able to manipulate such equivalences, and we need them to behave like
--- isomorphisms when doing so, with `refl` as the identity, `symm` as inverse, and `trans` as composition.
--- In other words, a structure with its equivalences is a category where every morphism has an inverse (as
--- guaranteed by `symm`), i.e. it is a groupoid. Since equivalences have equivalences, it is actually a
--- higher groupoid.
---
--- (Of course, the same type may also have a category structure with more morphisms, but since we are
--- defining a generalization of an equivalence relation, not a category, we wish to ignore such extra
--- structure at this point.)
---
--- We add three redundant axioms to avoid unnecessary computations. (Actually, this list of axioms was
--- originally inspired by the seven corresponding lemmas in `data.equiv.basic` of mathlib in Lean 3:
--- `symm_symm`, `trans_refl`, etc.) Moreover, we need to add `congrArg`-like axioms for composition and
--- inverses because this is no longer a given after replacing `=` with `≃`.
---
--- With `a b c d : α`, we have:
---
--- ` refl          : a ≃ a                           ` | `id`
--- ` symm          : a ≃ b → b ≃ a                   ` | `⁻¹`
--- ` trans         : a ≃ b → b ≃ c → a ≃ c           ` | `∘` (in reverse order)
--- ` comp_congrArg {f₁ f₂ : a ≃ b} {g₁ g₂ : b ≃ c}     : f₁ ≃ f₂ → g₁ ≃ g₂ → g₁ ∘ f₁ ≃ g₂ ∘ f₂ `
--- ` inv_congrArg  {f₁ f₂ : a ≃ b}                     : f₁ ≃ f₂           → f₁⁻¹ ≃ f₂⁻¹       `
--- ` assoc         (f : a ≃ b) (g : b ≃ c) (h : c ≃ d) : h ∘ (g ∘ f) ≃ (h ∘ g) ∘ f             `
--- ` leftId        (f : a ≃ b)                         : id ∘ f      ≃ f                       `
--- ` rightId       (f : a ≃ b)                         : f ∘ id      ≃ f                       `
--- ` leftInv       (f : a ≃ b)                         : f⁻¹ ∘ f     ≃ id                      `
--- ` rightInv      (f : a ≃ b)                         : f ∘ f⁻¹     ≃ id                      `
--- ` invInv        (f : a ≃ b)                         : (f⁻¹)⁻¹     ≃ f                       `
--- ` compInv       (f : a ≃ b) (g : b ≃ c)             : (g ∘ f)⁻¹   ≃ f⁻¹ ∘ g⁻¹               `
--- ` idInv                                             : id⁻¹        ≃ id                      `
---
--- Remark: Interestingly, all axioms can be regarded as simplification rules (with the simplification for
--- associativity being the omission of parentheses). With the addition of the three redundant axioms, they
--- enable equational reasoning by transforming all possible terms into a "flat" canonical form. Besides
--- making proofs trivial, this observation also suggests an alternative formalization of the axioms in
--- terms of a simplification function.
---
--- Note that for actual equivalence relations, the axioms are trivially satisfied in a proof-irrelevant
--- system such as Lean.
-
-namespace Morphisms
-
-variable {α : Sort u} {β : Sort v}
-
-section Notation
-
-variable [IsType β]
-
--- Note that we use a nonstandard order in `HasComp.comp` so that it directly matches
--- `HasTrans.trans`. When using `•` notation (which we use to avoid clashing with function
--- composition), we reverse the order to conform to function/morphism/functor composition.
-def comp {R : GeneralizedRelation α β} [h : HasTrans R] {a b c : α} (f : R a b) (g : R b c) := h.trans f g
-@[reducible] def revComp {R : GeneralizedRelation α β} [h : HasTrans R] {a b c : α} (g : R b c) (f : R a b) := comp f g
-infixr:90 " • " => revComp
-
-def ident (R : GeneralizedRelation α β) [h : HasRefl R] (a : α) := h.refl a
-
-def inv {R : GeneralizedRelation α β} [h : HasSymm R] {a b : α} (f : R a b) := h.symm f
-postfix:max "⁻¹" => inv
-
-end Notation
-
-section Axioms
-
-variable [IsTypeWithEquivalence β] (R : GeneralizedRelation α β)
-
-class HasComposition extends HasTrans R where
-(comp_congrArg {a b c   : α} {f₁ f₂ : R a b} {g₁ g₂ : R b c}     : f₁ ≃ f₂ → g₁ ≃ g₂ → g₁ • f₁ ≃ g₂ • f₂)
-(assoc         {a b c d : α} (f : R a b) (g : R b c) (h : R c d) : h • (g • f) ≃ (h • g) • f)
-
-class HasMorphisms extends HasComposition R, HasRefl R where
-(leftId  {a b : α} (f : R a b) : ident R b • f ≃ f)
-(rightId {a b : α} (f : R a b) : f • ident R a ≃ f)
-
-class HasIsomorphisms extends HasMorphisms R, HasSymm R where
-(inv_congrArg {a b   : α} {f₁ f₂ : R a b}         : f₁ ≃ f₂ → f₁⁻¹ ≃ f₂⁻¹)
-(leftInv      {a b   : α} (f : R a b)             : f⁻¹ • f       ≃ ident R a)
-(rightInv     {a b   : α} (f : R a b)             : f • f⁻¹       ≃ ident R b)
-(invInv       {a b   : α} (f : R a b)             : (f⁻¹)⁻¹       ≃ f)
-(compInv      {a b c : α} (f : R a b) (g : R b c) : (g • f)⁻¹     ≃ f⁻¹ • g⁻¹)
-(idInv        (a     : α)                         : (ident R a)⁻¹ ≃ ident R a)
-
-instance isoEquiv [h : HasIsomorphisms R] : IsEquivalence R :=
-{ refl  := h.refl,
-  trans := h.trans,
-  symm  := h.symm }
-
--- For each of the type classes, if we generalize the relation of an existing instance, we obtain a new
--- instance. At the moment, we only need this for `HasIsomorphisms`.
-
-instance mapHasIso [h : HasIsomorphisms R] {ω : Sort w} (m : ω → α) :
-  HasIsomorphisms (mapRelation m R) :=
-{ refl          := λ a => h.refl (m a),
-  symm          := h.symm,
-  trans         := h.trans,
-  comp_congrArg := h.comp_congrArg,
-  inv_congrArg  := h.inv_congrArg,
-  assoc         := h.assoc,
-  leftId        := h.leftId,
-  rightId       := h.rightId,
-  leftInv       := h.leftInv,
-  rightInv      := h.rightInv,
-  invInv        := h.invInv,
-  compInv       := h.compInv,
-  idInv         := λ a => h.idInv (m a) }
-
-end Axioms
-
-end Morphisms
-
-open Morphisms
-
-
-
--- In Lean, we can use proof irrelevance to define one instance that works for all ordinary equivalence
--- relations.
-
-namespace PropEquiv
-
-variable {α : Sort u} (r : α → α → Prop) [h : IsEquivalence r]
-
-instance propEquivHasIso : HasIsomorphisms (RelationWithSetoid.relWithEq r) :=
-{ refl          := h.refl,
-  symm          := h.symm,
-  trans         := h.trans,
-  comp_congrArg := λ _ _   => proofIrrel _ _,
-  inv_congrArg  := λ _     => proofIrrel _ _,
-  assoc         := λ _ _ _ => proofIrrel _ _,
-  leftId        := λ _     => proofIrrel _ _,
-  rightId       := λ _     => proofIrrel _ _,
-  leftInv       := λ _     => proofIrrel _ _,
-  rightInv      := λ _     => proofIrrel _ _,
-  invInv        := λ _     => proofIrrel _ _,
-  compInv       := λ _ _   => proofIrrel _ _,
-  idInv         := λ _     => proofIrrel _ _ }
-
-end PropEquiv
-
-
-
--- We will be dealing with many different operations that respect composition, identity, and inverses,
--- or equivalently reflexivity, symmetry, and transitivity. We formalize all such operations using a
--- generalized definition of a functor. An actual functor between two structures is a special case of
--- this generalized version.
---
--- For convenience and also to avoid unnecessary computation, we add the redundant requirement that a
--- functor must preserve inverses, as those are an integral part of our axiomatized structure.
---
--- We split the type classes into the three pieces of structure that we are dealing with, so we can
--- potentially reuse it in other contexts later.
-
-namespace Functors
-
-section Axioms
-
-variable {α : Sort u} {β : Sort v} {γ : Sort w} [IsTypeWithEquivalence β] [IsTypeWithEquivalence γ]
-         (R : GeneralizedRelation α β) (S : GeneralizedRelation α γ)
-         (F : ∀ {a b : α}, R a b → S a b)
-
-class IsEquivFunctor where
-(respectsEquiv {a b   : α} {f₁ f₂ : R a b}         : f₁ ≃ f₂ → F f₁ ≃ F f₂)
-
-class IsCompositionFunctor [HasComposition  R] [HasComposition  S]
-  extends IsEquivFunctor       R S F where
-(respectsComp  {a b c : α} (f : R a b) (g : R b c) : F (g • f)     ≃ F g • F f)
-
-class IsMorphismFunctor    [HasMorphisms    R] [HasMorphisms    S]
-  extends IsCompositionFunctor R S F where
-(respectsId    (a     : α)                         : F (ident R a) ≃ ident S a)
-
-class IsIsomorphismFunctor [HasIsomorphisms R] [HasIsomorphisms S]
-  extends IsMorphismFunctor    R S F where
-(respectsInv   {a b   : α} (f : R a b)             : F f⁻¹         ≃ (F f)⁻¹)
-
--- Similarly to `HasIsomorphisms`, we can obtain a new (generalized) functor by mapping the relations.
-
-instance mapIsoFunctor [HasIsomorphisms R] [HasIsomorphisms S] [h : IsIsomorphismFunctor R S F]
-                       {ω : Sort w'} (m : ω → α) :
-  IsIsomorphismFunctor (mapRelation m R) (mapRelation m S) F :=
-{ respectsEquiv := h.respectsEquiv,
-  respectsComp  := h.respectsComp,
-  respectsId    := λ a => h.respectsId (m a),
-  respectsInv   := h.respectsInv }
-
-end Axioms
-
-instance idIsoFunctor {α : Sort u} {β : Sort v} [IsTypeWithEquivalence β]
-                      (R : GeneralizedRelation α β) [HasIsomorphisms R] :
-  IsIsomorphismFunctor R R id :=
-{ respectsEquiv := id,
-  respectsComp  := λ f g => HasInstanceEquivalence.isEquiv.refl (g • f),
-  respectsId    := λ a   => HasInstanceEquivalence.isEquiv.refl (ident R a),
-  respectsInv   := λ f   => HasInstanceEquivalence.isEquiv.refl f⁻¹ }
-
-instance compIsoFunctor {α : Sort u} {β : Sort v} {γ : Sort w} {δ : Sort w'}
-                        [IsTypeWithEquivalence β] [IsTypeWithEquivalence γ] [IsTypeWithEquivalence δ]
-                        (R : GeneralizedRelation α β) [HasIsomorphisms R]
-                        (S : GeneralizedRelation α γ) [HasIsomorphisms S]
-                        (T : GeneralizedRelation α δ) [HasIsomorphisms T]
-                        (F : ∀ {a b : α}, R a b → S a b) [hF : IsIsomorphismFunctor R S F]
-                        (G : ∀ {a b : α}, S a b → T a b) [hG : IsIsomorphismFunctor S T G] :
-  IsIsomorphismFunctor R T (G ∘ F) :=
-{ respectsEquiv := hG.respectsEquiv ∘ hF.respectsEquiv,
-  respectsComp  := λ f g => let e₁ : G (F (g • f)) ≃ G (F g • F f)     := hG.respectsEquiv (hF.respectsComp f g);
-                            let e₂ : G (F g • F f) ≃ G (F g) • G (F f) := hG.respectsComp (F f) (F g);
-                            HasInstanceEquivalence.isEquiv.trans e₁ e₂,
-  respectsId    := λ a   => let e₁ : G (F (ident R a)) ≃ G (ident S a) := hG.respectsEquiv (hF.respectsId a);
-                            let e₂ : G (ident S a)     ≃ ident T a     := hG.respectsId a;
-                            HasInstanceEquivalence.isEquiv.trans e₁ e₂,
-  respectsInv   := λ f   => let e₁ : G (F f⁻¹) ≃ G (F f)⁻¹   := hG.respectsEquiv (hF.respectsInv f);
-                            let e₂ : G (F f)⁻¹ ≃ (G (F f))⁻¹ := hG.respectsInv (F f);
-                            HasInstanceEquivalence.isEquiv.trans e₁ e₂ }
-
-end Functors
-
-open Functors
-
--- If the target has equivalences in `Prop`, the functor axioms are satisfied trivially.
-
-instance propFunctor {α : Sort u} {β : Sort v} [IsTypeWithEquivalence β]
-                     {R : GeneralizedRelation α β} [HasIsomorphisms R]
-                     {γ : Sort w} {m : α → γ} {s : γ → γ → Prop} [h : IsEquivalence s]
-                     {F : ∀ {a b : α}, R a b → s (m a) (m b)} :
-  IsIsomorphismFunctor R (mapRelation m (RelationWithSetoid.relWithEq s)) F :=
-{ respectsEquiv := λ _   => proofIrrel _ _,
-  respectsComp  := λ _ _ => proofIrrel _ _,
-  respectsId    := λ _   => proofIrrel _ _,
-  respectsInv   := λ _   => proofIrrel _ _ }
 
 
 
@@ -415,7 +42,7 @@ instance (a b : Prop) : Coe (a ↔' b) (a ↔ b) := ⟨Iff'.toIff⟩
 
 class HasGeneralStructure (α : Sort u) where
 {equivType   : Sort v}
-[equivIsType : IsTypeWithEquivalence equivType]
+[equivIsType : IsTypeWithFunctorialEquivalence equivType]
 (M           : GeneralizedRelation α equivType)
 [hasIsos     : HasIsomorphisms M]
 
@@ -424,7 +51,7 @@ namespace HasGeneralStructure
 variable {α : Sort u} [h : HasGeneralStructure α]
 
 instance hasEquivalence : HasEquivalence α α := ⟨h.M⟩
-instance : IsTypeWithEquivalence h.equivType := h.equivIsType
+instance isTypeWithEquiv : IsTypeWithFunctorialEquivalence h.equivType := h.equivIsType
 instance hasIso : HasIsomorphisms h.M := h.hasIsos
 
 instance hasInstEquiv : HasInstanceEquivalence α :=
@@ -432,13 +59,17 @@ instance hasInstEquiv : HasInstanceEquivalence α :=
   Equiv     := h.M,
   isEquiv   := isoEquiv h.M }
 
-instance : IsTypeWithEquivalence (HasEquivalence.γ α α) := h.equivIsType
+instance : IsTypeWithFunctorialEquivalence (HasEquivalence.γ α α) := h.equivIsType
 instance : HasIsomorphisms (@HasEquivalence.Equiv α α hasEquivalence) := hasIso
 
 def id___ (a : α) : a ≃ a := ident h.M a
 
-def comp_congrArg {a b c : α} {f₁ f₂ : a ≃ b} {g₁ g₂ : b ≃ c}  : f₁ ≃ f₂ → g₁ ≃ g₂ → g₁ • f₁ ≃ g₂ • f₂ := hasIso.comp_congrArg
-def inv_congrArg  {a b   : α} {f₁ f₂ : a ≃ b}                  : f₁ ≃ f₂ → f₁⁻¹ ≃ f₂⁻¹                 := hasIso.inv_congrArg
+def comp_congrArg_left  {a b c : α} {f : a ≃ b} {g₁ g₂ : b ≃ c} : g₁ ≃ g₂ → g₁ • f ≃ g₂ • f := (isTypeWithEquiv.funCond (b ≃ c) (a ≃ c) _).coe (hasIso.trans_left_functor  f)
+def comp_congrArg_right {a b c : α} {f₁ f₂ : a ≃ b} {g : b ≃ c} : f₁ ≃ f₂ → g • f₁ ≃ g • f₂ := (isTypeWithEquiv.funCond (a ≃ b) (a ≃ c) _).coe (hasIso.trans_right_functor g)
+def comp_congrArg {a b c : α} {f₁ f₂ : a ≃ b} {g₁ g₂ : b ≃ c}  : f₁ ≃ f₂ → g₁ ≃ g₂ → g₁ • f₁ ≃ g₂ • f₂ :=
+λ h₁ h₂ => HasTrans.trans (comp_congrArg_left h₂) (comp_congrArg_right h₁)
+
+def inv_congrArg {a b : α} {f₁ f₂ : a ≃ b} : f₁ ≃ f₂ → f₁⁻¹ ≃ f₂⁻¹ := (isTypeWithEquiv.funCond (a ≃ b) (b ≃ a) _).coe hasIso.symm_functor
 
         def assoc    {a b c d : α} (f : a ≃ b) (g : b ≃ c) (h : c ≃ d) : h • (g • f) ≃ (h • g) • f := hasIso.assoc    f g h
         def assoc'   {a b c d : α} (f : a ≃ b) (g : b ≃ c) (h : c ≃ d) : (h • g) • f ≃ h • (g • f) := HasSymm.symm (assoc f g h)
@@ -449,11 +80,6 @@ def inv_congrArg  {a b   : α} {f₁ f₂ : a ≃ b}                  : f₁ ≃
 @[simp] def invInv   {a b     : α} (f : a ≃ b)                         : (f⁻¹)⁻¹     ≃ f           := hasIso.invInv   f
 @[simp] def compInv  {a b c   : α} (f : a ≃ b) (g : b ≃ c)             : (g • f)⁻¹   ≃ f⁻¹ • g⁻¹   := hasIso.compInv  f g
 @[simp] def idInv    (a       : α)                                     : (id___ a)⁻¹ ≃ id___ a     := hasIso.idInv    a
-
-def comp_congrArg_left  {a b c : α} {f : a ≃ b} {g₁ g₂ : b ≃ c} : g₁ ≃ g₂ → g₁ • f ≃ g₂ • f :=
-λ h => comp_congrArg (HasRefl.refl f) h
-def comp_congrArg_right {a b c : α} {f₁ f₂ : a ≃ b} {g : b ≃ c} : f₁ ≃ f₂ → g • f₁ ≃ g • f₂ :=
-λ h => comp_congrArg h (HasRefl.refl g)
 
 def comp_subst  {a b c : α} {f₁ f₂ : a ≃ b} {g₁ g₂ : b ≃ c} {e : a ≃ c} : f₁ ≃ f₂ → g₁ ≃ g₂ → g₂ • f₂ ≃ e → g₁ • f₁ ≃ e :=
 λ h₁ h₂ h₃ => HasTrans.trans (comp_congrArg h₁ h₂) h₃
@@ -574,8 +200,11 @@ instance equivSetoid (a b : α) : Setoid (IsType.type (a ≃ b)) := BundledSetoi
 def id_ (a : α) : a ≃ a := hasGeneralStructure.id___ a
 def id' {a : α} := id_ a
 
+theorem comp_congrArg_left  {a b c : α} {f : a ≃ b} {g₁ g₂ : b ≃ c} : g₁ ≈ g₂ → g₁ • f ≈ g₂ • f := hasGeneralStructure.comp_congrArg_left
+theorem comp_congrArg_right {a b c : α} {f₁ f₂ : a ≃ b} {g : b ≃ c} : f₁ ≈ f₂ → g • f₁ ≈ g • f₂ := hasGeneralStructure.comp_congrArg_right
 theorem comp_congrArg {a b c : α} {f₁ f₂ : a ≃ b} {g₁ g₂ : b ≃ c}  : f₁ ≈ f₂ → g₁ ≈ g₂ → g₁ • f₁ ≈ g₂ • f₂ := hasGeneralStructure.comp_congrArg
-theorem inv_congrArg  {a b   : α} {f₁ f₂ : a ≃ b}                  : f₁ ≈ f₂ → f₁⁻¹ ≈ f₂⁻¹                 := hasGeneralStructure.inv_congrArg
+
+theorem inv_congrArg  {a b : α} {f₁ f₂ : a ≃ b} : f₁ ≈ f₂ → f₁⁻¹ ≈ f₂⁻¹ := hasGeneralStructure.inv_congrArg
 
         theorem assoc    {a b c d : α} (f : a ≃ b) (g : b ≃ c) (h : c ≃ d) : h • (g • f) ≈ (h • g) • f := hasGeneralStructure.assoc    f g h
         theorem assoc'   {a b c d : α} (f : a ≃ b) (g : b ≃ c) (h : c ≃ d) : (h • g) • f ≈ h • (g • f) := hasGeneralStructure.assoc' f g h
@@ -586,9 +215,6 @@ theorem inv_congrArg  {a b   : α} {f₁ f₂ : a ≃ b}                  : f₁
 @[simp] theorem invInv   {a b     : α} (f : a ≃ b)                         : (f⁻¹)⁻¹   ≈ f             := hasGeneralStructure.invInv   f
 @[simp] theorem compInv  {a b c   : α} (f : a ≃ b) (g : b ≃ c)             : (g • f)⁻¹ ≈ f⁻¹ • g⁻¹     := hasGeneralStructure.compInv  f g
 @[simp] theorem idInv    (a       : α)                                     : (id_ a)⁻¹ ≈ id_ a         := hasGeneralStructure.idInv    a
-
-theorem comp_congrArg_left  {a b c : α} {f : a ≃ b} {g₁ g₂ : b ≃ c} : g₁ ≈ g₂ → g₁ • f ≈ g₂ • f := hasGeneralStructure.comp_congrArg_left
-theorem comp_congrArg_right {a b c : α} {f₁ f₂ : a ≃ b} {g : b ≃ c} : f₁ ≈ f₂ → g • f₁ ≈ g • f₂ := hasGeneralStructure.comp_congrArg_right
 
 theorem comp_subst  {a b c : α} {f₁ f₂ : a ≃ b} {g₁ g₂ : b ≃ c} {e : a ≃ c} : f₁ ≈ f₂ → g₁ ≈ g₂ → g₂ • f₂ ≈ e → g₁ • f₁ ≈ e := hasGeneralStructure.comp_subst
 theorem comp_subst' {a b c : α} {f₁ f₂ : a ≃ b} {g₁ g₂ : b ≃ c} {e : a ≃ c} : f₁ ≈ f₂ → g₁ ≈ g₂ → e ≈ g₁ • f₁ → e ≈ g₂ • f₂ := hasGeneralStructure.comp_subst'
@@ -681,7 +307,7 @@ variable {S : Structure}
 
 instance hasStructure : HasStructure (IsType.type S) := S.hasStruct
 instance hasGeneralStructure : HasGeneralStructure (IsType.type S) := HasStructure.hasGeneralStructure (h := hasStructure)
-instance hasIso : HasIsomorphisms (iso S) := hasGeneralStructure.hasIso
+instance hasIso : HasIsomorphisms (t := BundledSetoid.isTypeWithFunctorialEquivalence) (iso S) := hasGeneralStructure.hasIso
 
 instance structureIsTypeWithEquiv : IsTypeWithEquivalence Structure :=
 { type  := Structure.α,
@@ -762,19 +388,21 @@ def equivSetoid {α : Sort u} [HasGeneralStructure α] (a b : α) : BundledSetoi
   s := instanceEquivSetoid (IsType.type (a ≃ b)) }
 
 instance equivHasIso {α : Sort u} [h : HasGeneralStructure α] : HasIsomorphisms (@equivSetoid α h) :=
-{ refl          := h.hasIsos.refl,
-  symm          := h.hasIsos.symm,
-  trans         := h.hasIsos.trans,
-  comp_congrArg := λ ⟨he⟩ ⟨hf⟩ => ⟨h.hasIsos.comp_congrArg he hf⟩,
-  inv_congrArg  := λ ⟨he⟩      => ⟨h.hasIsos.inv_congrArg  he⟩,
-  assoc         := λ e f g     => ⟨h.hasIsos.assoc         e f g⟩,
-  leftId        := λ e         => ⟨h.hasIsos.leftId        e⟩,
-  rightId       := λ e         => ⟨h.hasIsos.rightId       e⟩,
-  leftInv       := λ e         => ⟨h.hasIsos.leftInv       e⟩,
-  rightInv      := λ e         => ⟨h.hasIsos.rightInv      e⟩,
-  invInv        := λ e         => ⟨h.hasIsos.invInv        e⟩,
-  compInv       := λ e f       => ⟨h.hasIsos.compInv       e f⟩,
-  idInv         := λ a         => ⟨h.hasIsos.idInv         a⟩ }
+{ refl                := h.hasIsos.refl,
+  symm                := h.hasIsos.symm,
+  trans               := h.hasIsos.trans,
+  trans_left_functor  := λ f g₁ g₂ ⟨he⟩ => ⟨HasGeneralStructure.comp_congrArg_left  he⟩,
+  trans_right_functor := λ g f₁ f₁ ⟨he⟩ => ⟨HasGeneralStructure.comp_congrArg_right he⟩,
+  trans_nat           := Unit.unit,
+  symm_functor        := λ ⟨he⟩   => ⟨HasGeneralStructure.inv_congrArg  he⟩,
+  assoc               := λ e f g  => ⟨HasGeneralStructure.assoc         e f g⟩,
+  leftId              := λ e      => ⟨HasGeneralStructure.leftId        e⟩,
+  rightId             := λ e      => ⟨HasGeneralStructure.rightId       e⟩,
+  leftInv             := λ e      => ⟨HasGeneralStructure.leftInv       e⟩,
+  rightInv            := λ e      => ⟨HasGeneralStructure.rightInv      e⟩,
+  invInv              := λ e      => ⟨HasGeneralStructure.invInv        e⟩,
+  compInv             := λ e f    => ⟨HasGeneralStructure.compInv       e f⟩,
+  idInv               := λ a      => ⟨HasGeneralStructure.idInv         a⟩ }
 
 instance hasTruncatedStructure (α : Sort u) [h : HasGeneralStructure α] : HasStructure α :=
 ⟨@equivSetoid α h⟩
@@ -859,7 +487,7 @@ theorem compInv {P Q R : StructureProduct S T} (e : ProductEquiv P Q) (f : Produ
 theorem idInv (P : StructureProduct S T) : symm (refl P) ≈ refl P :=
 ⟨HasStructure.idInv         P.fst,             HasStructure.idInv         P.snd⟩
 
-instance productEquivHasIso : HasIsomorphisms (@productEquiv S T) :=
+instance productEquivHasIso : HasIsomorphisms (t := BundledSetoid.isTypeWithFunctorialEquivalence) (@productEquiv S T) :=
 { refl          := refl,
   symm          := symm,
   trans         := trans,
@@ -902,12 +530,12 @@ instance (s : α → S) (t : α → T) :
   CoeFun (GeneralizedFunctor s t) (λ _ => ∀ {a b : α}, s a ≃ s b → t a ≃ t b) :=
 ⟨GeneralizedFunctor.mapEquiv⟩
 
-def mapFunctor {β : Sort v} {s : α → S} {t : α → T} (m : β → α) (φ : GeneralizedFunctor s t) :
+def mapFunctor {ω : Sort w} {s : α → S} {t : α → T} (m : ω → α) (φ : GeneralizedFunctor s t) :
   GeneralizedFunctor (s ∘ m) (t ∘ m) :=
 { mapEquiv  := φ.mapEquiv,
   isFunctor := mapIsoFunctor (isoRel s) (isoRel t) φ.mapEquiv (h := φ.isFunctor) m }
 
-instance {β : Sort v} (s : α → S) (t : α → T) (m : β → α) :
+instance {ω : Sort w} (s : α → S) (t : α → T) (m : ω → α) :
   Coe (GeneralizedFunctor s t) (GeneralizedFunctor (s ∘ m) (t ∘ m)) :=
 ⟨mapFunctor m⟩
 
@@ -930,7 +558,7 @@ def genFun : GeneralizedFunctor s u := ⟨ψ.mapEquiv ∘ φ.mapEquiv⟩
 
 end comp
 
-def comp.genFun' {β : Sort v} {s : α → S} {t : β → T} {u : β → U} (m : α → β)
+def comp.genFun' {ω : Sort w} {s : α → S} {t : ω → T} {u : ω → U} (m : α → ω)
                  (φ : GeneralizedFunctor s (t ∘ m)) (ψ : GeneralizedFunctor t u) :
   GeneralizedFunctor s (u ∘ m) :=
 comp.genFun φ (mapFunctor m ψ)
@@ -941,10 +569,10 @@ variable {s : α → S} (c : T)
 
 def genFun : GeneralizedFunctor s (Function.const α c) :=
 { mapEquiv  := λ _ => HasRefl.refl c,
-  isFunctor := { respectsEquiv := λ _   => HasInstanceEquivalence.isEquiv.refl (id_ c),
-                 respectsComp  := λ _ _ => (Setoid.symm (leftId (id_ c)) : _),
-                 respectsId    := λ _   => HasInstanceEquivalence.isEquiv.refl (id_ c),
-                 respectsInv   := λ _   => (Setoid.symm (idInv c) : _) } }
+  isFunctor := { respectsEquiv := λ _   => Setoid.refl (id_ c),
+                 respectsComp  := λ _ _ => Setoid.symm (leftId (id_ c)),
+                 respectsId    := λ _   => Setoid.refl (id_ c),
+                 respectsInv   := λ _   => Setoid.symm (idInv c) } }
 
 end const
 
@@ -960,7 +588,7 @@ namespace Pi
 
 variable {α : Sort u} {C : α → Structure}
 
-def mapPi {β : Sort v} (m : β → α) (p : Pi C) : Pi (C ∘ m) :=
+def mapPi {ω : Sort w} (m : ω → α) (p : Pi C) : Pi (C ∘ m) :=
 λ b => p (m b)
 
 def PiEquiv (p q : Pi C) := ∀ a, p a ≃ q a
@@ -976,7 +604,7 @@ def trans {p q H : Pi C} (η : PiEquiv p q) (θ : PiEquiv q H) : PiEquiv p H :=
 
 def piIsoStructure (p q : Pi C) (a : α) := isoStructure (p a) (q a)
 
-def mapPiEquiv {β : Sort v} (m : β → α) {p q : Pi C} (η : PiEquiv p q) :
+def mapPiEquiv {ω : Sort w} (m : ω → α) {p q : Pi C} (η : PiEquiv p q) :
   PiEquiv (mapPi m p) (mapPi m q) :=
 λ b => η (m b)
 
@@ -1000,7 +628,7 @@ end EquivEquiv
 
 def piEquiv : RelationWithSetoid (Pi C) := λ p q => ⟨PiEquiv p q⟩
 
-instance piEquivHasIso : HasIsomorphisms (@piEquiv α C) :=
+instance piEquivHasIso : HasIsomorphisms (t := BundledSetoid.isTypeWithFunctorialEquivalence) (@piEquiv α C) :=
 { refl          := refl,
   symm          := symm,
   trans         := trans,
@@ -1015,25 +643,25 @@ instance piEquivHasIso : HasIsomorphisms (@piEquiv α C) :=
   compInv       := λ η θ   a => compInv       (η a) (θ a),
   idInv         := λ b     a => idInv         (b a) }
 
-@[reducible] def MappedPiEquiv {β : Sort v} (m : β → Pi C) (b c : β) := PiEquiv (m b) (m c)
+@[reducible] def MappedPiEquiv {ω : Sort w} (m : ω → Pi C) (b c : ω) := PiEquiv (m b) (m c)
 
 namespace MappedPiEquiv
 
-variable {β : Sort v} {m : β → Pi C}
+variable {ω : Sort w} {m : ω → Pi C}
 
-def refl  (b     : β)                                                     : MappedPiEquiv m b b :=
+def refl  (b     : ω)                                                     : MappedPiEquiv m b b :=
 PiEquiv.refl  (m b)
-def symm  {b c   : β} (e : MappedPiEquiv m b c)                           : MappedPiEquiv m c b :=
+def symm  {b c   : ω} (e : MappedPiEquiv m b c)                           : MappedPiEquiv m c b :=
 PiEquiv.symm  e
-def trans {b c d : β} (e : MappedPiEquiv m b c) (f : MappedPiEquiv m c d) : MappedPiEquiv m b d :=
+def trans {b c d : ω} (e : MappedPiEquiv m b c) (f : MappedPiEquiv m c d) : MappedPiEquiv m b d :=
 PiEquiv.trans e f
 
-instance EquivEquiv.mappedPiEquivSetoid {b c : β} : Setoid (MappedPiEquiv m b c) := EquivEquiv.piEquivSetoid
+instance EquivEquiv.mappedPiEquivSetoid {b c : ω} : Setoid (MappedPiEquiv m b c) := EquivEquiv.piEquivSetoid
 
-def mappedPiEquiv : RelationWithSetoid β := λ b c => ⟨MappedPiEquiv m b c⟩
+def mappedPiEquiv : RelationWithSetoid ω := λ b c => ⟨MappedPiEquiv m b c⟩
 
-instance mappedPiEquivHasIso : HasIsomorphisms (@mappedPiEquiv α C β m) :=
-mapHasIso (@piEquiv α C) m
+instance mappedPiEquivHasIso : HasIsomorphisms (@mappedPiEquiv α C ω m) :=
+mapHasIso (t := BundledSetoid.isTypeWithFunctorialEquivalence) (@piEquiv α C) m
 
 end MappedPiEquiv
 
@@ -1202,7 +830,7 @@ instance naturalTransformationSetoid {s : α → S} {t₁ t₂ : α → T} (φ :
 ⟨λ e f => PiEquiv.EquivEquiv e.ext f.ext,
  ⟨λ e => PiEquiv.EquivEquiv.refl e.ext, PiEquiv.EquivEquiv.symm, PiEquiv.EquivEquiv.trans⟩⟩
 
-def mapNaturalTransformation {β : Sort v} {s : α → S} {t₁ t₂ : α → T} (m : β → α)
+def mapNaturalTransformation {ω : Sort w} {s : α → S} {t₁ t₂ : α → T} (m : ω → α)
                              {φ : GeneralizedFunctor s t₁} {ψ : GeneralizedFunctor s t₂}
                              (η : GeneralizedNaturalTransformation φ ψ) :
   GeneralizedNaturalTransformation (mapFunctor m φ) (mapFunctor m ψ) :=
@@ -1477,7 +1105,7 @@ def rightId (F : StructureFunctor S T) : F ⊙ idFun ≃ F :=
 
 end idFun
 
-
+#exit
 
 instance hasMor : HasMorphisms functorStructure :=
 { refl          := @idFun,

@@ -1,12 +1,3 @@
---  An abstract formalization of "isomorphism is equality up to relabeling"
--- -------------------------------------------------------------------------
---
--- See `README.md` for more info.
---
--- Mapped views on structures from `Axioms.lean`.
-
-
-
 import Structure.Generic.Axioms
 
 open GeneralizedRelation
@@ -19,7 +10,7 @@ universes u v w
 
 
 
-def mapOperation {α : Sort u} {β : Sort v} (op : α → α → β) {ω : Sort w} (m : ω → α) :
+@[reducible] def mapOperation {α : Sort u} {β : Sort v} (op : α → α → β) {ω : Sort w} (m : ω → α) :
   ω → ω → β :=
 λ a b => op (m a) (m b)
 
@@ -39,17 +30,36 @@ end GeneralizedProperty
 namespace GeneralizedRelation
 
   variable {α : Sort u} {V : Universe} (R : GeneralizedRelation α V)
-           {ω : Sort w} (m : ω → α)
 
-  instance mapRefl  [h : HasRefl  R] : HasRefl  (mapOperation R m) := ⟨λ a => h.refl (m a)⟩
+  section Mapping
 
-  variable [HasInternalFunctors V]
+    variable {ω : Sort w} (m : ω → α)
 
-  instance mapSymm  [h : HasSymm  R] : HasSymm  (mapOperation R m) := ⟨h.symm⟩
-  instance mapTrans [h : HasTrans R] : HasTrans (mapOperation R m) := ⟨h.trans⟩
+    instance mapRefl  [h : HasRefl  R] : HasRefl  (mapOperation R m) := ⟨λ a => h.refl (m a)⟩
 
-  instance mapPreorder    [IsPreorder    R] : IsPreorder    (mapOperation R m) := ⟨⟩
-  instance mapEquivalence [IsEquivalence R] : IsEquivalence (mapOperation R m) := ⟨⟩
+    variable [HasInternalFunctors V]
+
+    instance mapSymm  [h : HasSymm  R] : HasSymm  (mapOperation R m) := ⟨h.symm⟩
+    instance mapTrans [h : HasTrans R] : HasTrans (mapOperation R m) := ⟨h.trans⟩
+
+    instance mapPreorder    [IsPreorder    R] : IsPreorder    (mapOperation R m) := ⟨⟩
+    instance mapEquivalence [IsEquivalence R] : IsEquivalence (mapOperation R m) := ⟨⟩
+
+  end Mapping
+
+  section Identity
+
+    @[simp] theorem mapRefl.id  [h : HasRefl  R] : mapRefl  R id = h := match h with | ⟨_⟩ => rfl
+
+    variable [HasInternalFunctors V]
+
+    @[simp] theorem mapSymm.id  [h : HasSymm  R] : mapSymm  R id = h := match h with | ⟨_⟩ => rfl
+    @[simp] theorem mapTrans.id [h : HasTrans R] : mapTrans R id = h := match h with | ⟨_⟩ => rfl
+
+    @[simp] theorem mapPreorder.id    [h : IsPreorder    R] : mapPreorder    R id = h := match h with | { refl := _, trans := _ } => rfl
+    @[simp] theorem mapEquivalence.id [h : IsEquivalence R] : mapEquivalence R id = h := match h with | { refl := _, symm := _, trans := _ } => rfl
+
+  end Identity
 
 end GeneralizedRelation
 
@@ -96,7 +106,7 @@ section Functors
 
   variable [HasInternalFunctors V] [HasInternalFunctors W]
 
-  instance mapSymmFunctor  [HasSymm  R] [HasSymm S ] [h : IsSymmFunctor  R S F] :
+  instance mapSymmFunctor  [HasSymm  R] [HasSymm  S] [h : IsSymmFunctor  R S F] :
     IsSymmFunctor  (mapOperation R m) (mapOperation S m) F :=
   ⟨h.respectsSymm⟩
 

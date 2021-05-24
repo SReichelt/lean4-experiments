@@ -46,3 +46,40 @@ instance hasGeneralStructure : HasGeneralStructure α :=
 instance hasIso : HasIsomorphisms h.M := h.hasIsos
 
 end HasTwoStructure
+
+
+
+instance structureHasTwoStructure : HasTwoStructure Structure :=
+{ M                           := StructureEquiv.equivStructure,
+  hasIsos                     := StructureEquiv.equivHasIso,
+  comp_congrArg_left_functor  := sorry,
+  comp_congrArg_right_functor := sorry,
+  inv_congrArg_functor        := sorry }
+
+
+
+structure TwoStructure where
+(α         : Sort u)
+[hasStruct : HasTwoStructure α]
+
+namespace TwoStructure
+
+instance structureIsType : IsType TwoStructure := ⟨TwoStructure.α⟩
+
+def iso (S : TwoStructure) : GeneralizedRelation (IsType.type S) Structure := S.hasStruct.M
+
+variable {S : TwoStructure}
+
+instance hasTwoStructure : HasTwoStructure (IsType.type S) := S.hasStruct
+instance hasGeneralStructure : HasGeneralStructure (IsType.type S) := HasTwoStructure.hasGeneralStructure (h := hasTwoStructure)
+instance hasIso : HasIsomorphisms (iso S) := hasGeneralStructure.hasIso
+
+instance twoStructureIsTypeWithEquiv : IsTypeWithEquivalence TwoStructure :=
+{ type  := TwoStructure.α,
+  equiv := λ S => HasGeneralStructure.hasInstEquiv (h := hasGeneralStructure) }
+
+end TwoStructure
+
+
+
+instance universeTwoStructure : TwoStructure := ⟨Structure⟩

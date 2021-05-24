@@ -18,22 +18,12 @@ infixr:35 " (⊓) " => HasProduct.γ
 infixr:35 " ⊓ " => HasProduct.Product
 
 
--- TODO: Figure out correct precendence level of arrows.
-
 class HasArrow (α : Sort u) (β : Sort v) where
 {γ     : Sort w}
 (Arrow : α → β → γ)
 
-infixr:20 " (⟶) " => HasArrow.γ
-infixr:20 " ⟶ " => HasArrow.Arrow
-
-
-class HasArrow' (α : Sort u) (β : Sort v) where
-{γ     : Sort w}
-(Arrow : α → β → γ)
-
-infixr:20 " (⇝) " => HasArrow'.γ
-infixr:20 " ⇝ " => HasArrow'.Arrow
+infixr:20 " (⇝) " => HasArrow.γ
+infixr:20 " ⇝ " => HasArrow.Arrow
 
 
 infixr:25 " (≃) " => HasEquivalence.γ

@@ -1,14 +1,6 @@
---  An abstract formalization of "isomorphism is equality up to relabeling"
--- -------------------------------------------------------------------------
---
--- See `README.md` for more info.
---
--- This file contains definitions of category-theoretic functors using just the basic axioms.
-
-
-
 import Structure.Generic.Axioms
 import Structure.Generic.Mapped
+import Structure.Generic.Lemmas
 
 
 
@@ -16,23 +8,46 @@ section Functors
 
   variable {α : Sort u} {β : Sort v} (V W : Universe)
            [HasInternalFunctors V] [HasInternalFunctors W] [HasInstanceArrows W] [HasExternalFunctors V W]
-           (F : α → β)
 
-  class IsProductFunctor [hα : HasProducts     α V] [hβ : HasProducts     β W] where
+  class IsProductFunctor [hα : HasProducts     α V] [hβ : HasProducts     β W] (F : α → β) where
   (mapProduct {a b : α} : a ⊓ b ⟶' F a ⊓ F b)
   [isFunctor            : IsSymmFunctor        hα.Product (mapOperation hβ.Product F) mapProduct]
 
-  class IsArrowFunctor   [hα : HasArrows       α V] [hβ : HasArrows       β W] where
+  class IsArrowFunctor   [hα : HasArrows       α V] [hβ : HasArrows       β W] (F : α → β) where
   (mapArrow   {a b : α} : (a ⇝ b) ⟶' (F a ⇝ F b))
   [isFunctor            : IsPreorderFunctor    hα.Arrow   (mapOperation hβ.Arrow   F) mapArrow]
 
-  class IsEquivFunctor   [hα : HasEquivalences α V] [hβ : HasEquivalences β W] where
+  class IsEquivFunctor   [hα : HasEquivalences α V] [hβ : HasEquivalences β W] (F : α → β) where
   (mapEquiv   {a b : α} : a ≃ b ⟶' F a ≃ F b)
   [isFunctor            : IsEquivalenceFunctor hα.Equiv   (mapOperation hβ.Equiv   F) mapEquiv]
 
 end Functors
 
--- TODO: id, const, comp
+section FunctorOperations
+
+  variable {α : Sort u}
+
+  namespace idFun
+
+    variable (V : Universe) [HasInternalFunctors V] [HasInstanceArrows V] [HasIdFun V]
+
+    instance isProductFunctor [hα : HasProducts α V] : IsProductFunctor V V (@id α) :=
+    { mapProduct := HasIdFun.idFun' _,
+      isFunctor  := GeneralizedRelation.mapSymm.id hα.Product ▸ isSymmFunctor hα.Product }
+
+    instance isArrowFunctor [hα : HasArrows α V] : IsArrowFunctor V V (@id α) :=
+    { mapArrow  := HasIdFun.idFun' _,
+      isFunctor := GeneralizedRelation.mapPreorder.id hα.Arrow ▸ isPreorderFunctor hα.Arrow }
+
+    instance isEquivFunctor [hα : HasEquivalences α V] : IsEquivFunctor V V (@id α) :=
+    { mapEquiv  := HasIdFun.idFun' _,
+      isFunctor := GeneralizedRelation.mapEquivalence.id hα.Equiv ▸ isEquivalenceFunctor hα.Equiv }
+
+  end idFun
+
+  -- TODO: const, comp
+
+end FunctorOperations
 
 
 
@@ -40,19 +55,16 @@ section NaturalTransformations
 
   variable {α : Sort u} {β : Sort v} (V W : Universe)
            [HasInternalFunctors V] [HasInternalFunctors W] [HasInstanceEquivalences W] [HasExternalFunctors V W]
-           (F G : α → β)
 
   instance : HasInstanceArrows W := HasInstanceEquivalences.toHasInstanceArrows W
 
-  class IsNaturalTransformation [hα : HasArrows α V] [hβ : HasArrows β W]
-                                [hF : IsArrowFunctor V W F] [hG : IsArrowFunctor V W G] where
-  (arrow (a : α) : F a ⇝ G a)
-  [isNatural     : IsNatural hα.Arrow hβ.Arrow hF.mapArrow hG.mapArrow arrow]
+  def NaturalTransformation [hα : HasArrows α V] [hβ : HasArrows β W]
+                            (F G : α → β) [hF : IsArrowFunctor V W F] [hG : IsArrowFunctor V W G] :=
+  NaturalQuantification hα.Arrow hβ.Arrow hF.mapArrow hG.mapArrow
 
-  class IsNaturalEquivalence [hα : HasEquivalences α V] [hβ : HasEquivalences β W]
-                             [hF : IsEquivFunctor V W F] [hG : IsEquivFunctor V W G] where
-  (equiv (a : α) : F a ≃ G a)
-  [isNatural     : IsNatural hα.Equiv hβ.Equiv hF.mapEquiv hG.mapEquiv equiv]
+  def NaturalEquivalence [hα : HasEquivalences α V] [hβ : HasEquivalences β W]
+                         (F G : α → β) [hF : IsEquivFunctor V W F] [hG : IsEquivFunctor V W G] :=
+  NaturalQuantification hα.Equiv hβ.Equiv hF.mapEquiv hG.mapEquiv
 
 end NaturalTransformations
 
