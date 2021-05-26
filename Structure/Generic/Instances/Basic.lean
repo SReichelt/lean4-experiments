@@ -13,7 +13,7 @@ universes u v w
 
 
 
-def sortUniverse : Universe.{u, u + 1} := ⟨Sort u⟩
+def sortUniverse : Universe.{u} := ⟨Sort u⟩
 @[reducible] def propUniverse := sortUniverse.{0}
 @[reducible] def typeUniverse := sortUniverse.{u + 1}
 

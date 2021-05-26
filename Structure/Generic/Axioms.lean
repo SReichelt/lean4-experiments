@@ -11,16 +11,17 @@
 
 
 
+import Structure.Generic.Notation
+
 import mathlib4_experiments.Data.Notation
 import mathlib4_experiments.Data.Equiv.Basic
-import Structure.Generic.Notation
 
 
 
 set_option autoBoundImplicitLocal false
---set_option pp.universes true
+set_option pp.universes true
 
-universes u uu v vv w
+universes u v v' w w'
 
 
 
@@ -30,41 +31,41 @@ universes u uu v vv w
 -- * Another common case is `Bundled C` for a type class `C : Sort u → Sort v`.
 -- Both examples are defined in `Instances.lean`.
 
-class HasInstances (U : Sort uu) where
+class HasInstances (U : Sort v) : Sort (max (u + 1) v) where
 (Inst : U → Sort u)
 
 namespace HasInstances
 
-  instance coeSort (V : Sort v) [s : HasInstances V] : CoeSort V (Sort u) := ⟨s.Inst⟩
+  instance coeSort (U : Sort v) [s : HasInstances.{u, v} U] : CoeSort U (Sort u) := ⟨s.Inst⟩
 
-  notation "⌈" V:0 "⌉" => HasInstances.Inst V
+  notation "⌈" U:0 "⌉" => HasInstances.Inst U
 
-  instance sortHasInstances : HasInstances (Sort u) := ⟨id⟩
+  instance sortHasInstances : HasInstances.{u, u + 1} (Sort u) := ⟨id⟩
 
 end HasInstances
 
 
 
-def TypeClass (U : Sort uu) [HasInstances.{u, uu} U] := U → Sort v
+def GeneralizedTypeClass (U : Type u) [HasInstances.{u, u + 1} U] : Type (max u v) := U → Sort v
 
-structure Bundled {U : Sort uu} [HasInstances.{u, uu} U] (C : TypeClass.{u, uu, v} U) : Sort (max 1 uu v) where
+structure Bundled {U : Type u} [HasInstances.{u, u + 1} U] (C : GeneralizedTypeClass.{u, v} U) : Type (max u v) where
 (α    : U)
 [inst : C α]
 
 namespace Bundled
 
-  instance hasInstances {U : Sort uu} [HasInstances.{u, uu} U] (C : TypeClass.{u, uu, v} U) : HasInstances (Bundled C) :=
+  instance hasInstances {U : Type u} [HasInstances.{u, u + 1} U] (C : GeneralizedTypeClass.{u, v} U) : HasInstances (Bundled C) :=
   ⟨λ S => ⌈S.α⌉⟩
 
 end Bundled
 
 
 
-def Universe : Type (max u uu) := Bundled HasInstances.{u, uu}
+def Universe : Type (u + 1) := Bundled HasInstances.{u, u + 1}
 
 namespace Universe
 
-  instance hasInstances : HasInstances Universe.{u, uu} := Bundled.hasInstances HasInstances
+  instance hasInstances : HasInstances Universe.{u} := Bundled.hasInstances HasInstances
 
   variable (U : Universe)
 
@@ -97,10 +98,11 @@ end Universe
 --
 -- Moreover, `α ⟶' β` is defined so that `α` and `β` can live in different universes.
 
-class HasExternalFunctors (U : Universe.{u, uu}) (V : Universe.{v, vv}) where
+class HasExternalFunctors (U : Universe.{u}) (V : Universe.{v}) : Type (max u v w) where
 (IsFun {α : U} {β : V} : (α → β) → Sort w)
 
-structure BundledFunctor {U V : Universe} [h : HasExternalFunctors.{u, uu, v, vv, w} U V] (α : U) (β : V) : Sort (max 1 u v w) where
+structure BundledFunctor {U : Universe.{u}} {V : Universe.{v}}
+          [h : HasExternalFunctors.{u, v, w} U V] (α : U) (β : V) : Sort (max 1 u v w) where
 (f     : α → β)
 (isFun : h.IsFun f)
 
@@ -116,7 +118,7 @@ namespace BundledFunctor
 
 end BundledFunctor
 
-class HasInternalFunctors (U : Universe) extends HasExternalFunctors U U where
+class HasInternalFunctors (U : Universe.{u}) extends HasExternalFunctors.{u, u, w} U U : Type (max u w) where
 (Fun                : U → U → U)
 (funEquiv (α β : U) : ⌈Fun α β⌉ ≃ (α ⟶' β))
 
@@ -204,9 +206,9 @@ namespace HasCompFun
 
 end HasCompFun
 
-class HasExternalFunOp (U : Universe) [h : HasExternalFunctors U U] extends HasIdFun U, HasConstFun U U, HasCompFun U U U
+class HasExternalFunOp (U : Universe.{u}) [h : HasExternalFunctors U U] extends HasIdFun U, HasConstFun U U, HasCompFun U U U
 
-class HasInternalFunOp (U : Universe) [h : HasInternalFunctors U] extends HasExternalFunOp U where
+class HasInternalFunOp (U : Universe.{u}) [h : HasInternalFunctors U] extends HasExternalFunOp U where
 (constFunIsFun   (α β : U)                      : h.IsFun (λ c : β         => HasInternalFunctors.mkFun (constIsFun α c)))
 (appIsFun        {α : U} (a : α) (β : U)        : h.IsFun (λ F : α ⟶ β     => F a))
 (appFunIsFun     (α β : U)                      : h.IsFun (λ a : α         => HasInternalFunctors.mkFun (appIsFun a β)))
@@ -215,13 +217,13 @@ class HasInternalFunOp (U : Universe) [h : HasInternalFunctors U] extends HasExt
 (compFunIsFun    {α β : U} (F : α ⟶' β) (γ : U) : h.IsFun (λ G : β ⟶ γ     => HasInternalFunctors.mkFun (compIsFun F (HasInternalFunctors.toBundled G))))
 (compFunFunIsFun (α β γ : U)                    : h.IsFun (λ F : α ⟶ β     => HasInternalFunctors.mkFun (compFunIsFun (HasInternalFunctors.toBundled F) γ)))
 
-class HasFunOp (U : Universe) extends HasInternalFunctors U, HasInternalFunOp U
+class HasFunOp (U : Universe.{u}) extends HasInternalFunctors.{u, w} U, HasInternalFunOp U : Type (max u w)
 
 namespace HasFunOp
 
-  variable {U : Universe} [h : HasFunOp U]
+  variable {U : Universe.{u}} [h : HasFunOp U]
 
-  def idFun  (α : U) : α ⟶ α := HasInternalFunctors.mkFun  (h.idIsFun α)
+  def idFun (α : U) : α ⟶ α := HasInternalFunctors.mkFun (h.idIsFun α)
 
   @[simp] theorem idFun.eff (α : U) (a : α) : (idFun α) a = a :=
   by apply HasInternalFunctors.mkFun.eff
@@ -291,11 +293,11 @@ end HasFunOp
 
 
 
-def GeneralizedProperty (α : Sort u) (V : Universe) := α → V
+def GeneralizedProperty (α : Sort u) (V : Universe.{v}) := α → V
 
 namespace GeneralizedProperty
 
-  variable {α : Sort u} {V : Universe}
+  variable {α : Sort u} {V : Universe.{v}}
 
   instance hasInstances : HasInstances (GeneralizedProperty α V) := ⟨λ P => ∀ a, P a⟩
 
@@ -326,11 +328,11 @@ open GeneralizedProperty
 -- coerced to a sort. This way, the codomain can be any Lean structure that bundles a sort, in particular
 -- it can be our `Structure` type.
 
-def GeneralizedRelation (α : Sort u) (V : Universe) := α → α → V
+def GeneralizedRelation (α : Sort u) (V : Universe.{v}) := α → α → V
 
 namespace GeneralizedRelation
 
-  variable {α : Sort u} {V : Universe}
+  variable {α : Sort u} {V : Universe.{v}}
 
   instance hasInstances : HasInstances (GeneralizedRelation α V) := ⟨λ R => ∀ a b, R a b⟩
 
@@ -477,31 +479,14 @@ open GeneralizedDependentRelation
 
 
 
-section Sets
-
-  variable (M : Universe)
-
-  -- TODO: We want sets to have an instance equivalence (i.e. equality).
-  -- For this, we probably need to start with a universe with instance equivalences.
-  -- I think we need to introduce a `UniverseWithEquivalences` type. Or is it just `Groupoid`?
-
-  def Subset (U : Universe) := GeneralizedProperty ⌈U⌉ M
-
-  @[reducible] def GeneralizedSet := Bundled (Subset M)
-
-  def setUniverse : Universe := ⟨GeneralizedSet M⟩
-
-end Sets
-
-
-
 -- We can attach products, arrows, and/or equivalences to a given sort, in the form of generalized
 -- relations satisfying appropriate properties.
 
 section AttachedRelations
 
-  variable (α : Sort u) (V : Universe) [HasInternalFunctors V]
+  variable (α : Sort u) (V : Universe.{v}) [HasInternalFunctors.{v, w} V]
 
+  -- TODO: Remove this?
   class HasProducts where
   (Product : GeneralizedRelation α V)
   [hasSymm : HasSymm Product]
@@ -590,9 +575,9 @@ end AttachedDependentRelations
 --
 -- TODO: describe arrows
 
-class HasInstanceArrows (U : Universe) where
-(arrowUniverse           : Universe)
-[arrowHasFunOp           : HasFunOp arrowUniverse]
+class HasInstanceArrows (U : Universe.{u}) where
+(arrowUniverse           : Universe.{v})
+[arrowHasFunOp           : HasFunOp.{v, w} arrowUniverse]
 (Arrow (α : U)           : GeneralizedRelation ⌈α⌉ arrowUniverse)
 [arrowIsPreorder (α : U) : IsPreorder (Arrow α)]
 
@@ -610,8 +595,10 @@ namespace HasInstanceArrows
 
 end HasInstanceArrows
 
-class HasArrowCongrArg (U V : Universe) [HasExternalFunctors U V] [HasInstanceArrows U] [HasInstanceArrows V] where
-(arrowCongrArg {α : U} {β : V} (F : α ⟶' β) {a b : α} : (a ⇝ b) → (F a ⇝ F b))
+class HasArrowCongrArg (U V : Universe) [HasExternalFunctors U V]
+                       [hU : HasInstanceArrows U] [hV : HasInstanceArrows V]
+                       [HasExternalFunctors hU.arrowUniverse hV.arrowUniverse] where
+(arrowCongrArg {α : U} {β : V} (F : α ⟶' β) {a b : α} : (a ⇝ b) ⟶' (F a ⇝ F b))
 
 class HasFunctorialArrows (U : Universe) [HasInternalFunctors U] extends HasInstanceArrows U where
 (arrowCongr {α β : U} {F G : α ⟶ β} {a b : α} : (F ⇝ G) ⟶ (a ⇝ b) ⟶ (F a ⇝ G b))
@@ -629,13 +616,16 @@ namespace HasFunctorialArrows
   def arrow_congrArg''  {α β : U} (F : α ⟶' β) {a b : α} : (a ⇝ b) ⟶ (F a ⇝ F b) := HasInternalFunctors.fromBundled.coe F ▸ arrow_congrArg U (HasInternalFunctors.fromBundled F)
   def arrow_congrArg''' {α β : U} (F : α ⟶' β) {a b : α} : (a ⇝ b) → (F a ⇝ F b) := HasInternalFunctors.funCoe (arrow_congrArg'' U F)
 
-  instance toHasArrowCongrArg : HasArrowCongrArg U U := ⟨arrow_congrArg''' U⟩
+  def arrow_congrFun  {α β : U} {F G : α ⟶ β} (a : α) : (F ⇝ G) ⟶ (F a ⇝ G a) := HasFunOp.appFun (HasRefl.refl a) (F a ⇝ G a) ⊙ arrow_congr U
+  def arrow_congrFun' {α β : U} {F G : α ⟶ β} (a : α) : (F ⇝ G) → (F a ⇝ G a) := λ f => arrow_congr'' U f (HasRefl.refl a)
+
+  instance toHasArrowCongrArg : HasArrowCongrArg U U := ⟨λ F => HasInternalFunctors.toBundled (arrow_congrArg'' U F)⟩
 
 end HasFunctorialArrows
 
-class HasInstanceEquivalences (U : Universe) where
-(equivUniverse              : Universe)
-[equivHasFunOp              : HasFunOp equivUniverse]
+class HasInstanceEquivalences (U : Universe.{u}) where
+(equivUniverse              : Universe.{v})
+[equivHasFunOp              : HasFunOp.{v, w} equivUniverse]
 (Equiv (α : U)              : GeneralizedRelation ⌈α⌉ equivUniverse)
 [equivIsEquivalence (α : U) : IsEquivalence (Equiv α)]
 
@@ -659,8 +649,10 @@ namespace HasInstanceEquivalences
 
 end HasInstanceEquivalences
 
-class HasEquivCongrArg (U V : Universe) [HasExternalFunctors U V] [HasInstanceEquivalences U] [HasInstanceEquivalences V] where
-(equivCongrArg {α : U} {β : V} (F : α ⟶' β) {a b : α} : a ≃ b → F a ≃ F b)
+class HasEquivCongrArg (U V : Universe) [HasExternalFunctors U V]
+                       [hU : HasInstanceEquivalences U] [hV : HasInstanceEquivalences V]
+                       [HasExternalFunctors hU.equivUniverse hV.equivUniverse] where
+(equivCongrArg {α : U} {β : V} (F : α ⟶' β) {a b : α} : a ≃ b ⟶' F a ≃ F b)
 
 class HasFunctorialEquivalences (U : Universe) [HasInternalFunctors U] extends HasInstanceEquivalences U where
 (equivCongr {α β : U} {F G : α ⟶ β} {a b : α} : F ≃ G ⟶ a ≃ b ⟶ F a ≃ G b)
@@ -682,7 +674,10 @@ namespace HasFunctorialEquivalences
   def equiv_congrArg''  {α β : U} (F : α ⟶' β) {a b : α} : a ≃ b ⟶ F a ≃ F b := HasInternalFunctors.fromBundled.coe F ▸ equiv_congrArg U (HasInternalFunctors.fromBundled F)
   def equiv_congrArg''' {α β : U} (F : α ⟶' β) {a b : α} : a ≃ b → F a ≃ F b := HasInternalFunctors.funCoe (equiv_congrArg'' U F)
 
-  instance toHasEquivCongrArg : HasEquivCongrArg U U := ⟨equiv_congrArg''' U⟩
+  def equiv_congrFun  {α β : U} {F G : α ⟶ β} (a : α) : F ≃ G ⟶ F a ≃ G a := HasFunOp.appFun (HasRefl.refl a) (F a ≃ G a) ⊙ equiv_congr U
+  def equiv_congrFun' {α β : U} {F G : α ⟶ β} (a : α) : F ≃ G → F a ≃ G a := λ e => equiv_congr'' U e (HasRefl.refl a)
+
+  instance toHasEquivCongrArg : HasEquivCongrArg U U := ⟨λ F => HasInternalFunctors.toBundled (equiv_congrArg'' U F)⟩
 
 end HasFunctorialEquivalences
 
@@ -716,18 +711,18 @@ end HasFunctorialEquivalences
 
 section Morphisms
 
-  variable {α : Sort u} {V : Universe} [HasInternalFunctors V] [HasInstanceArrows V]
+  variable {α : Sort u} {V : Universe.{v}} [HasInternalFunctors.{v, v'} V] [HasInstanceArrows.{v, w, w'} V]
            (R : GeneralizedRelation α V)
 
-  class IsCompositionRelation [HasTrans      R] where
+  class IsCompositionRelation [HasTrans      R]                                 : Sort (max 1 u v w) where
   (assocLR {a b c d : α} (f : R a b) (g : R b c) (h : R c d) : (h • g) • f ⇝ h • (g • f))
   (assocRL {a b c d : α} (f : R a b) (g : R b c) (h : R c d) : h • (g • f) ⇝ (h • g) • f)
 
-  class IsMorphismRelation    [IsPreorder    R] extends IsCompositionRelation R where
+  class IsMorphismRelation    [IsPreorder    R] extends IsCompositionRelation R : Sort (max 1 u v w) where
   (leftId  {a b : α} (f : R a b) : ident R b • f ⇝ f)
   (rightId {a b : α} (f : R a b) : f • ident R a ⇝ f)
 
-  class IsIsomorphismRelation [IsEquivalence R] extends IsMorphismRelation R where
+  class IsIsomorphismRelation [IsEquivalence R] extends IsMorphismRelation    R : Sort (max 1 u v w) where
   (leftInv  {a b   : α} (f : R a b)             : f⁻¹ • f       ⇝ ident R a)
   (rightInv {a b   : α} (f : R a b)             : f • f⁻¹       ⇝ ident R b)
   (invInv   {a b   : α} (f : R a b)             : (f⁻¹)⁻¹       ⇝ f)
@@ -805,9 +800,9 @@ class HasNaturalQuantification (U₁ U₂ V W : Universe) [HasExternalFunctors U
 
 section Categories
 
-  variable (M : Universe) [HasInternalFunctors M] [HasInstanceArrows M] (α : Sort u)
+  variable (M : Universe.{v}) [HasInternalFunctors.{v, v'} M] [HasInstanceArrows.{v, w, w'} M] (α : Sort u)
 
-  class IsCategory extends HasArrows α M where
+  class IsCategory extends HasArrows α M : Sort (max 1 u (v + 1) w) where
   [isMor : IsMorphismRelation Arrow]
 
   namespace IsCategory
@@ -818,7 +813,7 @@ section Categories
 
   end IsCategory
 
-  class IsGroupoid extends HasEquivalences α M where
+  class IsGroupoid extends HasEquivalences α M : Sort (max 1 u (v + 1) w) where
   [isIso : IsIsomorphismRelation Equiv]
 
   namespace IsGroupoid

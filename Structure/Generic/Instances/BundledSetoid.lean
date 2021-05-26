@@ -6,12 +6,12 @@ import Structure.Generic.Instances.Bundled
 set_option autoBoundImplicitLocal false
 --set_option pp.universes true
 
-universes u v w
+universes u
 
 
 
 def BundledSetoid := Bundled Setoid
-@[reducible] def bundledSetoid : Universe := bundledUniverse (U := typeUniverse.{u}) Setoid
+@[reducible] def bundledSetoid : Universe := simpleBundledUniverse Setoid
 
 namespace BundledSetoid
 
@@ -21,7 +21,7 @@ namespace BundledSetoid
   class IsFunctorial {S T : bundledSetoid} (f : S → T) where
   (mapEquiv {a b : S} : a ≈ b → f a ≈ f b)
 
-  instance hasFunctoriality : Bundled.HasFunctoriality.{u + 1, u + 1, v + 1, v + 1, 1} Setoid Setoid := ⟨IsFunctorial⟩
+  instance hasFunctoriality : Bundled.HasFunctoriality Setoid Setoid := ⟨IsFunctorial⟩
 
   namespace BundledFunctor
 
@@ -48,26 +48,22 @@ namespace BundledSetoid
     theorem congr {S T : bundledSetoid} {F G : S ⟶' T} {a b : S} : F ≈ G → a ≈ b → F a ≈ G b :=
     λ h₁ h₂ => Setoid.trans (congrFun h₁ a) (congrArg G h₂)
 
-    instance hasFunctorInstances : Bundled.HasFunctorInstances.{u + 1, u + 1, 1} Setoid := ⟨isSetoid⟩
+    instance hasFunctorInstances : Bundled.HasFunctorInstances Setoid := ⟨isSetoid⟩
 
   end BundledFunctor
 
   instance hasInternalFunctors : HasInternalFunctors bundledSetoid := Bundled.hasInternalFunctors Setoid
 
-  instance hasIdFun    : HasIdFun    bundledSetoid.{u}                                     :=
+  -- Although this duplicates generic proofs in `ConstructibleFunctors.lean`, we keep this version because
+  -- it is much more readable and we can avoid the import.
+  instance hasIdFun    : HasIdFun    bundledSetoid                             :=
   ⟨λ S           => ⟨id⟩⟩
-  instance hasConstFun : HasConstFun bundledSetoid.{u} bundledSetoid.{v}                   :=
-  ⟨λ S {T}   c   => ⟨Function.const _ (Setoid.refl c)⟩⟩
-  instance hasCompFun  : HasCompFun  bundledSetoid.{u} bundledSetoid.{v} bundledSetoid.{w} :=
-  ⟨λ {S T U} F G => ⟨G.isFun.mapEquiv ∘ F.isFun.mapEquiv⟩⟩
+  instance hasConstFun : HasConstFun bundledSetoid bundledSetoid               :=
+  ⟨λ S {T}   c   => ⟨λ _ => Setoid.refl c⟩⟩
+  instance hasCompFun  : HasCompFun  bundledSetoid bundledSetoid bundledSetoid :=
+  ⟨λ {S T U} F G => ⟨BundledFunctor.congrArg G ∘ BundledFunctor.congrArg F⟩⟩
 
-  instance hasInstanceEquivalences : HasInstanceEquivalences bundledSetoid :=
-  ⟨propUniverse, λ S => (isSetoid S).r⟩
-
-  instance hasFunctorialEquivalences : HasFunctorialEquivalences bundledSetoid :=
-  { equivCongr := BundledFunctor.congr }
-
-  -- TODO: Move to `Bundled.lean`
+  -- Same.
   instance hasFunOp : HasFunOp bundledSetoid :=
   { constFunIsFun   := λ S T       => ⟨λ hc a   => hc⟩,
     appIsFun        := λ {S} a T   => ⟨λ hF     => BundledFunctor.congrFun hF a⟩,
@@ -76,6 +72,12 @@ namespace BundledSetoid
     dupFunIsFun     := λ S T       => ⟨λ hF a   => BundledFunctor.congrFun (BundledFunctor.congrFun hF a) a⟩,
     compFunIsFun    := λ {S T} F U => ⟨λ hG a   => BundledFunctor.congrFun hG (F a)⟩,
     compFunFunIsFun := λ S T U     => ⟨λ hF G a => BundledFunctor.congrArg G (BundledFunctor.congrFun hF a)⟩ }
+
+  instance hasInstanceEquivalences : HasInstanceEquivalences bundledSetoid :=
+  ⟨propUniverse, λ S => (isSetoid S).r⟩
+
+  instance hasFunctorialEquivalences : HasFunctorialEquivalences bundledSetoid :=
+  { equivCongr := BundledFunctor.congr }
 
   def eq (α : Sort u) : BundledSetoid :=
   { α    := α,
