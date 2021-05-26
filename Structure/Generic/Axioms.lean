@@ -206,37 +206,20 @@ namespace HasCompFun
 
 end HasCompFun
 
-class HasExternalFunOp (U : Universe.{u}) [h : HasExternalFunctors U U] extends HasIdFun U, HasConstFun U U, HasCompFun U U U
-
-class HasInternalFunOp (U : Universe.{u}) [h : HasInternalFunctors U] extends HasExternalFunOp U where
-(constFunIsFun   (α β : U)                      : h.IsFun (λ c : β         => HasInternalFunctors.mkFun (constIsFun α c)))
+class HasLinearFunOp (U : Universe.{u}) [h : HasInternalFunctors U] extends HasIdFun U, HasCompFun U U U where
 (appIsFun        {α : U} (a : α) (β : U)        : h.IsFun (λ F : α ⟶ β     => F a))
 (appFunIsFun     (α β : U)                      : h.IsFun (λ a : α         => HasInternalFunctors.mkFun (appIsFun a β)))
-(dupIsFun        {α β : U} (F : α ⟶' α ⟶ β)     : h.IsFun (λ a : α         => F a a))
-(dupFunIsFun     (α β : U)                      : h.IsFun (λ F : α ⟶ α ⟶ β => HasInternalFunctors.mkFun (dupIsFun (HasInternalFunctors.toBundled F))))
 (compFunIsFun    {α β : U} (F : α ⟶' β) (γ : U) : h.IsFun (λ G : β ⟶ γ     => HasInternalFunctors.mkFun (compIsFun F (HasInternalFunctors.toBundled G))))
 (compFunFunIsFun (α β γ : U)                    : h.IsFun (λ F : α ⟶ β     => HasInternalFunctors.mkFun (compFunIsFun (HasInternalFunctors.toBundled F) γ)))
 
-class HasFunOp (U : Universe.{u}) extends HasInternalFunctors.{u, w} U, HasInternalFunOp U : Type (max u w)
+namespace HasLinearFunOp
 
-namespace HasFunOp
+  variable {U : Universe.{u}} [HasInternalFunctors U] [h : HasLinearFunOp U]
 
-  variable {U : Universe.{u}} [h : HasFunOp U]
-
-  def idFun (α : U) : α ⟶ α := HasInternalFunctors.mkFun (h.idIsFun α)
+  def idFun  (α : U) : α ⟶  α := HasInternalFunctors.mkFun (h.idIsFun α)
+  def idFun' (α : U) : α ⟶' α := HasIdFun.idFun' α
 
   @[simp] theorem idFun.eff (α : U) (a : α) : (idFun α) a = a :=
-  by apply HasInternalFunctors.mkFun.eff
-
-  def constFun (α : U) {β : U} (c : β) : α ⟶ β := HasInternalFunctors.mkFun (h.constIsFun α c)
-
-  @[simp] theorem constFun.eff (α : U) {β : U} (c : β) (a : α) : (constFun α c) a = c :=
-  by apply HasInternalFunctors.mkFun.eff
-
-  def constFunFun' (α β : U) : β ⟶' (α ⟶ β) := BundledFunctor.mkFun      (h.constFunIsFun α β)
-  def constFunFun  (α β : U) : β ⟶  (α ⟶ β) := HasInternalFunctors.mkFun (h.constFunIsFun α β)
-
-  @[simp] theorem constFunFun.eff (α β : U) (c : β) : (constFunFun α β) c = constFun α c :=
   by apply HasInternalFunctors.mkFun.eff
 
   def appFun' {α : U} (a : α) (β : U) : (α ⟶ β) ⟶' β := BundledFunctor.mkFun      (h.appIsFun a β)
@@ -251,19 +234,8 @@ namespace HasFunOp
   @[simp] theorem appFunFun.eff (α β : U) (a : α) : (appFunFun α β) a = appFun a β :=
   by apply HasInternalFunctors.mkFun.eff
 
-  def dupFun' {α β : U} (F : α ⟶' α ⟶ β) : α ⟶' β := BundledFunctor.mkFun      (h.dupIsFun F)
-  def dupFun  {α β : U} (F : α ⟶  α ⟶ β) : α ⟶  β := HasInternalFunctors.mkFun (h.dupIsFun (HasInternalFunctors.toBundled F))
-
-  @[simp] theorem dupFun.eff {α β : U} (F : α ⟶ α ⟶ β) (a : α) : (dupFun F) a = F a a :=
-  by apply HasInternalFunctors.mkFun.eff
-
-  def dupFunFun' (α β : U) : (α ⟶ α ⟶ β) ⟶' (α ⟶ β) := BundledFunctor.mkFun      (h.dupFunIsFun α β)
-  def dupFunFun  (α β : U) : (α ⟶ α ⟶ β) ⟶  (α ⟶ β) := HasInternalFunctors.mkFun (h.dupFunIsFun α β)
-
-  @[simp] theorem dupFunFun.eff (α β : U) (F : α ⟶ α ⟶ β) : (dupFunFun α β) F = dupFun F :=
-  by apply HasInternalFunctors.mkFun.eff
-
-  def compFun {α β γ : U} (F : α ⟶  β) (G : β ⟶  γ) : α ⟶  γ := HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled F) (HasInternalFunctors.toBundled G))
+  def compFun' {α β γ : U} (F : α ⟶' β) (G : β ⟶' γ) : α ⟶' γ := HasCompFun.compFun' F G
+  def compFun  {α β γ : U} (F : α ⟶  β) (G : β ⟶  γ) : α ⟶  γ := HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled F) (HasInternalFunctors.toBundled G))
 
   @[simp] theorem compFun.eff {α β γ : U} (F : α ⟶ β) (G : β ⟶ γ) (a : α) : (compFun F G) a = G (F a) :=
   by apply HasInternalFunctors.mkFun.eff
@@ -281,9 +253,54 @@ namespace HasFunOp
   by apply HasInternalFunctors.mkFun.eff
 
   def revCompFun {α β γ : U} (G : β ⟶  γ) (F : α ⟶  β) : α ⟶ γ := compFun F G
-  infixr:90 " ⊙ "  => HasFunOp.revCompFun
+  infixr:90 " ⊙ "  => HasLinearFunOp.revCompFun
 
-end HasFunOp
+end HasLinearFunOp
+
+class HasAffineFunOp (U : Universe.{u}) [h : HasInternalFunctors U] extends HasLinearFunOp U, HasConstFun U U where
+(constFunIsFun (α β : U) : h.IsFun (λ c : β => HasInternalFunctors.mkFun (constIsFun α c)))
+
+namespace HasAffineFunOp
+
+  variable {U : Universe.{u}} [HasInternalFunctors U] [h : HasAffineFunOp U]
+
+  def constFun' (α : U) {β : U} (c : β) : α ⟶' β := HasConstFun.constFun' α c
+  def constFun  (α : U) {β : U} (c : β) : α ⟶  β := HasInternalFunctors.mkFun (h.constIsFun α c)
+
+  @[simp] theorem constFun.eff (α : U) {β : U} (c : β) (a : α) : (constFun α c) a = c :=
+  by apply HasInternalFunctors.mkFun.eff
+
+  def constFunFun' (α β : U) : β ⟶' (α ⟶ β) := BundledFunctor.mkFun      (h.constFunIsFun α β)
+  def constFunFun  (α β : U) : β ⟶  (α ⟶ β) := HasInternalFunctors.mkFun (h.constFunIsFun α β)
+
+  @[simp] theorem constFunFun.eff (α β : U) (c : β) : (constFunFun α β) c = constFun α c :=
+  by apply HasInternalFunctors.mkFun.eff
+
+end HasAffineFunOp
+
+class HasFullFunOp (U : Universe.{u}) [h : HasInternalFunctors U] extends HasAffineFunOp U where
+(dupIsFun    {α β : U} (F : α ⟶' α ⟶ β) : h.IsFun (λ a : α         => F a a))
+(dupFunIsFun (α β : U)                  : h.IsFun (λ F : α ⟶ α ⟶ β => HasInternalFunctors.mkFun (dupIsFun (HasInternalFunctors.toBundled F))))
+
+namespace HasFullFunOp
+
+  variable {U : Universe.{u}} [HasInternalFunctors U] [h : HasFullFunOp U]
+
+  def dupFun' {α β : U} (F : α ⟶' α ⟶ β) : α ⟶' β := BundledFunctor.mkFun      (h.dupIsFun F)
+  def dupFun  {α β : U} (F : α ⟶  α ⟶ β) : α ⟶  β := HasInternalFunctors.mkFun (h.dupIsFun (HasInternalFunctors.toBundled F))
+
+  @[simp] theorem dupFun.eff {α β : U} (F : α ⟶ α ⟶ β) (a : α) : (dupFun F) a = F a a :=
+  by apply HasInternalFunctors.mkFun.eff
+
+  def dupFunFun' (α β : U) : (α ⟶ α ⟶ β) ⟶' (α ⟶ β) := BundledFunctor.mkFun      (h.dupFunIsFun α β)
+  def dupFunFun  (α β : U) : (α ⟶ α ⟶ β) ⟶  (α ⟶ β) := HasInternalFunctors.mkFun (h.dupFunIsFun α β)
+
+  @[simp] theorem dupFunFun.eff (α β : U) (F : α ⟶ α ⟶ β) : (dupFunFun α β) F = dupFun F :=
+  by apply HasInternalFunctors.mkFun.eff
+
+end HasFullFunOp
+
+class HasFunOp (U : Universe.{u}) extends HasInternalFunctors.{u, w} U, HasFullFunOp U : Type (max u w)
 
 
 
@@ -577,7 +594,7 @@ end AttachedDependentRelations
 
 class HasInstanceArrows (U : Universe.{u}) where
 (arrowUniverse           : Universe.{v})
-[arrowHasFunOp           : HasFunOp.{v, w} arrowUniverse]
+[arrowHasFun             : HasInternalFunctors.{v, w} arrowUniverse]
 (Arrow (α : U)           : GeneralizedRelation ⌈α⌉ arrowUniverse)
 [arrowIsPreorder (α : U) : IsPreorder (Arrow α)]
 
@@ -585,7 +602,7 @@ namespace HasInstanceArrows
 
   variable (U : Universe) [h : HasInstanceArrows U]
 
-  instance hasFunOp : HasFunOp h.arrowUniverse := h.arrowHasFunOp
+  instance hasFun : HasInternalFunctors h.arrowUniverse := h.arrowHasFun
 
   instance arrowPreorder (α : U) : IsPreorder (h.Arrow α) := h.arrowIsPreorder α
 
@@ -616,8 +633,10 @@ namespace HasFunctorialArrows
   def arrow_congrArg''  {α β : U} (F : α ⟶' β) {a b : α} : (a ⇝ b) ⟶ (F a ⇝ F b) := HasInternalFunctors.fromBundled.coe F ▸ arrow_congrArg U (HasInternalFunctors.fromBundled F)
   def arrow_congrArg''' {α β : U} (F : α ⟶' β) {a b : α} : (a ⇝ b) → (F a ⇝ F b) := HasInternalFunctors.funCoe (arrow_congrArg'' U F)
 
-  def arrow_congrFun  {α β : U} {F G : α ⟶ β} (a : α) : (F ⇝ G) ⟶ (F a ⇝ G a) := HasFunOp.appFun (HasRefl.refl a) (F a ⇝ G a) ⊙ arrow_congr U
-  def arrow_congrFun' {α β : U} {F G : α ⟶ β} (a : α) : (F ⇝ G) → (F a ⇝ G a) := λ f => arrow_congr'' U f (HasRefl.refl a)
+  def arrow_congrFun [HasLinearFunOp h.arrowUniverse] {α β : U} {F G : α ⟶ β} (a : α) : (F ⇝ G) ⟶ (F a ⇝ G a) :=
+  HasLinearFunOp.appFun (HasRefl.refl a) (F a ⇝ G a) ⊙ arrow_congr U
+  def arrow_congrFun' {α β : U} {F G : α ⟶ β} (a : α) : (F ⇝ G) → (F a ⇝ G a) :=
+  λ f => arrow_congr'' U f (HasRefl.refl a)
 
   instance toHasArrowCongrArg : HasArrowCongrArg U U := ⟨λ F => HasInternalFunctors.toBundled (arrow_congrArg'' U F)⟩
 
@@ -625,7 +644,7 @@ end HasFunctorialArrows
 
 class HasInstanceEquivalences (U : Universe.{u}) where
 (equivUniverse              : Universe.{v})
-[equivHasFunOp              : HasFunOp.{v, w} equivUniverse]
+[equivHasFun                : HasInternalFunctors.{v, w} equivUniverse]
 (Equiv (α : U)              : GeneralizedRelation ⌈α⌉ equivUniverse)
 [equivIsEquivalence (α : U) : IsEquivalence (Equiv α)]
 
@@ -633,7 +652,7 @@ namespace HasInstanceEquivalences
 
   variable (U : Universe) [h : HasInstanceEquivalences U]
 
-  instance hasFunOp : HasFunOp h.equivUniverse := h.equivHasFunOp
+  instance hasFun : HasInternalFunctors h.equivUniverse := h.equivHasFun
 
   instance equivEquivalence (α : U) : IsEquivalence (h.Equiv α) := h.equivIsEquivalence α
 
@@ -643,7 +662,7 @@ namespace HasInstanceEquivalences
 
   def toHasInstanceArrows : HasInstanceArrows U :=
   { arrowUniverse   := h.equivUniverse,
-    arrowHasFunOp   := h.equivHasFunOp,
+    arrowHasFun     := h.equivHasFun,
     Arrow           := h.Equiv,
     arrowIsPreorder := λ α => (h.equivIsEquivalence α).toIsPreorder }
 
@@ -674,8 +693,10 @@ namespace HasFunctorialEquivalences
   def equiv_congrArg''  {α β : U} (F : α ⟶' β) {a b : α} : a ≃ b ⟶ F a ≃ F b := HasInternalFunctors.fromBundled.coe F ▸ equiv_congrArg U (HasInternalFunctors.fromBundled F)
   def equiv_congrArg''' {α β : U} (F : α ⟶' β) {a b : α} : a ≃ b → F a ≃ F b := HasInternalFunctors.funCoe (equiv_congrArg'' U F)
 
-  def equiv_congrFun  {α β : U} {F G : α ⟶ β} (a : α) : F ≃ G ⟶ F a ≃ G a := HasFunOp.appFun (HasRefl.refl a) (F a ≃ G a) ⊙ equiv_congr U
-  def equiv_congrFun' {α β : U} {F G : α ⟶ β} (a : α) : F ≃ G → F a ≃ G a := λ e => equiv_congr'' U e (HasRefl.refl a)
+  def equiv_congrFun [HasLinearFunOp h.equivUniverse] {α β : U} {F G : α ⟶ β} (a : α) : F ≃ G ⟶ F a ≃ G a :=
+  HasLinearFunOp.appFun (HasRefl.refl a) (F a ≃ G a) ⊙ equiv_congr U
+  def equiv_congrFun' {α β : U} {F G : α ⟶ β} (a : α) : F ≃ G → F a ≃ G a :=
+  λ e => equiv_congr'' U e (HasRefl.refl a)
 
   instance toHasEquivCongrArg : HasEquivCongrArg U U := ⟨λ F => HasInternalFunctors.toBundled (equiv_congrArg'' U F)⟩
 

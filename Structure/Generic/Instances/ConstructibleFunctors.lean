@@ -55,13 +55,17 @@ namespace HasConstructibleFunctors
   variable (U : Universe) [HasInternalFunctors U] [hU : HasFunctorialEquivalences U]
            [h : HasConstructibleFunctors U U]
 
-  instance hasFunOp : HasFunOp U :=
-  { constFunIsFun   := λ α β       => h.isFun (λ c : β => HasInternalFunctors.mkFun (HasConstFun.constIsFun α c)) sorry, -- λ hc a => BundledFunctor.congrArg (HasIdFun.idFun' _) hc
-    appIsFun        := λ {α} a β   => h.isFun (λ F : α ⟶ β => F a) (HasInternalFunctors.toBundled (HasFunctorialEquivalences.equiv_congrFun U a)),
+  instance hasLinearFunOp [HasLinearFunOp hU.equivUniverse] : HasLinearFunOp U :=
+  { appIsFun        := λ {α} a β   => h.isFun (λ F : α ⟶ β => F a) (HasInternalFunctors.toBundled (HasFunctorialEquivalences.equiv_congrFun U a)),
     appFunIsFun     := λ α β       => sorry, --⟨λ ha F   => BundledFunctor.congrArg F ha⟩,
-    dupIsFun        := λ {α β} F   => sorry, --⟨λ ha     => BundledFunctor.congr (BundledFunctor.congrArg F ha) ha⟩,
-    dupFunIsFun     := λ α β       => sorry, --⟨λ hF a   => BundledFunctor.congrFun (BundledFunctor.congrFun hF a) a⟩,
     compFunIsFun    := λ {α β} F γ => sorry, --⟨λ hG a   => BundledFunctor.congrFun hG (F a)⟩,
     compFunFunIsFun := λ α β γ     => sorry }-- ⟨λ hF G a => BundledFunctor.congrArg G (BundledFunctor.congrFun hF a)⟩ }
+
+  instance hasAffineFunOp [HasAffineFunOp hU.equivUniverse] : HasAffineFunOp U :=
+  { constFunIsFun   := λ α β       => h.isFun (λ c : β => HasInternalFunctors.mkFun (HasConstFun.constIsFun α c)) sorry } -- λ hc a => BundledFunctor.congrArg (HasIdFun.idFun' _) hc
+
+  instance hasFullFunOp [HasFullFunOp hU.equivUniverse] : HasFullFunOp U :=
+  { dupIsFun        := λ {α β} F   => sorry, --⟨λ ha     => BundledFunctor.congr (BundledFunctor.congrArg F ha) ha⟩,
+    dupFunIsFun     := λ α β       => sorry } --⟨λ hF a   => BundledFunctor.congrFun (BundledFunctor.congrFun hF a) a⟩,
 
 end HasConstructibleFunctors

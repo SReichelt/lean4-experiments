@@ -18,9 +18,9 @@ by subst ha; rfl
 
 
 
-namespace HasFunOp
+namespace HasLinearFunOp
 
-  variable {U : Universe} [h : HasFunOp U]
+  variable {U : Universe} [HasInternalFunctors U] [h : HasLinearFunOp U]
 
   -- The "swap" functor swaps the arguments of a nested functor. Its plain version `swapFun` actually
   -- just fixes the second argument.
@@ -102,16 +102,24 @@ namespace HasFunOp
 
   def compFun₂ {α β γ δ : U} (F : α ⟶ β ⟶ γ) (G : γ ⟶ δ) : α ⟶ β ⟶ δ := swapFunFun (revCompFunFun α G ⊙ swapFunFun F)
 
+end HasLinearFunOp
+
+
+
+namespace HasFullFunOp
+
+  variable {U : Universe} [HasInternalFunctors U] [h : HasFullFunOp U]
+
   -- The S combinator (see https://en.wikipedia.org/wiki/SKI_combinator_calculus), which in our case says
   -- that if we can functorially construct a functor `H : β ⟶ γ` and an argument `b : β`, then the
   -- construction of `H b` is also functorial.
 
   theorem substFun.def {α β γ : U} (F : α ⟶' β ⟶ γ) (G : α ⟶' β) (a : α) :
-    F a (G a) = HasInternalFunctors.mkFun (swapIsFun F (G a)) a :=
-  Eq.symm (HasInternalFunctors.mkFun.eff (swapIsFun F (G a)) a)
+    F a (G a) = HasInternalFunctors.mkFun (HasLinearFunOp.swapIsFun F (G a)) a :=
+  Eq.symm (HasInternalFunctors.mkFun.eff (HasLinearFunOp.swapIsFun F (G a)) a)
 
   def substIsFun {α β γ : U} (F : α ⟶' β ⟶ γ) (G : α ⟶' β) : HasExternalFunctors.IsFun (λ a : α => F a (G a)) :=
-  funext (substFun.def F G) ▸ h.dupIsFun (swapFunFun' F ⊙' G)
+  funext (substFun.def F G) ▸ h.dupIsFun (HasLinearFunOp.swapFunFun' F ⊙' G)
 
   def substFun' {α β γ : U} (F : α ⟶' β ⟶ γ) (G : α ⟶' β) : α ⟶' γ := BundledFunctor.mkFun      (substIsFun F                    G)
   def substFun  {α β γ : U} (F : α ⟶  β ⟶ γ) (G : α ⟶  β) : α ⟶  γ := HasInternalFunctors.mkFun (substIsFun (HasInternalFunctors.toBundled F) (HasInternalFunctors.toBundled G))
@@ -122,12 +130,12 @@ namespace HasFunOp
 
   theorem substFunFun.def {α β γ : U} (F : α ⟶' β ⟶ γ) (G : α ⟶ β) :
     HasInternalFunctors.mkFun (substIsFun F (HasInternalFunctors.toBundled G)) =
-    HasInternalFunctors.mkFun (h.dupIsFun (HasInternalFunctors.toBundled (HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled G) (swapFunFun' F))))) :=
+    HasInternalFunctors.mkFun (h.dupIsFun (HasInternalFunctors.toBundled (HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled G) (HasLinearFunOp.swapFunFun' F))))) :=
   HasInternalFunctors.toFromBundled _ ▸ elimRec
 
   def substFunIsFun {α β γ : U} (F : α ⟶' β ⟶ γ) :
     HasExternalFunctors.IsFun (λ G : α ⟶ β => HasInternalFunctors.mkFun (substIsFun F (HasInternalFunctors.toBundled G))) :=
-  funext (substFunFun.def F) ▸ h.compIsFun (revCompFunFun' α (swapFunFun' F)) (dupFunFun' α γ)
+  funext (substFunFun.def F) ▸ h.compIsFun (HasLinearFunOp.revCompFunFun' α (HasLinearFunOp.swapFunFun' F)) (dupFunFun' α γ)
 
   def substFunFun' {α β γ : U} (F : α ⟶' β ⟶ γ) : (α ⟶ β) ⟶' (α ⟶ γ) := BundledFunctor.mkFun      (substFunIsFun F)
   def substFunFun  {α β γ : U} (F : α ⟶  β ⟶ γ) : (α ⟶ β) ⟶  (α ⟶ γ) := HasInternalFunctors.mkFun (substFunIsFun (HasInternalFunctors.toBundled F))
@@ -137,12 +145,12 @@ namespace HasFunOp
   by apply HasInternalFunctors.mkFun.eff
 
   theorem substFunFunFun.def (α β γ : U) (F : α ⟶ β ⟶ γ) :
-    substFunFun F = HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled (revCompFunFun α (swapFunFun F))) (dupFunFun' α γ)) :=
+    substFunFun F = HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled (HasLinearFunOp.revCompFunFun α (HasLinearFunOp.swapFunFun F))) (dupFunFun' α γ)) :=
   HasInternalFunctors.toFromBundled _ ▸ HasInternalFunctors.toFromBundled _ ▸ elimRec
 
   def substFunFunIsFun (α β γ : U) : HasExternalFunctors.IsFun (λ F : α ⟶ β ⟶ γ => substFunFun F) :=
-  funext (substFunFunFun.def α β γ) ▸ h.compIsFun (revCompFunFunFun' α β (α ⟶ γ) ⊙' swapFunFunFun' α β γ)
-                                                  (revCompFunFun' (α ⟶ β) (dupFunFun' α γ))
+  funext (substFunFunFun.def α β γ) ▸ h.compIsFun (HasLinearFunOp.revCompFunFunFun' α β (α ⟶ γ) ⊙' HasLinearFunOp.swapFunFunFun' α β γ)
+                                                  (HasLinearFunOp.revCompFunFun' (α ⟶ β) (dupFunFun' α γ))
 
   def substFunFunFun' (α β γ : U) : (α ⟶ β ⟶ γ) ⟶' (α ⟶ β) ⟶ (α ⟶ γ) := BundledFunctor.mkFun      (substFunFunIsFun α β γ)
   def substFunFunFun  (α β γ : U) : (α ⟶ β ⟶ γ) ⟶  (α ⟶ β) ⟶ (α ⟶ γ) := HasInternalFunctors.mkFun (substFunFunIsFun α β γ)
@@ -152,31 +160,32 @@ namespace HasFunOp
   by apply HasInternalFunctors.mkFun.eff
 
 
+end HasFullFunOp
 
-  -- Using the functoriality axioms and the constructions above, we can algorithmically prove
-  -- functoriality of lambda terms. The algorithm to prove `HasExternalFunctors.IsFun (λ a : α => t)`
-  -- is as follows:
-  --
-  --  Case                           | Proof
-  -- --------------------------------+--------------------------------------------------------------
-  --  `t` does not contain `a`       | `constIsFun α t`
-  --  `t` is `a`                     | `idIsFun α`
-  --  `t` is `G b` with `G : β ⟶ γ`: |
-  --    `a` appears only in `b`      | Prove that `λ a => b` is functorial, yielding a functor
-  --                                 | `F : α ⟶ β`. Then the proof is `compIsFun F G`.
-  --      `b` is `a`                 | Optimization: `HasInternalFunctors.isFun G`
-  --    `a` appears only in `G`      | Prove that `λ a => G` is functorial, yielding a functor
-  --                                 | `F : α ⟶ β ⟶ γ`. Then the proof is `swapIsFun F b`.
-  --      `G` is `a`                 | Optimization: `appIsFun b γ`
-  --    `a` appears in both          | Prove that `λ a => G` is functorial, yielding a functor
-  --                                 | `F₁ : α ⟶ β ⟶ γ`. Prove that `λ a => b` is functorial,
-  --                                 | yielding a functor `F₂ : α ⟶ β`. Then the proof is
-  --                                 | `substIsFun F₁ F₂`.
-  --  `t` is `mkFun (λ b : β => c)`  | Prove that `λ a => c` is functorial when regarding `b` as
-  --                                 | a constant, yielding a functor `F : α ⟶ γ` for every `b`.
-  --                                 | Prove that  `λ b => F` is functorial, yielding a functor
-  --                                 | `G : β ⟶ α ⟶ γ`. Then the proof is `swapFunIsFun G`.
-  --
-  -- (This list does not contain all possible optimizations.)
 
-end HasFunOp
+
+-- Using the functoriality axioms and the constructions above, we can algorithmically prove
+-- functoriality of lambda terms. The algorithm to prove `HasExternalFunctors.IsFun (λ a : α => t)`
+-- is as follows:
+--
+--  Case                           | Proof
+-- --------------------------------+--------------------------------------------------------------
+--  `t` does not contain `a`       | `constIsFun α t`
+--  `t` is `a`                     | `idIsFun α`
+--  `t` is `G b` with `G : β ⟶ γ`: |
+--    `a` appears only in `b`      | Prove that `λ a => b` is functorial, yielding a functor
+--                                 | `F : α ⟶ β`. Then the proof is `compIsFun F G`.
+--      `b` is `a`                 | Optimization: `HasInternalFunctors.isFun G`
+--    `a` appears only in `G`      | Prove that `λ a => G` is functorial, yielding a functor
+--                                 | `F : α ⟶ β ⟶ γ`. Then the proof is `swapIsFun F b`.
+--      `G` is `a`                 | Optimization: `appIsFun b γ`
+--    `a` appears in both          | Prove that `λ a => G` is functorial, yielding a functor
+--                                 | `F₁ : α ⟶ β ⟶ γ`. Prove that `λ a => b` is functorial,
+--                                 | yielding a functor `F₂ : α ⟶ β`. Then the proof is
+--                                 | `substIsFun F₁ F₂`.
+--  `t` is `mkFun (λ b : β => c)`  | Prove that `λ a => c` is functorial when regarding `b` as
+--                                 | a constant, yielding a functor `F : α ⟶ γ` for every `b`.
+--                                 | Prove that  `λ b => F` is functorial, yielding a functor
+--                                 | `G : β ⟶ α ⟶ γ`. Then the proof is `swapFunIsFun G`.
+--
+-- (This list does not contain all possible optimizations.)

@@ -13,9 +13,9 @@ universes u v w
 
 
 
-namespace HasFunOp
+namespace HasLinearFunOp
 
-  variable {U : Universe} [h : HasFunOp U]
+  variable {U : Universe} [h : HasInternalFunctors U] [HasLinearFunOp U]
 
   -- TODO: Add equivalences.
   -- TODO: Add morphisms.
@@ -26,7 +26,7 @@ namespace HasFunOp
 
   instance hasArrows : HasArrows ⌈U⌉ U := ⟨h.Fun⟩
 
-end HasFunOp
+end HasLinearFunOp
 
 
 
@@ -56,26 +56,26 @@ namespace GeneralizedRelation
 
     instance hasRefl  : HasRefl  (ConstRel α c) := ⟨λ _ => c⟩
 
-    variable [HasFunOp V]
+    variable [HasInternalFunctors V] [HasAffineFunOp V]
 
-    instance hasSymm  : HasSymm  (ConstRel α c) := ⟨HasFunOp.idFun β⟩
-    instance hasTrans : HasTrans (ConstRel α c) := ⟨HasFunOp.constFun β (HasFunOp.idFun β)⟩
+    instance hasSymm  : HasSymm  (ConstRel α c) := ⟨HasLinearFunOp.idFun β⟩
+    instance hasTrans : HasTrans (ConstRel α c) := ⟨HasAffineFunOp.constFun β (HasLinearFunOp.idFun β)⟩
 
     instance isPreorder    : IsPreorder    (ConstRel α c) := ⟨⟩
     instance isEquivalence : IsEquivalence (ConstRel α c) := ⟨⟩
 
     @[simp] theorem symmEq  {a₁ a₂    : α} : (hasSymm  α c).symm'  (a := a₁) (b := a₂)           c   = c :=
-    HasFunOp.idFun.eff β c
+    HasLinearFunOp.idFun.eff β c
     @[simp] theorem transEq {a₁ a₂ a₃ : α} : (hasTrans α c).trans' (a := a₁) (b := a₂) (c := a₃) c c = c :=
-    let h₁ := congrArg HasInternalFunctors.funCoe (HasFunOp.constFun.eff β (HasFunOp.idFun β) c);
-    Eq.trans (congrFun h₁ c) (HasFunOp.idFun.eff β c)
+    let h₁ := congrArg HasInternalFunctors.funCoe (HasAffineFunOp.constFun.eff β (HasLinearFunOp.idFun β) c);
+    Eq.trans (congrFun h₁ c) (HasLinearFunOp.idFun.eff β c)
 
   end ConstRel
 
-  variable {α : Sort u} {V : Universe} [HasFunOp V]
+  variable {α : Sort u} {V : Universe} [HasInternalFunctors V] [HasLinearFunOp V]
 
-  def HasTrans.revTrans   {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} : R b c ⟶ R a b ⟶ R a c := HasFunOp.swapFunFun h.trans
-  def HasTrans.revTrans'' {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (g : R b c) : R a b ⟶ R a c := HasFunOp.swapFun h.trans g
+  def HasTrans.revTrans   {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} : R b c ⟶ R a b ⟶ R a c := HasLinearFunOp.swapFunFun h.trans
+  def HasTrans.revTrans'' {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (g : R b c) : R a b ⟶ R a c := HasLinearFunOp.swapFun h.trans g
 
 end GeneralizedRelation
 
@@ -95,7 +95,8 @@ infix:20 " ⟷' " => Iff'
 
 section Morphisms
 
-  variable {α : Sort u} {U : Universe} [HasInternalFunctors U] [he : HasFunctorialEquivalences U] {R : GeneralizedRelation α U}
+  variable {α : Sort u} {U : Universe} [HasInternalFunctors U] [he : HasFunctorialEquivalences U]
+           [HasLinearFunOp he.equivUniverse] {R : GeneralizedRelation α U}
 
   instance : HasFunctorialArrows U := HasFunctorialEquivalences.toHasFunctorialArrows U
 
@@ -112,12 +113,12 @@ section Morphisms
     HasFunctorialEquivalences.equiv_congrArg U (HasTrans.trans ⟮f⟯)
 
     def comp_congrArg_right {a b c : α} {f₁ f₂ : R a b} {g : R b c} : f₁ ≃ f₂ ⟶ g • f₁ ≃ g • f₂ :=
-    HasFunOp.swapFun comp_congrArg (HasRefl.refl g)
+    HasLinearFunOp.swapFun comp_congrArg (HasRefl.refl g)
 
     def comp_subst  {a b c : α} {f₁ f₂ : R a b} {g₁ g₂ : R b c} {e : R a c} : f₁ ≃ f₂ ⟶ g₁ ≃ g₂ ⟶ g₂ • f₂ ≃ e ⟶ g₁ • f₁ ≃ e :=
-    HasFunOp.compFun₂ comp_congrArg HasTrans.trans
+    HasLinearFunOp.compFun₂ comp_congrArg HasTrans.trans
     def comp_subst' {a b c : α} {f₁ f₂ : R a b} {g₁ g₂ : R b c} {e : R a c} : f₁ ≃ f₂ ⟶ g₁ ≃ g₂ ⟶ e ≃ g₁ • f₁ ⟶ e ≃ g₂ • f₂ :=
-    HasFunOp.compFun₂ comp_congrArg HasTrans.revTrans
+    HasLinearFunOp.compFun₂ comp_congrArg HasTrans.revTrans
 
     def comp_subst_left   {a b c : α} (f : R a b) {g₁ g₂ : R b c} {e : R a c} : g₁ ≃ g₂ ⟶ g₂ • f ≃ e ⟶ g₁ • f ≃ e :=
     HasTrans.trans    ⊙ comp_congrArg_left
@@ -152,9 +153,9 @@ section Morphisms
     variable [IsPreorder R] [IsMorphismRelation R]
 
     def leftCancelId  {a b : α} (f : R a b) {e : R b b} : e ≃ ident R b ⟶ e • f ≃ f :=
-    HasFunOp.swapFun (comp_subst_left  f) (leftId  f)
+    HasLinearFunOp.swapFun (comp_subst_left  f) (leftId  f)
     def rightCancelId {a b : α} (f : R a b) {e : R a a} : e ≃ ident R a ⟶ f • e ≃ f :=
-    HasFunOp.swapFun (comp_subst_right f) (rightId f)
+    HasLinearFunOp.swapFun (comp_subst_right f) (rightId f)
 
   end IsMorphismRelation
 
@@ -182,28 +183,28 @@ section Morphisms
     def rightCancelInv  {a b c : α} (f : R a b) (g : R a c) : (f • g⁻¹) • g ≃ f := applyAssocRL_left ⟮rightCancelInv' f g⟯
 
     def leftMulInv  {a b c : α} (f₁ : R a b) (f₂ : R a c) (g : R b c) : g • f₁ ≃ f₂ ⟷' f₁ ≃ g⁻¹ • f₂ :=
-    ⟨HasFunOp.swapFun (comp_subst_right' g⁻¹) (HasSymm.symm' (leftCancel f₁ g)),
-     HasFunOp.swapFun (comp_subst_right  g)   (leftCancelInv f₂ g)⟩
+    ⟨HasLinearFunOp.swapFun (comp_subst_right' g⁻¹) (HasSymm.symm' (leftCancel f₁ g)),
+     HasLinearFunOp.swapFun (comp_subst_right  g)   (leftCancelInv f₂ g)⟩
     def leftMulInv' {a b c : α} (f₁ : R a b) (f₂ : R a c) (g : R c b) : g⁻¹ • f₁ ≃ f₂ ⟷' f₁ ≃ g • f₂ :=
-    ⟨HasFunOp.swapFun (comp_subst_right' g)   (HasSymm.symm' (leftCancelInv f₁ g)),
-     HasFunOp.swapFun (comp_subst_right  g⁻¹) (leftCancel f₂ g)⟩
+    ⟨HasLinearFunOp.swapFun (comp_subst_right' g)   (HasSymm.symm' (leftCancelInv f₁ g)),
+     HasLinearFunOp.swapFun (comp_subst_right  g⁻¹) (leftCancel f₂ g)⟩
 
     def leftMul {a b c : α} (f₁ f₂ : R a b) (g : R b c) : g • f₁ ≃ g • f₂ ⟷' f₁ ≃ f₂ :=
     ⟨HasTrans.revTrans'' (leftCancel f₂ g) ⊙ (leftMulInv f₁ (g • f₂) g).mp, comp_congrArg_right⟩
 
     def rightMulInv  {a b c : α} (f₁ : R a c) (f₂ : R b c) (g : R b a) : f₁ • g ≃ f₂ ⟷' f₁ ≃ f₂ • g⁻¹ :=
-    ⟨HasFunOp.swapFun (comp_subst_left' g⁻¹) (HasSymm.symm' (rightCancel f₁ g)),
-     HasFunOp.swapFun (comp_subst_left  g)   (rightCancelInv f₂ g)⟩
+    ⟨HasLinearFunOp.swapFun (comp_subst_left' g⁻¹) (HasSymm.symm' (rightCancel f₁ g)),
+     HasLinearFunOp.swapFun (comp_subst_left  g)   (rightCancelInv f₂ g)⟩
     def rightMulInv' {a b c : α} (f₁ : R a c) (f₂ : R b c) (g : R a b) : f₁ • g⁻¹ ≃ f₂ ⟷' f₁ ≃ f₂ • g :=
-    ⟨HasFunOp.swapFun (comp_subst_left' g)   (HasSymm.symm' (rightCancelInv f₁ g)),
-     HasFunOp.swapFun (comp_subst_left  g⁻¹) (rightCancel f₂ g)⟩
+    ⟨HasLinearFunOp.swapFun (comp_subst_left' g)   (HasSymm.symm' (rightCancelInv f₁ g)),
+     HasLinearFunOp.swapFun (comp_subst_left  g⁻¹) (rightCancel f₂ g)⟩
 
     def rightMul {a b c : α} (f₁ f₂ : R a b) (g : R c a) : f₁ • g ≃ f₂ • g ⟷' f₁ ≃ f₂ :=
     ⟨HasTrans.revTrans'' (rightCancel f₂ g) ⊙ (rightMulInv f₁ (f₂ • g) g).mp, comp_congrArg_left⟩
 
     def eqInvIffInvEq {a b : α} (f : R a b) (g : R b a) : f ≃ g⁻¹ ⟷' f⁻¹ ≃ g :=
-    ⟨HasFunOp.swapFun inv_subst  (invInv g),
-     HasFunOp.swapFun inv_subst' (HasSymm.symm' (invInv f))⟩
+    ⟨HasLinearFunOp.swapFun inv_subst  (invInv g),
+     HasLinearFunOp.swapFun inv_subst' (HasSymm.symm' (invInv f))⟩
 
     def eqIffEqInv {a b : α} (f₁ f₂ : R a b) : f₁⁻¹ ≃ f₂⁻¹ ⟷' f₁ ≃ f₂ :=
     ⟨HasTrans.revTrans'' (invInv f₂) ⊙ (eqInvIffInvEq f₁ f₂⁻¹).mpr, inv_congrArg⟩
@@ -264,7 +265,7 @@ section Functors
     instance isReflFunctor  [HasRefl  R] : IsReflFunctor  R (ConstRel α c) (HasConstFun.constFun' _ c) :=
     ⟨λ _   => idArrow c⟩
 
-    variable [HasInternalFunctors U] [HasFunOp V]
+    variable [HasInternalFunctors U] [HasInternalFunctors V] [HasAffineFunOp V]
 
     instance isSymmFunctor  [HasSymm  R] : IsSymmFunctor  R (ConstRel α c) (HasConstFun.constFun' _ c) :=
     ⟨λ _   => Eq.ndrec (motive := λ b : β => ⌈c ⇝ b⌉) (idArrow c) (Eq.symm (ConstRel.symmEq  α c))⟩
@@ -319,10 +320,10 @@ end Functors
 
 section NaturalTransformations
 
-  variable {α : Sort u} {V W : Universe} [HasInternalFunctors W] [HasFunctorialEquivalences W] [HasExternalFunctors V W]
+  variable {α : Sort u} {V W : Universe} [HasInternalFunctors W] [hW : HasFunctorialEquivalences W] [HasExternalFunctors V W]
            {β : Sort w} (R : GeneralizedRelation α V) (S : GeneralizedRelation β W)
 
-  instance : HasFunctorialArrows W := HasFunctorialEquivalences.toHasFunctorialArrows W
+  instance : HasFunctorialArrows W := hW.toHasFunctorialArrows W
 
   namespace IsNaturalTransformation
 
@@ -330,6 +331,8 @@ section NaturalTransformations
               (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) :
       IsNatural R S F F (λ a => ident S (mF a)) :=
     ⟨λ f => HasTrans.trans' (h.rightId (F f)) (HasSymm.symm' (h.leftId (F f)))⟩
+
+    variable [HasLinearFunOp hW.equivUniverse]
 
     def symm  [IsEquivalence S] [h : IsIsomorphismRelation S] {mF mG    : α → β}
               (F : ∀ {a b}, R a b ⟶' S (mF a) (mF b)) (G : ∀ {a b}, R a b ⟶' S (mG a) (mG b))

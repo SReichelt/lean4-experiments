@@ -109,10 +109,10 @@ end HasInstanceEquivalences
 namespace HasFunctorialEquivalences
 
   instance prop : HasFunctorialEquivalences propUniverse :=
-  { equivCongr := λ _ _ => trivial }
+  { equivCongr    := λ _ _ => trivial }
 
   instance type : HasFunctorialEquivalences typeUniverse.{u} :=
-  { equivCongr := congr }
+  { equivCongr    := congr }
 
 end HasFunctorialEquivalences
 
