@@ -33,9 +33,15 @@ namespace Bundled
     HasExternalFunctors.{u + 1, v + 1} (simpleBundledUniverse C) (simpleBundledUniverse D) :=
   ⟨h.IsFunctorial⟩
 
-  class HasFunctorInstances (C : SimpleTypeClass.{u})
-                            [h : HasFunctoriality.{u, u} C C] : Type (u + 1) where
+  class HasFunctorInstances (C : SimpleTypeClass.{u}) [h : HasFunctoriality.{u, u} C C] : Type (u + 1) where
   (funInst (S T : simpleBundledUniverse C) : C (S ⟶' T))
+
+  -- Work around type class resolution problems.
+  class HasFunctorInstances' (C : SimpleTypeClass.{u}) (h : HasFunctoriality.{u, u} C C) : Type (u + 1) where
+  (funInst (S T : simpleBundledUniverse C) : C (S ⟶' T))
+
+  instance (C : SimpleTypeClass.{u}) (h : HasFunctoriality.{u, u} C C) [h' : HasFunctorInstances' C h] :
+    HasFunctorInstances C := ⟨h'.funInst⟩
 
   instance hasInternalFunctors (C : SimpleTypeClass.{u})
                                [HasFunctoriality.{u, u} C C]
@@ -44,5 +50,11 @@ namespace Bundled
   { Fun      := λ S T => { α    := S ⟶' T,
                            inst := h.funInst S T },
     funEquiv := λ S T => Equiv.refl (S ⟶' T) }
+
+  instance hasInternalFunctors' (C : SimpleTypeClass.{u})
+                                (h : HasFunctoriality.{u, u} C C)
+                                [h' : HasFunctorInstances'.{u} C h] :
+    HasInternalFunctors.{u + 1} (simpleBundledUniverse C) :=
+  hasInternalFunctors C
 
 end Bundled

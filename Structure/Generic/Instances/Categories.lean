@@ -100,15 +100,16 @@ section InternalFunctors
                           F.isFun.mapEquiv G.isFun.mapEquiv).Nat (h := T.inst.isEquiv.toHasTrans)
 
     instance functorGroupoid (S T : groupoid.{u, v, w} M) : IsGroupoid.{(max u v w) + 1} M (S ⟶' T) :=
-    { Equiv   := EquivRel M (hNat := hNat) S T,
+    { Equiv   := EquivRel M S T,
       isEquiv := sorry,
       isIso   := sorry }
 
-    instance hasFunctorInstances : Bundled.HasFunctorInstances.{max u v w} (IsGroupoid M) (h := hasFunctoriality.{u, u, v, v, w, w} M M) :=
-    sorry --⟨functorGroupoid.{u, v, w} M (hNat := hNat)⟩
+    instance hasFunctorInstances : Bundled.HasFunctorInstances'.{max u v w} (IsGroupoid M)
+                                                                            (hasFunctoriality.{u, u, v, v, w, w} M M) :=
+    ⟨functorGroupoid.{u, v, w} M⟩
 
     instance hasInternalFunctors : HasInternalFunctors (groupoid.{u, v, w} M) :=
-    sorry --Bundled.hasInternalFunctors.{max u v w} (IsGroupoid M) (h := hasFunctorInstances.{u, v, w} M)
+    Bundled.hasInternalFunctors'.{max u v w} (IsGroupoid M) (hasFunctoriality.{u, u, v, v, w, w} M M)
 
   end IsGroupoid
 
