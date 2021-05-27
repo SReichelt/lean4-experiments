@@ -99,7 +99,7 @@ section InternalFunctors
                           (mF := HasInternalFunctors.toBundled F.f) (mG := HasInternalFunctors.toBundled G.f)
                           F.isFun.mapEquiv G.isFun.mapEquiv).Nat (h := T.inst.isEquiv.toHasTrans)
 
-    instance functorGroupoid (S T : groupoid.{u, v, w} M) : IsGroupoid M (S ⟶' T) :=
+    instance functorGroupoid (S T : groupoid.{u, v, w} M) : IsGroupoid.{(max u v w) + 1} M (S ⟶' T) :=
     { Equiv   := EquivRel M (hNat := hNat) S T,
       isEquiv := sorry,
       isIso   := sorry }
