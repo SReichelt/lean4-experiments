@@ -31,8 +31,7 @@ namespace HasLinearFunOp
   def swapFun' {α β γ : U} (F : α ⟶' β ⟶ γ) (b : β) : α ⟶' γ := BundledFunctor.mkFun      (swapIsFun F                                 b)
   def swapFun  {α β γ : U} (F : α ⟶  β ⟶ γ) (b : β) : α ⟶  γ := HasInternalFunctors.mkFun (swapIsFun (HasInternalFunctors.toBundled F) b)
 
-  @[simp] theorem swapFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (b : β) (a : α) :
-    (swapFun F b) a = F a b :=
+  @[simp] theorem swapFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (b : β) (a : α) : (swapFun F b) a = F a b :=
   by apply HasInternalFunctors.mkFun.eff
 
   theorem swapFunFun.def {α β γ : U} (F : α ⟶' β ⟶ γ) (b : β) :
@@ -45,9 +44,11 @@ namespace HasLinearFunOp
   def swapFunFun' {α β γ : U} (F : α ⟶' β ⟶ γ) : β ⟶' α ⟶ γ := BundledFunctor.mkFun      (swapFunIsFun F)
   def swapFunFun  {α β γ : U} (F : α ⟶  β ⟶ γ) : β ⟶  α ⟶ γ := HasInternalFunctors.mkFun (swapFunIsFun (HasInternalFunctors.toBundled F))
 
-  @[simp] theorem swapFunFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (b : β) :
-    (swapFunFun F) b = swapFun F b :=
+  @[simp] theorem swapFunFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (b : β) : (swapFunFun F) b = swapFun F b :=
   by apply HasInternalFunctors.mkFun.eff
+
+  @[simp] theorem swapFunFun.effEff {α β γ : U} (F : α ⟶ β ⟶ γ) (b : β) (a : α) : ((swapFunFun F) b) a = F a b :=
+  by simp
 
   theorem swapFunFunFun.def (α β γ : U) (F : α ⟶ β ⟶ γ) :
     swapFunFun F = HasInternalFunctors.mkFun (h.compIsFun (appFunFun' β γ) (HasInternalFunctors.toBundled (compFunFun F γ))) :=
@@ -60,9 +61,14 @@ namespace HasLinearFunOp
   def swapFunFunFun' (α β γ : U) : (α ⟶ β ⟶ γ) ⟶' (β ⟶ α ⟶ γ) := BundledFunctor.mkFun      (swapFunFunIsFun α β γ)
   def swapFunFunFun  (α β γ : U) : (α ⟶ β ⟶ γ) ⟶  (β ⟶ α ⟶ γ) := HasInternalFunctors.mkFun (swapFunFunIsFun α β γ)
 
-  @[simp] theorem swapFunFunFun.eff (α β γ : U) (F : α ⟶ β ⟶ γ) :
-    (swapFunFunFun α β γ) F = swapFunFun F :=
+  @[simp] theorem swapFunFunFun.eff (α β γ : U) (F : α ⟶ β ⟶ γ) : (swapFunFunFun α β γ) F = swapFunFun F :=
   by apply HasInternalFunctors.mkFun.eff
+
+  @[simp] theorem swapFunFunFun.effEff (α β γ : U) (F : α ⟶ β ⟶ γ) (b : β) : ((swapFunFunFun α β γ) F) b = swapFun F b :=
+  by simp
+
+  @[simp] theorem swapFunFunFun.effEffEff (α β γ : U) (F : α ⟶ β ⟶ γ) (b : β) (a : α) : (((swapFunFunFun α β γ) F) b) a = F a b :=
+  by simp
 
   -- In particular, reverse composition is also functorial.
 
@@ -79,24 +85,30 @@ namespace HasLinearFunOp
   def revCompFunFun' (α : U) {β γ : U} (G : β ⟶' γ) : (α ⟶ β) ⟶' (α ⟶ γ) := BundledFunctor.mkFun      (revCompFunIsFun α G)
   def revCompFunFun  (α : U) {β γ : U} (G : β ⟶  γ) : (α ⟶ β) ⟶  (α ⟶ γ) := HasInternalFunctors.mkFun (revCompFunIsFun α (HasInternalFunctors.toBundled G))
 
-  @[simp] theorem revCompFunFun.eff (α : U) {β γ : U} (G : β ⟶ γ) (F : α ⟶ β) :
-    (revCompFunFun α G) F = G ⊙ F :=
+  @[simp] theorem revCompFunFun.eff (α : U) {β γ : U} (G : β ⟶ γ) (F : α ⟶ β) : (revCompFunFun α G) F = G ⊙ F :=
   by apply HasInternalFunctors.mkFun.eff
+
+  @[simp] theorem revCompFunFun.effEff (α : U) {β γ : U} (G : β ⟶ γ) (F : α ⟶ β) (a : α) : ((revCompFunFun α G) F) a = G (F a) :=
+  by simp
 
   theorem revCompFunFunFun.def (α β γ : U) (G : β ⟶ γ) :
     HasInternalFunctors.mkFun (revCompFunIsFun α (HasInternalFunctors.toBundled G)) = HasInternalFunctors.mkFun (swapIsFun (compFunFunFun' α β γ) G) :=
   congrArg (λ H => HasInternalFunctors.mkFun (swapIsFun (compFunFunFun' α β γ) H)) (HasInternalFunctors.fromToBundled G) ▸ elimRec
 
-  def revCompFunFunIsFun (α β γ : U) :
-    HasExternalFunctors.IsFun (λ G : β ⟶ γ => revCompFunFun α G) :=
+  def revCompFunFunIsFun (α β γ : U) : HasExternalFunctors.IsFun (λ G : β ⟶ γ => revCompFunFun α G) :=
   funext (revCompFunFunFun.def α β γ) ▸ swapFunIsFun (compFunFunFun' α β γ)
 
   def revCompFunFunFun' (α β γ : U) : (β ⟶ γ) ⟶' (α ⟶ β) ⟶ (α ⟶ γ) := BundledFunctor.mkFun      (revCompFunFunIsFun α β γ)
   def revCompFunFunFun  (α β γ : U) : (β ⟶ γ) ⟶  (α ⟶ β) ⟶ (α ⟶ γ) := HasInternalFunctors.mkFun (revCompFunFunIsFun α β γ)
 
-  @[simp] theorem revCompFunFunFun.eff (α β γ : U) (G : β ⟶ γ) :
-    (revCompFunFunFun α β γ) G = revCompFunFun α G :=
+  @[simp] theorem revCompFunFunFun.eff (α β γ : U) (G : β ⟶ γ) : (revCompFunFunFun α β γ) G = revCompFunFun α G :=
   by apply HasInternalFunctors.mkFun.eff
+
+  @[simp] theorem revCompFunFunFun.effEff (α β γ : U) (G : β ⟶ γ) (F : α ⟶ β) : ((revCompFunFunFun α β γ) G) F = G ⊙ F :=
+  by simp
+
+  @[simp] theorem revCompFunFunFun.effEffEff (α β γ : U) (G : β ⟶ γ) (F : α ⟶ β) (a : α) : (((revCompFunFunFun α β γ) G) F) a = G (F a) :=
+  by simp
 
   -- Composition of a function with two arguments.
 
@@ -124,8 +136,7 @@ namespace HasFullFunOp
   def substFun' {α β γ : U} (F : α ⟶' β ⟶ γ) (G : α ⟶' β) : α ⟶' γ := BundledFunctor.mkFun      (substIsFun F                    G)
   def substFun  {α β γ : U} (F : α ⟶  β ⟶ γ) (G : α ⟶  β) : α ⟶  γ := HasInternalFunctors.mkFun (substIsFun (HasInternalFunctors.toBundled F) (HasInternalFunctors.toBundled G))
 
-  @[simp] theorem substFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (G : α ⟶ β) (a : α) :
-    (substFun F G) a = F a (G a) :=
+  @[simp] theorem substFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (G : α ⟶ β) (a : α) : (substFun F G) a = F a (G a) :=
   by apply HasInternalFunctors.mkFun.eff
 
   theorem substFunFun.def {α β γ : U} (F : α ⟶' β ⟶ γ) (G : α ⟶ β) :
@@ -140,9 +151,11 @@ namespace HasFullFunOp
   def substFunFun' {α β γ : U} (F : α ⟶' β ⟶ γ) : (α ⟶ β) ⟶' (α ⟶ γ) := BundledFunctor.mkFun      (substFunIsFun F)
   def substFunFun  {α β γ : U} (F : α ⟶  β ⟶ γ) : (α ⟶ β) ⟶  (α ⟶ γ) := HasInternalFunctors.mkFun (substFunIsFun (HasInternalFunctors.toBundled F))
 
-  @[simp] theorem substFunFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (G : α ⟶ β) :
-    (substFunFun F) G = substFun F G :=
+  @[simp] theorem substFunFun.eff {α β γ : U} (F : α ⟶ β ⟶ γ) (G : α ⟶ β) : (substFunFun F) G = substFun F G :=
   by apply HasInternalFunctors.mkFun.eff
+
+  @[simp] theorem substFunFun.effEff {α β γ : U} (F : α ⟶ β ⟶ γ) (G : α ⟶ β) (a : α) : ((substFunFun F) G) a = F a (G a) :=
+  by simp
 
   theorem substFunFunFun.def (α β γ : U) (F : α ⟶ β ⟶ γ) :
     substFunFun F = HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled (HasLinearFunOp.revCompFunFun α (HasLinearFunOp.swapFunFun F))) (dupFunFun' α γ)) :=
@@ -155,10 +168,14 @@ namespace HasFullFunOp
   def substFunFunFun' (α β γ : U) : (α ⟶ β ⟶ γ) ⟶' (α ⟶ β) ⟶ (α ⟶ γ) := BundledFunctor.mkFun      (substFunFunIsFun α β γ)
   def substFunFunFun  (α β γ : U) : (α ⟶ β ⟶ γ) ⟶  (α ⟶ β) ⟶ (α ⟶ γ) := HasInternalFunctors.mkFun (substFunFunIsFun α β γ)
 
-  @[simp] theorem substFunFunFun.eff (α β γ : U) (F : α ⟶ β ⟶ γ) :
-    (substFunFunFun α β γ) F = substFunFun F :=
+  @[simp] theorem substFunFunFun.eff (α β γ : U) (F : α ⟶ β ⟶ γ) : (substFunFunFun α β γ) F = substFunFun F :=
   by apply HasInternalFunctors.mkFun.eff
 
+  @[simp] theorem substFunFunFun.effEff (α β γ : U) (F : α ⟶ β ⟶ γ) (G : α ⟶ β) : ((substFunFunFun α β γ) F) G = substFun F G :=
+  by simp
+
+  @[simp] theorem substFunFunFun.effEffEff (α β γ : U) (F : α ⟶ β ⟶ γ) (G : α ⟶ β) (a : α) : (((substFunFunFun α β γ) F) G) a = F a (G a) :=
+  by simp
 
 end HasFullFunOp
 

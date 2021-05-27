@@ -165,7 +165,7 @@ end HasInternalFunctors
 -- dup   : `(α ⟶ α ⟶ β) ⟶ (α ⟶ β),           F ↦ (a ↦ F a a)`
 -- comp  : `(α ⟶ β) ⟶ (β ⟶ γ) ⟶ (α ⟶ γ),     F ↦ (G ↦ (a ↦ G (F a)))`
 --
--- We construct these functors below. In `Lemmas.lean`, we additionally construct e.g.
+-- We construct these functors below. In `DerivedFunctors.lean`, we additionally construct e.g.
 -- swap  : `(α ⟶ β ⟶ γ) ⟶ (β ⟶ α ⟶ γ),       F ↦ (b ↦ (a ↦ F a b))`
 -- subst : `(α ⟶ β ⟶ γ) ⟶ (α ⟶ β) ⟶ (α ⟶ γ), F ↦ (G ↦ (a ↦ F a (G a)))`
 -- from these axioms, and give a general algorithm for proving that a function is functorial.
@@ -234,6 +234,9 @@ namespace HasLinearFunOp
   @[simp] theorem appFunFun.eff (α β : U) (a : α) : (appFunFun α β) a = appFun a β :=
   by apply HasInternalFunctors.mkFun.eff
 
+  @[simp] theorem appFunFun.effEff (α β : U) (a : α) (F : α ⟶ β) : ((appFunFun α β) a) F = F a :=
+  by simp
+
   def compFun' {α β γ : U} (F : α ⟶' β) (G : β ⟶' γ) : α ⟶' γ := HasCompFun.compFun' F G
   def compFun  {α β γ : U} (F : α ⟶  β) (G : β ⟶  γ) : α ⟶  γ := HasInternalFunctors.mkFun (h.compIsFun (HasInternalFunctors.toBundled F) (HasInternalFunctors.toBundled G))
 
@@ -246,14 +249,26 @@ namespace HasLinearFunOp
   @[simp] theorem compFunFun.eff {α β : U} (F : α ⟶ β) (γ : U) (G : β ⟶ γ) : (compFunFun F γ) G = compFun F G :=
   by apply HasInternalFunctors.mkFun.eff
 
+  @[simp] theorem compFunFun.effEff {α β : U} (F : α ⟶ β) (γ : U) (G : β ⟶ γ) (a : α) : ((compFunFun F γ) G) a = G (F a) :=
+  by simp
+
   def compFunFunFun' (α β γ : U) : (α ⟶ β) ⟶' (β ⟶ γ) ⟶ (α ⟶ γ) := BundledFunctor.mkFun      (h.compFunFunIsFun α β γ)
   def compFunFunFun  (α β γ : U) : (α ⟶ β) ⟶  (β ⟶ γ) ⟶ (α ⟶ γ) := HasInternalFunctors.mkFun (h.compFunFunIsFun α β γ)
   
   @[simp] theorem compFunFunFun.eff (α β γ : U) (F : α ⟶ β) : (compFunFunFun α β γ) F = compFunFun F γ :=
   by apply HasInternalFunctors.mkFun.eff
 
+  @[simp] theorem compFunFunFun.effEff (α β γ : U) (F : α ⟶ β) (G : β ⟶ γ) : ((compFunFunFun α β γ) F) G = compFun F G :=
+  by simp
+
+  @[simp] theorem compFunFunFun.effEffEff (α β γ : U) (F : α ⟶ β) (G : β ⟶ γ) (a : α) : (((compFunFunFun α β γ) F) G) a = G (F a) :=
+  by simp
+
   def revCompFun {α β γ : U} (G : β ⟶  γ) (F : α ⟶  β) : α ⟶ γ := compFun F G
   infixr:90 " ⊙ "  => HasLinearFunOp.revCompFun
+
+  @[simp] theorem revCompFun.eff {α β γ : U} (F : α ⟶ β) (G : β ⟶ γ) (a : α) : (G ⊙ F) a = G (F a) :=
+  compFun.eff F G a
 
 end HasLinearFunOp
 
@@ -276,6 +291,9 @@ namespace HasAffineFunOp
   @[simp] theorem constFunFun.eff (α β : U) (c : β) : (constFunFun α β) c = constFun α c :=
   by apply HasInternalFunctors.mkFun.eff
 
+  @[simp] theorem constFunFun.effEff (α β : U) (c : β) (a : α) : ((constFunFun α β) c) a = c :=
+  by simp
+
 end HasAffineFunOp
 
 class HasFullFunOp (U : Universe.{u}) [h : HasInternalFunctors U] extends HasAffineFunOp U where
@@ -297,6 +315,9 @@ namespace HasFullFunOp
 
   @[simp] theorem dupFunFun.eff (α β : U) (F : α ⟶ α ⟶ β) : (dupFunFun α β) F = dupFun F :=
   by apply HasInternalFunctors.mkFun.eff
+
+  @[simp] theorem dupFunFun.effEff (α β : U) (F : α ⟶ α ⟶ β) (a : α) : ((dupFunFun α β) F) a = F a a :=
+  by simp
 
 end HasFullFunOp
 
