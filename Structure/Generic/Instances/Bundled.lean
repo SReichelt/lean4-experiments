@@ -25,22 +25,22 @@ def universeUniverse : Universe.{u + 1} := simpleBundledUniverse HasInstances.{u
 
 namespace Bundled
 
-  class HasFunctoriality (C : SimpleTypeClass.{u}) (D : SimpleTypeClass.{v}) : Type ((max u v w) + 1) where
-  (IsFunctorial {S : simpleBundledUniverse C} {T : simpleBundledUniverse D} : (S → T) → Type w)
+  class HasFunctoriality (C : SimpleTypeClass.{u}) (D : SimpleTypeClass.{v}) : Type ((max u v) + 1) where
+  (IsFunctorial {S : simpleBundledUniverse C} {T : simpleBundledUniverse D} : (S → T) → Type (max u v))
 
   instance hasExternalFunctors (C : SimpleTypeClass.{u}) (D : SimpleTypeClass.{v})
-                               [h : HasFunctoriality.{u, v, w} C D] :
-    HasExternalFunctors.{u + 1, v + 1, w + 1} (simpleBundledUniverse C) (simpleBundledUniverse D) :=
+                               [h : HasFunctoriality.{u, v} C D] :
+    HasExternalFunctors.{u + 1, v + 1} (simpleBundledUniverse C) (simpleBundledUniverse D) :=
   ⟨h.IsFunctorial⟩
 
-  class HasFunctorInstances (C : SimpleTypeClass.{max u w})
-                            [HasFunctoriality.{max u w, max u w, w} C C] : Type ((max u w) + 1) where
+  class HasFunctorInstances (C : SimpleTypeClass.{u})
+                            [h : HasFunctoriality.{u, u} C C] : Type (u + 1) where
   (funInst (S T : simpleBundledUniverse C) : C (S ⟶' T))
 
-  instance hasInternalFunctors (C : SimpleTypeClass.{max u w})
-                               [HasFunctoriality.{max u w, max u w, w} C C]
-                               [h : HasFunctorInstances.{u, w} C] :
-    HasInternalFunctors.{(max u w) + 1, w + 1} (simpleBundledUniverse C) :=
+  instance hasInternalFunctors (C : SimpleTypeClass.{u})
+                               [HasFunctoriality.{u, u} C C]
+                               [h : HasFunctorInstances.{u} C] :
+    HasInternalFunctors.{u + 1} (simpleBundledUniverse C) :=
   { Fun      := λ S T => { α    := S ⟶' T,
                            inst := h.funInst S T },
     funEquiv := λ S T => Equiv.refl (S ⟶' T) }

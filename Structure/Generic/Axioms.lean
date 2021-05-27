@@ -21,7 +21,7 @@ import mathlib4_experiments.Data.Equiv.Basic
 set_option autoBoundImplicitLocal false
 set_option pp.universes true
 
-universes u v v' w w'
+universes u v w
 
 
 
@@ -98,11 +98,11 @@ end Universe
 --
 -- Moreover, `α ⟶' β` is defined so that `α` and `β` can live in different universes.
 
-class HasExternalFunctors (U : Universe.{u}) (V : Universe.{v}) : Type (max u v w) where
-(IsFun {α : U} {β : V} : (α → β) → Sort w)
+class HasExternalFunctors (U : Universe.{u}) (V : Universe.{v}) : Type (max u v) where
+(IsFun {α : U} {β : V} : (α → β) → Sort (max u v))
 
 structure BundledFunctor {U : Universe.{u}} {V : Universe.{v}}
-          [h : HasExternalFunctors.{u, v, w} U V] (α : U) (β : V) : Sort (max 1 u v w) where
+          [h : HasExternalFunctors.{u, v} U V] (α : U) (β : V) : Sort (max 1 u v) where
 (f     : α → β)
 (isFun : h.IsFun f)
 
@@ -118,7 +118,7 @@ namespace BundledFunctor
 
 end BundledFunctor
 
-class HasInternalFunctors (U : Universe.{u}) extends HasExternalFunctors.{u, u, w} U U : Type (max u w) where
+class HasInternalFunctors (U : Universe.{u}) extends HasExternalFunctors.{u, u} U U : Type u where
 (Fun                : U → U → U)
 (funEquiv (α β : U) : ⌈Fun α β⌉ ≃ (α ⟶' β))
 
@@ -300,7 +300,7 @@ namespace HasFullFunOp
 
 end HasFullFunOp
 
-class HasFunOp (U : Universe.{u}) extends HasInternalFunctors.{u, w} U, HasFullFunOp U : Type (max u w)
+class HasFunOp (U : Universe.{u}) extends HasInternalFunctors.{u} U, HasFullFunOp U : Type u
 
 
 
@@ -501,7 +501,7 @@ open GeneralizedDependentRelation
 
 section AttachedRelations
 
-  variable (α : Sort u) (V : Universe.{v}) [HasInternalFunctors.{v, w} V]
+  variable (α : Sort u) (V : Universe.{v}) [HasInternalFunctors V]
 
   -- TODO: Remove this?
   class HasProducts where
@@ -594,7 +594,7 @@ end AttachedDependentRelations
 
 class HasInstanceArrows (U : Universe.{u}) where
 (arrowUniverse           : Universe.{v})
-[arrowHasFun             : HasInternalFunctors.{v, w} arrowUniverse]
+[arrowHasFun             : HasInternalFunctors arrowUniverse]
 (Arrow (α : U)           : GeneralizedRelation ⌈α⌉ arrowUniverse)
 [arrowIsPreorder (α : U) : IsPreorder (Arrow α)]
 
@@ -644,7 +644,7 @@ end HasFunctorialArrows
 
 class HasInstanceEquivalences (U : Universe.{u}) where
 (equivUniverse              : Universe.{v})
-[equivHasFun                : HasInternalFunctors.{v, w} equivUniverse]
+[equivHasFun                : HasInternalFunctors equivUniverse]
 (Equiv (α : U)              : GeneralizedRelation ⌈α⌉ equivUniverse)
 [equivIsEquivalence (α : U) : IsEquivalence (Equiv α)]
 
@@ -732,7 +732,7 @@ end HasFunctorialEquivalences
 
 section Morphisms
 
-  variable {α : Sort u} {V : Universe.{v}} [HasInternalFunctors.{v, v'} V] [HasInstanceArrows.{v, w, w'} V]
+  variable {α : Sort u} {V : Universe.{v}} [HasInternalFunctors V] [HasInstanceArrows.{v, w} V]
            (R : GeneralizedRelation α V)
 
   class IsCompositionRelation [HasTrans      R]                                 : Sort (max 1 u v w) where
@@ -821,7 +821,7 @@ class HasNaturalQuantification (U₁ U₂ V W : Universe) [HasExternalFunctors U
 
 section Categories
 
-  variable (M : Universe.{v}) [HasInternalFunctors.{v, v'} M] [HasInstanceArrows.{v, w, w'} M] (α : Sort u)
+  variable (M : Universe.{v}) [HasInternalFunctors M] [HasInstanceArrows.{v, w} M] (α : Sort u)
 
   class IsCategory extends HasArrows α M : Sort (max 1 u (v + 1) w) where
   [isMor : IsMorphismRelation Arrow]

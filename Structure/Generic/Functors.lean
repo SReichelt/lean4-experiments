@@ -7,25 +7,25 @@ import Structure.Generic.Lemmas
 set_option autoBoundImplicitLocal false
 set_option pp.universes true
 
-universes u₁ u₂ u₃ v v' w w' w'' w''' w''''
+universes u u₁ u₂ u₃ v v' w w'
 
 
 
 section Functors
 
   variable {α : Sort u₁} {β : Sort u₂} (V : Universe.{v}) (W : Universe.{w})
-           [HasInternalFunctors.{v, v'} V] [HasInternalFunctors.{w, w'} W]
-           [HasInstanceArrows.{w, w'', w'''} W] [HasExternalFunctors.{v, w, w''''} V W]
+           [HasInternalFunctors V] [HasInternalFunctors W]
+           [HasInstanceArrows.{w, w'} W] [HasExternalFunctors V W]
 
-  class IsProductFunctor [hα : HasProducts     α V] [hβ : HasProducts     β W] (F : α → β) : Type (max u₁ v w w'' w'''') where
+  class IsProductFunctor [hα : HasProducts     α V] [hβ : HasProducts     β W] (F : α → β) : Sort (max 1 u u₁ v w w') where
   (mapProduct {a b : α} : a ⊓ b ⟶' F a ⊓ F b)
   [isFunctor            : IsSymmFunctor        hα.Product (mapOperation hβ.Product F) mapProduct]
 
-  class IsArrowFunctor   [hα : HasArrows       α V] [hβ : HasArrows       β W] (F : α → β) : Type (max u₁ v w w'' w'''') where
+  class IsArrowFunctor   [hα : HasArrows       α V] [hβ : HasArrows       β W] (F : α → β) : Sort (max 1 u u₁ v w w') where
   (mapArrow   {a b : α} : (a ⇝ b) ⟶' (F a ⇝ F b))
   [isFunctor            : IsPreorderFunctor    hα.Arrow   (mapOperation hβ.Arrow   F) mapArrow]
 
-  class IsEquivFunctor   [hα : HasEquivalences α V] [hβ : HasEquivalences β W] (F : α → β) : Type (max u₁ v w w'' w'''') where
+  class IsEquivFunctor   [hα : HasEquivalences α V] [hβ : HasEquivalences β W] (F : α → β) : Sort (max 1 u u₁ v w w') where
   (mapEquiv   {a b : α} : a ≃ b ⟶' F a ≃ F b)
   [isFunctor            : IsEquivalenceFunctor hα.Equiv   (mapOperation hβ.Equiv   F) mapEquiv]
 

@@ -18,7 +18,7 @@ namespace BundledSetoid
   instance isSetoid (S : bundledSetoid) : Setoid ⌈S⌉ := S.inst
   instance (S : bundledSetoid) : Setoid ⌈S⌉ := isSetoid S
 
-  class IsFunctorial {S T : bundledSetoid} (f : S → T) where
+  class IsFunctorial {S T : bundledSetoid} (f : S → T) : Type u where
   (mapEquiv {a b : S} : a ≈ b → f a ≈ f b)
 
   instance hasFunctoriality : Bundled.HasFunctoriality Setoid Setoid := ⟨IsFunctorial⟩
@@ -51,8 +51,6 @@ namespace BundledSetoid
     instance hasFunctorInstances : Bundled.HasFunctorInstances Setoid := ⟨isSetoid⟩
 
   end BundledFunctor
-
-  instance hasInternalFunctors : HasInternalFunctors bundledSetoid := Bundled.hasInternalFunctors Setoid
 
   -- Although this duplicates generic proofs in `ConstructibleFunctors.lean`, we keep this version because
   -- it is much more readable and we can avoid the import.

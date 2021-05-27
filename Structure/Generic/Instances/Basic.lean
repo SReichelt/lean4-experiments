@@ -19,30 +19,30 @@ def sortUniverse : Universe.{u} := ⟨Sort u⟩
 
 namespace SortUniverse
 
-  instance hasExternalFunctors : HasExternalFunctors sortUniverse.{u} sortUniverse.{v} := ⟨λ _ => True⟩
+  instance hasExternalFunctors : HasExternalFunctors sortUniverse.{u} sortUniverse.{v} := ⟨λ _ => PUnit⟩
 
   def funEquiv (α β : sortUniverse.{u}) : (α → β) ≃ (α ⟶' β) :=
-  { toFun    := λ f      => ⟨f, trivial⟩,
+  { toFun    := λ f      => ⟨f, PUnit.unit⟩,
     invFun   := λ F      => F.f,
     leftInv  := λ _      => rfl,
-    rightInv := λ ⟨_, _⟩ => rfl }
+    rightInv := λ ⟨_, _⟩ => by simp }
 
   instance hasInternalFunctors : HasInternalFunctors sortUniverse.{u} :=
   { Fun      := λ α β => α → β,
     funEquiv := funEquiv }
 
-  instance hasIdFun    : HasIdFun    sortUniverse.{u}                                   := ⟨λ _     => trivial⟩
-  instance hasConstFun : HasConstFun sortUniverse.{u} sortUniverse.{v}                  := ⟨λ _ _ _ => trivial⟩
-  instance hasCompFun  : HasCompFun  sortUniverse.{u} sortUniverse.{v} sortUniverse.{w} := ⟨λ _ _   => trivial⟩
+  instance hasIdFun    : HasIdFun    sortUniverse.{u}                                   := ⟨λ _     => PUnit.unit⟩
+  instance hasConstFun : HasConstFun sortUniverse.{u} sortUniverse.{v}                  := ⟨λ _ _ _ => PUnit.unit⟩
+  instance hasCompFun  : HasCompFun  sortUniverse.{u} sortUniverse.{v} sortUniverse.{w} := ⟨λ _ _   => PUnit.unit⟩
 
   instance hasFunOp : HasFunOp sortUniverse.{u} :=
-  { constFunIsFun   := λ _ _   => trivial,
-    appIsFun        := λ _ _   => trivial,
-    appFunIsFun     := λ _ _   => trivial,
-    dupIsFun        := λ _     => trivial,
-    dupFunIsFun     := λ _ _   => trivial,
-    compFunIsFun    := λ _ _   => trivial,
-    compFunFunIsFun := λ _ _ _ => trivial }
+  { constFunIsFun   := λ _ _   => PUnit.unit,
+    appIsFun        := λ _ _   => PUnit.unit,
+    appFunIsFun     := λ _ _   => PUnit.unit,
+    dupIsFun        := λ _     => PUnit.unit,
+    dupFunIsFun     := λ _ _   => PUnit.unit,
+    compFunIsFun    := λ _ _   => PUnit.unit,
+    compFunFunIsFun := λ _ _ _ => PUnit.unit }
 
 end SortUniverse
 
