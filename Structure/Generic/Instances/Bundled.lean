@@ -1,4 +1,5 @@
-import Structure.Generic.Axioms
+import Structure.Generic.Axioms.Universes
+import Structure.Generic.Axioms.AbstractFunctors
 import Structure.Generic.Instances.Basic
 
 
@@ -6,7 +7,7 @@ import Structure.Generic.Instances.Basic
 set_option autoBoundImplicitLocal false
 --set_option pp.universes true
 
-universes u v w
+universes u v
 
 
 
