@@ -4,7 +4,7 @@ import Structure.Generic.Instances.Basic
 
 
 set_option autoBoundImplicitLocal false
-set_option pp.universes true
+--set_option pp.universes true
 
 universes u v w
 
@@ -13,7 +13,7 @@ universes u v w
 def bundledUniverse {U : Universe.{u}} (C : GeneralizedTypeClass.{u, u} U) : Universe.{u} := ⟨Bundled C⟩
 instance bundledInstance {U : Universe.{u}} (C : GeneralizedTypeClass.{u, u} U) (S : bundledUniverse C) : C S.α := S.inst
 
-def SimpleTypeClass := GeneralizedTypeClass.{u + 1, u + 1} typeUniverse.{u}
+def SimpleTypeClass := GeneralizedTypeClass.{u + 1, u + 1} sort.{u + 1}
 def simpleBundledUniverse (C : SimpleTypeClass.{u}) : Universe.{u + 1} := bundledUniverse C
 instance simpleBundledInstance (C : SimpleTypeClass.{u}) (S : simpleBundledUniverse C) : C S.α := bundledInstance C S
 

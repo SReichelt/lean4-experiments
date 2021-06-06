@@ -1,3 +1,5 @@
+#exit
+
 import Structure.Generic.Axioms
 import Structure.Generic.Instances.Basic
 import Structure.Generic.Instances.Bundled

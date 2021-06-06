@@ -5,7 +5,7 @@ import Structure.Generic.Lemmas
 
 
 set_option autoBoundImplicitLocal false
-set_option pp.universes true
+--set_option pp.universes true
 
 universes u u₁ u₂ u₃ v v' w w'
 

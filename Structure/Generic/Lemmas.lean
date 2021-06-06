@@ -1,3 +1,5 @@
+#exit
+
 import Structure.Generic.Axioms
 import Structure.Generic.DerivedFunctors
 
@@ -10,47 +12,6 @@ open GeneralizedRelation
 set_option autoBoundImplicitLocal false
 
 universes u v w
-
-
-
-namespace HasLinearFunOp
-
-  variable (U : Universe) [h : HasInternalFunctors U] [HasLinearFunOp U]
-
-  -- TODO: Add equivalences.
-  -- TODO: Add morphisms.
-
-  instance : HasRefl    h.Fun := ⟨idFun⟩
-  instance : HasTrans   h.Fun := ⟨compFunFunFun _ _ _⟩
-  instance : IsPreorder h.Fun := ⟨⟩
-
-  instance hasArrows : HasArrows ⌈U⌉ U := ⟨h.Fun⟩
-
-  @[simp] theorem transDef {α β γ : U} {F : α ⟶ β} {G : β ⟶ γ} : G • F = G ⊙ F :=
-  compFunFunFun.effEff α β γ F G
-
-  variable [hInst : HasFunctorialArrows U] [HasLinearFunOp hInst.arrowUniverse]
-
-  def DependentArrow {α β : U} (F : α ⟶ β) (a : α) (b : β) := F a ⇝ b
-
-  namespace DependentArrow
-
-    def refl {α : U} (a : α) : (idFun α) a ⇝ a :=
-    Eq.ndrec (motive := λ x : α => ⌈x ⇝ a⌉) (ident (hInst.Arrow α) a) (Eq.symm (idFun.eff α a))
-
-    def trans {α β γ : U} {F : α ⟶ β} {G : β ⟶ γ} {a : α} {b : β} {c : γ} : (F a ⇝ b) ⟶ (G b ⇝ c) ⟶ ((G • F) a ⇝ c) :=
-    let f₁ : (F a ⇝ b) ⟶ ((G • F) a ⇝ G b) := compFunFunFun.effEffEff α β γ F G a ▸ HasFunctorialArrows.arrow_congrArg U G;
-    HasTrans.trans ⊙ f₁ 
-
-    instance : GeneralizedDependentRelation.HasDependentRefl    (DependentArrow U) := ⟨refl  U⟩
-    instance : GeneralizedDependentRelation.HasDependentTrans   (DependentArrow U) := ⟨trans U⟩
-    instance : GeneralizedDependentRelation.IsDependentPreorder (DependentArrow U) := ⟨⟩
-  
-  end DependentArrow
-
-  instance hasDependentArrows : HasDependentArrows U U hInst.arrowUniverse := ⟨DependentArrow U⟩
-
-end HasLinearFunOp
 
 
 
@@ -95,11 +56,6 @@ namespace GeneralizedRelation
     Eq.trans (congrFun h₁ c) (HasLinearFunOp.idFun.eff β c)
 
   end ConstRel
-
-  variable {α : Sort u} {V : Universe} [HasInternalFunctors V] [HasLinearFunOp V]
-
-  def HasTrans.revTrans   {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} : R b c ⟶ R a b ⟶ R a c := HasLinearFunOp.swapFunFun h.trans
-  def HasTrans.revTrans'' {R : GeneralizedRelation α V} [h : HasTrans R] {a b c : α} (g : R b c) : R a b ⟶ R a c := HasLinearFunOp.swapFun h.trans g
 
 end GeneralizedRelation
 

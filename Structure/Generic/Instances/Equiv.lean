@@ -14,7 +14,7 @@ universes u
 
 
 
-def EquivRel : GeneralizedRelation (Type u) typeUniverse.{u} := Equiv
+def EquivRel : GeneralizedRelation Type type := Equiv
 
 namespace EquivRel
 
@@ -23,24 +23,18 @@ namespace EquivRel
 
   instance isEquivalence : IsEquivalence EquivRel :=
   { refl  := Equiv.refl,
-    symm  := Equiv.symm,
-    trans := Equiv.trans }
+    trans := Equiv.trans,
+    symm  := ⟨Equiv.symm, Equiv.symm, Equiv.symm_symm, Equiv.symm_symm⟩ }
 
   instance isCompositionRelation : IsCompositionRelation EquivRel :=
-  { assocLR := λ f g h => Eq.symm (Equiv.trans_assoc f g h),
-    assocRL := Equiv.trans_assoc }
+  { assoc := funext (λ ab => (funext (λ bc => funext (λ cd => Equiv.trans_assoc ab bc cd)))) }
 
   instance isMorphismRelation : IsMorphismRelation EquivRel :=
-  { leftId  := Equiv.trans_refl,
-    rightId := Equiv.refl_trans }
+  { leftId  := funext Equiv.trans_refl,
+    rightId := funext Equiv.refl_trans }
 
   instance isIsomorphismRelation : IsIsomorphismRelation EquivRel :=
-  { leftInv  := Equiv.trans_symm,
-    rightInv := Equiv.symm_trans,
-    invInv   := Equiv.symm_symm,
-    compInv  := Equiv.symm_trans_symm,
-    idInv    := @Equiv.refl_symm }
+  { leftInv  := funext Equiv.trans_symm,
+    rightInv := funext Equiv.symm_trans }
 
 end EquivRel
-
-instance typeHasEquivalences : HasEquivalences (Type u) typeUniverse.{u} := ⟨EquivRel⟩

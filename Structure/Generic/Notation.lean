@@ -14,8 +14,8 @@ class HasProduct (α : Sort u) (β : Sort v) where
 {γ       : Sort w}
 (Product : α → β → γ)
 
-infixr:35 " (⊓) " => HasProduct.γ
-infixr:35 " ⊓ " => HasProduct.Product
+infixr:35 " (⧆) " => HasProduct.γ
+infixr:35 " ⧆ " => HasProduct.Product
 
 
 class HasArrow (α : Sort u) (β : Sort v) where

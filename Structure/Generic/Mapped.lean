@@ -1,3 +1,5 @@
+#exit
+
 import Structure.Generic.Axioms
 
 open GeneralizedRelation

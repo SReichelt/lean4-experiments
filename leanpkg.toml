@@ -1,7 +1,7 @@
 [package]
 name = "Structure"
 version = "0.1"
-lean_version = "leanprover/lean4:nightly-2021-04-24"
+lean_version = "leanprover/lean4:nightly-2021-05-30"
 
 [dependencies]
-mathlib4_experiments = {git = "https://github.com/kbuzzard/mathlib4_experiments", rev = "7c38eb9741a47ef2997661e2cd08e974a8126e05"}
+mathlib4_experiments = {git = "https://github.com/SReichelt/mathlib4_experiments", rev = "edf58e8ae32b1112325819a3a3e61386a49021d6"}

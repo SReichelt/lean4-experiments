@@ -5,7 +5,7 @@ import Structure.Generic.Instances.Bundled
 
 
 set_option autoBoundImplicitLocal false
-set_option pp.universes true
+--set_option pp.universes true
 
 universes u v
 
